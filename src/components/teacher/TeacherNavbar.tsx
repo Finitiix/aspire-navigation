@@ -1,11 +1,11 @@
-
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
-import { LogOut, Key, UserCircle2 } from "lucide-react";
+import { LogOut, UserCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
+import { ChangePasswordDialog } from "./ChangePasswordDialog";
 
 export const TeacherNavbar = () => {
   const navigate = useNavigate();
@@ -38,7 +38,7 @@ export const TeacherNavbar = () => {
   };
 
   return (
-    <Card className="fixed top-0 left-0 right-0 z-50 rounded-b-lg shadow-md">
+    <Card className="fixed top-0 left-0 right-0 z-50 rounded-b-lg shadow-md bg-primary">
       <div className="container mx-auto px-4">
         <div className="h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -46,32 +46,24 @@ export const TeacherNavbar = () => {
               <img
                 src={teacherDetails.profile_pic_url}
                 alt="Profile"
-                className="w-10 h-10 rounded-full"
+                className="w-10 h-10 rounded-full bg-white"
               />
             ) : (
-              <UserCircle2 className="w-10 h-10" />
+              <UserCircle2 className="w-10 h-10 text-white" />
             )}
             <div>
-              <p className="font-medium">{teacherDetails?.full_name}</p>
-              <p className="text-sm text-gray-600">
+              <p className="font-medium text-white">{teacherDetails?.full_name}</p>
+              <p className="text-sm text-white/80">
                 {teacherDetails?.eid} | {teacherDetails?.designation}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <ChangePasswordDialog />
             <Button
               variant="ghost"
               size="sm"
-              className="flex items-center gap-2"
-              onClick={() => navigate("/change-password")}
-            >
-              <Key className="w-4 h-4" />
-              Change Password
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 text-white"
               onClick={handleSignOut}
             >
               <LogOut className="w-4 h-4" />
