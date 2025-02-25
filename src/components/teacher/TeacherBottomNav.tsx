@@ -10,15 +10,15 @@ export const TeacherBottomNav = () => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t">
       <div className="container mx-auto px-4">
-        <div className="h-16 flex items-center justify-around">
+        <div className="h-20 flex items-center justify-around">
           <Link
             to="/teacher-dashboard"
             className={`flex flex-col items-center ${
               isActive("/teacher-dashboard") ? "text-primary" : "text-gray-600"
             }`}
           >
-            <Home className="w-6 h-6" />
-            <span className="text-xs">Home</span>
+            <Home className="w-7 h-7" />
+            <span className="text-sm mt-1">Home</span>
           </Link>
           <Link
             to="/teacher-dashboard/achievements"
@@ -26,8 +26,8 @@ export const TeacherBottomNav = () => {
               isActive("/teacher-dashboard/achievements") ? "text-primary" : "text-gray-600"
             }`}
           >
-            <Award className="w-6 h-6" />
-            <span className="text-xs">Achievements</span>
+            <Award className="w-7 h-7" />
+            <span className="text-sm mt-1">Achievements</span>
           </Link>
           <Link
             to="/teacher-dashboard/details"
@@ -35,8 +35,8 @@ export const TeacherBottomNav = () => {
               isActive("/teacher-dashboard/details") ? "text-primary" : "text-gray-600"
             }`}
           >
-            <FileText className="w-6 h-6" />
-            <span className="text-xs">Details</span>
+            <FileText className="w-7 h-7" />
+            <span className="text-sm mt-1">Details</span>
           </Link>
           <Link
             to="/teacher-dashboard/profile"
@@ -44,8 +44,8 @@ export const TeacherBottomNav = () => {
               isActive("/teacher-dashboard/profile") ? "text-primary" : "text-gray-600"
             }`}
           >
-            <User className="w-6 h-6" />
-            <span className="text-xs">Profile</span>
+            <User className="w-7 h-7" />
+            <span className="text-sm mt-1">Profile</span>
           </Link>
         </div>
       </div>

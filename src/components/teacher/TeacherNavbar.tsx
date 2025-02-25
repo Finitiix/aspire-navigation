@@ -40,25 +40,25 @@ export const TeacherNavbar = () => {
   return (
     <Card className="fixed top-0 left-0 right-0 z-50 rounded-b-lg shadow-md bg-primary">
       <div className="container mx-auto px-4">
-        <div className="h-16 flex items-center justify-between">
+        <div className="h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
             {teacherDetails?.profile_pic_url ? (
               <img
                 src={teacherDetails.profile_pic_url}
                 alt="Profile"
-                className="w-10 h-10 rounded-full bg-white"
+                className="w-12 h-12 rounded-full bg-white"
               />
             ) : (
-              <UserCircle2 className="w-10 h-10 text-white" />
+              <UserCircle2 className="w-12 h-12 text-white" />
             )}
             <div>
-              <p className="font-medium text-white">{teacherDetails?.full_name}</p>
+              <p className="text-lg font-medium text-white">{teacherDetails?.full_name}</p>
               <p className="text-sm text-white/80">
                 {teacherDetails?.eid} | {teacherDetails?.designation}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <ChangePasswordDialog />
             <Button
               variant="ghost"
@@ -66,7 +66,7 @@ export const TeacherNavbar = () => {
               className="flex items-center gap-2 text-white"
               onClick={handleSignOut}
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-5 h-5" />
               Sign Out
             </Button>
           </div>
