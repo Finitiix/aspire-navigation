@@ -30,6 +30,63 @@ export type Database = {
         }
         Relationships: []
       }
+      teacher_details: {
+        Row: {
+          address: string | null
+          cabin_no: string | null
+          created_at: string | null
+          date_of_joining: string
+          department: string
+          designation: string
+          eid: string
+          email_id: string
+          full_name: string
+          gender: string
+          highest_qualification: string
+          id: string
+          mobile_number: string
+          profile_pic_url: string | null
+          skills: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          cabin_no?: string | null
+          created_at?: string | null
+          date_of_joining: string
+          department: string
+          designation: string
+          eid: string
+          email_id: string
+          full_name: string
+          gender: string
+          highest_qualification: string
+          id: string
+          mobile_number: string
+          profile_pic_url?: string | null
+          skills?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          cabin_no?: string | null
+          created_at?: string | null
+          date_of_joining?: string
+          department?: string
+          designation?: string
+          eid?: string
+          email_id?: string
+          full_name?: string
+          gender?: string
+          highest_qualification?: string
+          id?: string
+          mobile_number?: string
+          profile_pic_url?: string | null
+          skills?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
