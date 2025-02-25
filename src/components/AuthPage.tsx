@@ -27,26 +27,31 @@ export const AuthPage = ({ role }: AuthPageProps) => {
     try {
       if (role === "teacher" && !validateTeacherUsername(username)) {
         toast.error("Invalid teacher ID format");
+        setLoading(false);
         return;
       }
 
       const email = `${username.toLowerCase()}@achievementhub.com`;
 
       if (isSignIn) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
-        if (error) throw error;
+        if (signInError) throw signInError;
         
-        const { data: profile } = await supabase
+        const { data: user } = await supabase.auth.getUser();
+        if (!user?.user?.id) throw new Error("No user found");
+
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('role')
-          .eq('id', (await supabase.auth.getUser()).data.user?.id)
+          .eq('id', user.user.id)
           .single();
 
-        if (profile?.role !== role) {
+        if (profileError) throw profileError;
+        if (!profile || profile.role !== role) {
           await supabase.auth.signOut();
           throw new Error("Unauthorized access");
         }
@@ -54,7 +59,7 @@ export const AuthPage = ({ role }: AuthPageProps) => {
         toast.success("Signed in successfully!");
         navigate(`/${role.toLowerCase()}-dashboard`);
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -64,7 +69,7 @@ export const AuthPage = ({ role }: AuthPageProps) => {
           },
         });
 
-        if (error) throw error;
+        if (signUpError) throw signUpError;
         toast.success("Account created! Please sign in.");
         setIsSignIn(true);
       }
@@ -75,7 +80,7 @@ export const AuthPage = ({ role }: AuthPageProps) => {
     }
   };
 
-  const validateTeacherUsername = (value: string) => {
+  const validateTeacherUsername = (value: string): boolean => {
     return /^E\d{5}$/.test(value);
   };
 
