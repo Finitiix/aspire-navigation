@@ -18,7 +18,16 @@ import { CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const achievementTypes = [
+type AchievementType = 
+  | "Research & Publications"
+  | "Book Published"
+  | "Patents & Grants"
+  | "Certifications & Courses"
+  | "Awards & Recognitions"
+  | "Projects & Workshops"
+  | "Others";
+
+const achievementTypes: AchievementType[] = [
   'Research & Publications',
   'Book Published',
   'Patents & Grants',
@@ -26,14 +35,25 @@ const achievementTypes = [
   'Awards & Recognitions',
   'Projects & Workshops',
   'Others'
-] as const;
+];
+
+type FormData = {
+  achievement_type: AchievementType | '';
+  title: string;
+  issuing_organization: string;
+  related_field: string;
+  link_url: string;
+  quantity: string;
+  collaboration: string;
+  remarks: string;
+};
 
 export const AchievementForm = () => {
   const [loading, setLoading] = useState(false);
   const [teacherDetails, setTeacherDetails] = useState<any>(null);
   const [date, setDate] = useState<Date>();
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     achievement_type: '',
     title: '',
     issuing_organization: '',
@@ -62,18 +82,24 @@ export const AchievementForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!date || !teacherDetails) return;
+    if (!date || !teacherDetails || !formData.achievement_type) return;
 
     setLoading(true);
     try {
       const { error } = await supabase
         .from('achievements')
-        .insert([{
+        .insert({
           teacher_id: teacherDetails.id,
-          ...formData,
+          achievement_type: formData.achievement_type,
+          title: formData.title,
           date_achieved: format(date, 'yyyy-MM-dd'),
+          issuing_organization: formData.issuing_organization,
+          related_field: formData.related_field || null,
+          link_url: formData.link_url || null,
           quantity: formData.quantity ? parseInt(formData.quantity) : null,
-        }]);
+          collaboration: formData.collaboration || null,
+          remarks: formData.remarks || null
+        });
 
       if (error) throw error;
 
@@ -126,7 +152,7 @@ export const AchievementForm = () => {
             <Select
               required
               value={formData.achievement_type}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, achievement_type: value }))}
+              onValueChange={(value: AchievementType) => setFormData(prev => ({ ...prev, achievement_type: value }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select achievement type" />
