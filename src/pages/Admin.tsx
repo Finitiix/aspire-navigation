@@ -1,112 +1,119 @@
 
 import { useEffect, useState } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LogOut, UserCircle2, Home, Users, Settings } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { AuthPage } from "@/components/AuthPage";
-import { toast } from "sonner";
-
-const AdminNavbar = () => {
-  const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) toast.error(error.message);
-  };
-
-  return (
-    <Card className="fixed top-0 left-0 right-0 z-50 rounded-b-lg shadow-md bg-primary">
-      <div className="container mx-auto px-4">
-        <div className="h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <UserCircle2 className="w-10 h-10 text-white" />
-            <div>
-              <p className="font-medium text-white">Admin Dashboard</p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex items-center gap-2 text-white"
-            onClick={handleSignOut}
-          >
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </Button>
-        </div>
-      </div>
-    </Card>
-  );
-};
-
-const AdminBottomNav = () => {
-  const location = useLocation();
-  const isActive = (path: string) => location.pathname === path;
-
-  return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t">
-      <div className="container mx-auto px-4">
-        <div className="h-16 flex items-center justify-around">
-          <Link
-            to="/admin-dashboard"
-            className={`flex flex-col items-center ${
-              isActive("/admin-dashboard") ? "text-primary" : "text-gray-600"
-            }`}
-          >
-            <Home className="w-6 h-6" />
-            <span className="text-xs">Home</span>
-          </Link>
-          <Link
-            to="/admin-dashboard/teachers"
-            className={`flex flex-col items-center ${
-              isActive("/admin-dashboard/teachers") ? "text-primary" : "text-gray-600"
-            }`}
-          >
-            <Users className="w-6 h-6" />
-            <span className="text-xs">Teachers</span>
-          </Link>
-          <Link
-            to="/admin-dashboard/settings"
-            className={`flex flex-col items-center ${
-              isActive("/admin-dashboard/settings") ? "text-primary" : "text-gray-600"
-            }`}
-          >
-            <Settings className="w-6 h-6" />
-            <span className="text-xs">Settings</span>
-          </Link>
-        </div>
-      </div>
-    </nav>
-  );
-};
+import { Link } from "react-router-dom";
 
 const Admin = () => {
-  const [session, setSession] = useState<any>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
+    checkUser();
   }, []);
 
-  if (!session) {
-    return <AuthPage role="admin" />;
+  const checkUser = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate('/');
+        return;
+      }
+
+      // Check if user has admin role
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.role !== 'admin') {
+        navigate('/');
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking user:', error);
+      navigate('/');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      navigate('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-16 pb-16">
-      <AdminNavbar />
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-4">Welcome, Admin</h1>
-        {/* Content will be added here based on routes */}
-      </div>
-      <AdminBottomNav />
+    <div className="min-h-screen bg-gray-50">
+      {/* Top Navigation */}
+      <nav className="fixed top-0 left-0 right-0 bg-white border-b z-50">
+        <div className="container mx-auto px-4">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-4">
+              <Link to="/admin" className="text-xl font-bold text-primary">
+                Admin Panel
+              </Link>
+            </div>
+            <Button variant="ghost" size="icon" onClick={handleSignOut}>
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="pt-16 pb-20">
+        <Outlet />
+      </main>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t z-50">
+        <div className="container mx-auto px-4">
+          <div className="flex justify-around items-center h-16">
+            <Link
+              to="/admin"
+              className={`flex flex-col items-center ${
+                location.pathname === '/admin' ? 'text-primary' : 'text-gray-500'
+              }`}
+            >
+              <Home className="h-5 w-5" />
+              <span className="text-xs mt-1">Home</span>
+            </Link>
+            <Link
+              to="/admin/teachers"
+              className={`flex flex-col items-center ${
+                location.pathname === '/admin/teachers' ? 'text-primary' : 'text-gray-500'
+              }`}
+            >
+              <Users className="h-5 w-5" />
+              <span className="text-xs mt-1">Teachers</span>
+            </Link>
+            <Link
+              to="/admin/settings"
+              className={`flex flex-col items-center ${
+                location.pathname === '/admin/settings' ? 'text-primary' : 'text-gray-500'
+              }`}
+            >
+              <Settings className="h-5 w-5" />
+              <span className="text-xs mt-1">Settings</span>
+            </Link>
+          </div>
+        </div>
+      </nav>
     </div>
   );
 };

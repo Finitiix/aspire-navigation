@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [feedback, setFeedback] = useState<any[]>([]);
   const [achievements, setAchievements] = useState<any[]>([]);
   const [stats, setStats] = useState({
@@ -23,10 +24,10 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      // Fetch feedback
+      // Fetch feedback with created_at
       const { data: feedbackData } = await supabase
         .from('feedback')
-        .select('*')
+        .select('*, created_at')
         .order('created_at', { ascending: false });
       
       // Fetch pending achievements
@@ -40,7 +41,7 @@ const AdminDashboard = () => {
         .order('created_at', { ascending: false });
 
       // Fetch stats
-      const { count: teacherCount } = await supabase
+      const { data: teacherData, count: teacherCount } = await supabase
         .from('teacher_details')
         .select('*', { count: 'exact' });
 
@@ -60,8 +61,11 @@ const AdminDashboard = () => {
         pendingAchievements: pendingCount || 0,
         totalFeedback: feedbackCount || 0
       });
+
+      console.log('Teacher Data:', teacherData); // Debug log
     } catch (error) {
       console.error('Error fetching data:', error);
+      toast.error('Error loading dashboard data');
     }
   };
 
@@ -75,16 +79,27 @@ const AdminDashboard = () => {
       if (error) throw error;
 
       toast.success(`Achievement ${status.toLowerCase()} successfully`);
-      fetchData();
+      fetchData(); // Refresh data after update
     } catch (error) {
+      console.error('Error updating achievement:', error);
       toast.error('Error updating achievement status');
     }
   };
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 pb-24">
-      {/* Stats Section */}
-      <div className="container mx-auto px-4">
+    <div className="min-h-screen bg-gray-50">
+      {/* Content */}
+      <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="p-6">
             <h3 className="text-lg font-medium mb-2">Total Teachers</h3>
@@ -111,9 +126,10 @@ const AdminDashboard = () => {
                     <div>
                       <h3 className="font-medium">{achievement.title}</h3>
                       <p className="text-sm text-gray-600">
-                        By {achievement.teacher_details.full_name} ({achievement.teacher_details.department})
+                        By {achievement.teacher_details?.full_name} ({achievement.teacher_details?.department})
                       </p>
                       <p className="text-sm text-gray-600">Type: {achievement.achievement_type}</p>
+                      <p className="text-sm text-gray-600">Date: {formatDate(achievement.date_achieved)}</p>
                     </div>
                     <div className="flex gap-2">
                       <Button
@@ -155,9 +171,11 @@ const AdminDashboard = () => {
                   <div>
                     <div className="flex justify-between items-start mb-2">
                       <h3 className="font-medium">{item.subject}</h3>
-                      <span className="text-sm text-gray-600">{item.identifier}</span>
+                      <span className="text-sm text-gray-600">{formatDate(item.created_at)}</span>
                     </div>
-                    <p className="text-sm text-gray-600 mb-2">From: {item.name}</p>
+                    <p className="text-sm text-gray-600 mb-2">
+                      From: {item.name} ({item.identifier})
+                    </p>
                     <p className="text-gray-700">{item.message}</p>
                   </div>
                 </Card>
