@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, UserCircle2, Home, Users, Settings, CheckCircle2, XCircle2 } from "lucide-react";
+import { LogOut, UserCircle2, Home, Users, Settings, CheckCircle, XCircle } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -122,7 +122,7 @@ const AdminDashboard = () => {
                         className="text-green-600"
                         onClick={() => handleAchievementAction(achievement.id, 'Approved')}
                       >
-                        <CheckCircle2 className="w-4 h-4 mr-1" />
+                        <CheckCircle className="w-4 h-4 mr-1" />
                         Approve
                       </Button>
                       <Button
@@ -131,7 +131,7 @@ const AdminDashboard = () => {
                         className="text-red-600"
                         onClick={() => handleAchievementAction(achievement.id, 'Rejected')}
                       >
-                        <XCircle2 className="w-4 h-4 mr-1" />
+                        <XCircle className="w-4 h-4 mr-1" />
                         Reject
                       </Button>
                     </div>
