@@ -9,6 +9,68 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          achievement_type: Database["public"]["Enums"]["achievement_type"]
+          collaboration: string | null
+          created_at: string | null
+          date_achieved: string
+          id: string
+          issuing_organization: string
+          link_url: string | null
+          quantity: number | null
+          related_field: string | null
+          remarks: string | null
+          status: string | null
+          submitted_at: string | null
+          teacher_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          achievement_type: Database["public"]["Enums"]["achievement_type"]
+          collaboration?: string | null
+          created_at?: string | null
+          date_achieved: string
+          id?: string
+          issuing_organization: string
+          link_url?: string | null
+          quantity?: number | null
+          related_field?: string | null
+          remarks?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          teacher_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          achievement_type?: Database["public"]["Enums"]["achievement_type"]
+          collaboration?: string | null
+          created_at?: string | null
+          date_achieved?: string
+          id?: string
+          issuing_organization?: string
+          link_url?: string | null
+          quantity?: number | null
+          related_field?: string | null
+          remarks?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          teacher_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "achievements_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_details"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departments: {
         Row: {
           created_at: string | null
@@ -140,7 +202,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      achievement_type:
+        | "Research & Publications"
+        | "Book Published"
+        | "Patents & Grants"
+        | "Certifications & Courses"
+        | "Awards & Recognitions"
+        | "Projects & Workshops"
+        | "Others"
     }
     CompositeTypes: {
       [_ in never]: never
