@@ -4,8 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
+import { X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 type FeedbackData = {
   name: string;
@@ -15,6 +17,7 @@ type FeedbackData = {
 }
 
 export const FeedbackForm = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<FeedbackData>({
     name: "",
@@ -28,7 +31,6 @@ export const FeedbackForm = () => {
     setLoading(true);
 
     try {
-      // Type assertion to any to bypass strict typing
       const { error } = await supabase
         .from('feedback')
         .insert([formData as any]);
@@ -36,7 +38,7 @@ export const FeedbackForm = () => {
       if (error) throw error;
 
       toast.success("Feedback submitted successfully!");
-      setFormData({ name: "", identifier: "", subject: "", message: "" });
+      navigate('/');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to submit feedback");
     } finally {
@@ -44,11 +46,25 @@ export const FeedbackForm = () => {
     }
   };
 
+  const handleClose = () => {
+    navigate('/');
+  };
+
   return (
     <div className="container max-w-2xl mx-auto py-8 px-4">
       <Card>
         <CardHeader>
-          <CardTitle>Submit Feedback</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle>Submit Feedback</CardTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleClose}
+              className="h-8 w-8"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

@@ -1,34 +1,35 @@
-
 import { Navigation } from "@/components/Navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GraduationCap, School, Shield, MessageSquare } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const Index = () => {
+  const navigate = useNavigate();
+
   const sections = [
     {
       title: "Student",
       icon: GraduationCap,
       description: "Access your courses, track progress, and achieve your goals",
-      link: "/student"
+      onClick: () => window.location.href = "https://cec-aiml.vercel.app/"
     },
     {
       title: "Teacher",
       icon: School,
       description: "Manage your classes and monitor student performance",
-      link: "/teacher"
+      onClick: () => navigate("/teacher")
     },
     {
       title: "Admin",
       icon: Shield,
       description: "Oversee system operations and user management",
-      link: "/admin"
+      onClick: () => navigate("/admin")
     },
     {
       title: "Feedback",
       icon: MessageSquare,
       description: "Share your thoughts and help us improve",
-      link: "/feedback"
+      onClick: () => navigate("/feedback")
     }
   ];
 
@@ -53,10 +54,10 @@ const Index = () => {
         <div className="container mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {sections.map((section) => (
-              <Link 
-                key={section.title} 
-                to={section.link}
-                className="transform transition-all duration-300 hover:-translate-y-2"
+              <div
+                key={section.title}
+                onClick={section.onClick}
+                className="transform transition-all duration-300 hover:-translate-y-2 cursor-pointer"
               >
                 <Card className="h-[300px] shadow-lg hover:shadow-xl transition-shadow">
                   <CardHeader className="text-center pb-2">
@@ -67,7 +68,7 @@ const Index = () => {
                     <p className="text-gray-600 text-center text-lg">{section.description}</p>
                   </CardContent>
                 </Card>
-              </Link>
+              </div>
             ))}
           </div>
         </div>
