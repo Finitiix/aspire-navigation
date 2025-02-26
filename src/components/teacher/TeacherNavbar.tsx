@@ -38,40 +38,42 @@ export const TeacherNavbar = () => {
   };
 
   return (
-    <Card className="fixed top-0 left-0 right-0 z-50 rounded-b-lg shadow-md bg-primary">
-      <div className="container mx-auto px-4">
-        <div className="h-20 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {teacherDetails?.profile_pic_url ? (
-              <img
-                src={teacherDetails.profile_pic_url}
-                alt="Profile"
-                className="w-12 h-12 rounded-full bg-white"
-              />
-            ) : (
-              <UserCircle2 className="w-12 h-12 text-white" />
-            )}
-            <div>
-              <p className="text-lg font-medium text-white">{teacherDetails?.full_name}</p>
-              <p className="text-sm text-white/80">
-                {teacherDetails?.eid} | {teacherDetails?.designation}
-              </p>
+    <div className="h-20 pt-4 px-4">
+      <Card className="fixed top-4 left-4 right-4 z-50 rounded-lg shadow-md bg-primary">
+        <div className="container mx-auto px-6">
+          <div className="h-20 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {teacherDetails?.profile_pic_url ? (
+                <img
+                  src={teacherDetails.profile_pic_url}
+                  alt="Profile"
+                  className="w-12 h-12 rounded-full bg-white"
+                />
+              ) : (
+                <UserCircle2 className="w-12 h-12 text-white" />
+              )}
+              <div>
+                <p className="text-lg font-medium text-white">{teacherDetails?.full_name}</p>
+                <p className="text-sm text-white/80">
+                  {teacherDetails?.eid} | {teacherDetails?.designation}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <ChangePasswordDialog />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-2 text-white"
+                onClick={handleSignOut}
+              >
+                <LogOut className="w-5 h-5" />
+                Sign Out
+              </Button>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <ChangePasswordDialog />
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex items-center gap-2 text-white"
-              onClick={handleSignOut}
-            >
-              <LogOut className="w-5 h-5" />
-              Sign Out
-            </Button>
-          </div>
         </div>
-      </div>
-    </Card>
+      </Card>
+    </div>
   );
 };

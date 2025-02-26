@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,25 +45,27 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation */}
-      <Card className="fixed top-0 left-0 right-0 z-50 rounded-b-lg shadow-md bg-primary">
-        <div className="container mx-auto px-4">
-          <div className="h-20 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <UserCircle2 className="w-12 h-12 text-white" />
-              <p className="text-xl font-medium text-white">Admin Dashboard</p>
+      <div className="h-20 pt-4 px-4">
+        <Card className="fixed top-4 left-4 right-4 z-50 rounded-lg shadow-md bg-primary">
+          <div className="container mx-auto px-6">
+            <div className="h-20 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <UserCircle2 className="w-12 h-12 text-white" />
+                <p className="text-xl font-medium text-white">Admin Dashboard</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-2 text-white"
+                onClick={handleSignOut}
+              >
+                <LogOut className="w-5 h-5" />
+                Sign Out
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex items-center gap-2 text-white"
-              onClick={handleSignOut}
-            >
-              <LogOut className="w-5 h-5" />
-              Sign Out
-            </Button>
           </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
 
       {/* Main Content */}
       <div className="container mx-auto px-4 pt-24 pb-24">
