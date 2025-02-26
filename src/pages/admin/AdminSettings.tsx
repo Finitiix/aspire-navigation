@@ -3,8 +3,17 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 
+type FeedbackItem = {
+  id: string;
+  name: string;
+  identifier: string;
+  subject: string;
+  message: string;
+  created_at: string;
+}
+
 const AdminSettings = () => {
-  const [feedback, setFeedback] = useState<any[]>([]);
+  const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
 
   useEffect(() => {
     const fetchFeedback = async () => {
@@ -13,7 +22,7 @@ const AdminSettings = () => {
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (data) setFeedback(data);
+      if (data) setFeedback(data as FeedbackItem[]);
     };
 
     fetchFeedback();
