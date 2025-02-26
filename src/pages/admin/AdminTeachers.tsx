@@ -31,22 +31,7 @@ const AdminTeachers = () => {
       if (data) setTeachers(data);
     };
 
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('teacher-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'teacher_details' },
-        (payload) => {
-          fetchTeachers(); // Refresh data when changes occur
-        }
-      )
-      .subscribe();
-
     fetchTeachers();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   return (

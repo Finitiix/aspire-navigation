@@ -20,21 +20,6 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchData();
-
-    // Set up real-time subscription for achievements
-    const channel = supabase
-      .channel('achievement-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'achievements' },
-        (payload) => {
-          fetchData(); // Refresh data when changes occur
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   const fetchData = async () => {
