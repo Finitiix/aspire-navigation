@@ -14,7 +14,7 @@ export type Database = {
           achievement_type: Database["public"]["Enums"]["achievement_type"]
           collaboration: string | null
           created_at: string | null
-          date_achieved: string
+          date_achieved: string | null
           id: string
           issuing_organization: string
           link_url: string | null
@@ -31,7 +31,7 @@ export type Database = {
           achievement_type: Database["public"]["Enums"]["achievement_type"]
           collaboration?: string | null
           created_at?: string | null
-          date_achieved: string
+          date_achieved?: string | null
           id?: string
           issuing_organization: string
           link_url?: string | null
@@ -48,7 +48,7 @@ export type Database = {
           achievement_type?: Database["public"]["Enums"]["achievement_type"]
           collaboration?: string | null
           created_at?: string | null
-          date_achieved?: string
+          date_achieved?: string | null
           id?: string
           issuing_organization?: string
           link_url?: string | null
