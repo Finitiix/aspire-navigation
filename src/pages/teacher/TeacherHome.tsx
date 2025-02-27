@@ -65,11 +65,11 @@ const TeacherHome = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Important Messages Section */}
-        <Card className="h-72">
+        <Card className="h-80"> {/* Increased height slightly */}
           <CardHeader>
             <CardTitle>Important Messages</CardTitle>
           </CardHeader>
-          <CardContent className="overflow-y-auto h-[calc(100%-4rem)]">
+          <CardContent className="h-64 overflow-y-auto"> {/* Scroll inside card */}
             {messages.important_messages.length > 0 ? (
               messages.important_messages.map((msg, index) => (
                 <p key={index} className="text-gray-600 mb-2">{msg.message}</p>
@@ -80,7 +80,7 @@ const TeacherHome = () => {
           </CardContent>
         </Card>
 
-        {/* Add Achievement Button */}
+        {/* Add Achievement Button & Important Details */}
         <div className="flex flex-col gap-6">
           <Dialog open={isAchievementFormOpen} onOpenChange={setIsAchievementFormOpen}>
             <DialogTrigger asChild>
@@ -97,12 +97,12 @@ const TeacherHome = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Important Details Section */}
-          <Card className="h-36">
+          {/* Important Details Section (Scrollable) */}
+          <Card className="h-48"> {/* Increased height slightly */}
             <CardHeader>
               <CardTitle>Important Details</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="h-32 overflow-y-auto"> {/* Scroll inside card */}
               {messages.important_details.length > 0 ? (
                 messages.important_details.map((detail, index) => (
                   <p key={index} className="text-gray-600 mb-2">{detail.detail}</p>
@@ -160,4 +160,3 @@ const TeacherHome = () => {
 };
 
 export default TeacherHome;
-
