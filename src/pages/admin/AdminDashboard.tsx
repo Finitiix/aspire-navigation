@@ -1,104 +1,105 @@
-
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, UserCircle2, Home, Users, Settings, CheckCircle, XCircle } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Trash } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const AdminDashboard = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
   const [feedback, setFeedback] = useState<any[]>([]);
-  const [achievements, setAchievements] = useState<any[]>([]);
   const [stats, setStats] = useState({
     totalTeachers: 0,
     pendingAchievements: 0,
-    totalFeedback: 0
+    totalFeedback: 0,
   });
+
+  const [importantMessages, setImportantMessages] = useState<string[]>([]);
+  const [importantDetails, setImportantDetails] = useState<string[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [newDetail, setNewDetail] = useState("");
 
   useEffect(() => {
     fetchData();
+    fetchImportantMessages();
+    fetchImportantDetails();
   }, []);
 
   const fetchData = async () => {
     try {
-      // Fetch feedback with created_at
       const { data: feedbackData } = await supabase
-        .from('feedback')
-        .select('*, created_at')
-        .order('created_at', { ascending: false });
-      
-      // Fetch pending achievements
-      const { data: achievementsData } = await supabase
-        .from('achievements')
-        .select(`
-          *,
-          teacher_details(full_name, department)
-        `)
-        .eq('status', 'Pending Approval')
-        .order('created_at', { ascending: false });
+        .from("feedback")
+        .select("name, message, created_at")
+        .order("created_at", { ascending: false });
 
-      // Fetch stats
-      const { data: teacherData, count: teacherCount } = await supabase
-        .from('teacher_details')
-        .select('*', { count: 'exact' });
+      const { count: teacherCount } = await supabase
+        .from("teacher_details")
+        .select("*", { count: "exact" });
 
       const { count: pendingCount } = await supabase
-        .from('achievements')
-        .select('*', { count: 'exact' })
-        .eq('status', 'Pending Approval');
+        .from("achievements")
+        .select("*", { count: "exact" })
+        .eq("status", "Pending Approval");
 
       const { count: feedbackCount } = await supabase
-        .from('feedback')
-        .select('*', { count: 'exact' });
+        .from("feedback")
+        .select("*", { count: "exact" });
 
       setFeedback(feedbackData || []);
-      setAchievements(achievementsData || []);
       setStats({
         totalTeachers: teacherCount || 0,
         pendingAchievements: pendingCount || 0,
-        totalFeedback: feedbackCount || 0
+        totalFeedback: feedbackCount || 0,
       });
-
-      console.log('Teacher Data:', teacherData); // Debug log
     } catch (error) {
-      console.error('Error fetching data:', error);
-      toast.error('Error loading dashboard data');
+      console.error("Error fetching data:", error);
+      toast.error("Error loading dashboard data");
     }
   };
 
-  const handleAchievementAction = async (id: string, status: 'Approved' | 'Rejected') => {
-    try {
-      const { error } = await supabase
-        .from('achievements')
-        .update({ status })
-        .eq('id', id);
+  const fetchImportantMessages = async () => {
+    const { data } = await supabase.from("important_messages").select("*");
+    setImportantMessages(data?.map((msg) => ({ id: msg.id, text: msg.message })) || []);
+  };
 
-      if (error) throw error;
+  const fetchImportantDetails = async () => {
+    const { data } = await supabase.from("important_details").select("*");
+    setImportantDetails(data?.map((detail) => ({ id: detail.id, text: detail.detail })) || []);
+  };
 
-      toast.success(`Achievement ${status.toLowerCase()} successfully`);
-      fetchData(); // Refresh data after update
-    } catch (error) {
-      console.error('Error updating achievement:', error);
-      toast.error('Error updating achievement status');
+  const addMessage = async () => {
+    if (!newMessage.trim()) return;
+    const { data, error } = await supabase.from("important_messages").insert([{ message: newMessage }]);
+    if (error) {
+      toast.error("Error adding message");
+    } else {
+      setImportantMessages([...importantMessages, { id: data[0].id, text: newMessage }]);
+      setNewMessage("");
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const addDetail = async () => {
+    if (!newDetail.trim()) return;
+    const { data, error } = await supabase.from("important_details").insert([{ detail: newDetail }]);
+    if (error) {
+      toast.error("Error adding detail");
+    } else {
+      setImportantDetails([...importantDetails, { id: data[0].id, text: newDetail }]);
+      setNewDetail("");
+    }
+  };
+
+  const deleteMessage = async (id: string) => {
+    await supabase.from("important_messages").delete().eq("id", id);
+    setImportantMessages(importantMessages.filter((msg) => msg.id !== id));
+  };
+
+  const deleteDetail = async (id: string) => {
+    await supabase.from("important_details").delete().eq("id", id);
+    setImportantDetails(importantDetails.filter((detail) => detail.id !== id));
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Content */}
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="p-6">
@@ -115,75 +116,72 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Pending Achievements */}
-        <Card className="mb-8">
-          <div className="p-6">
-            <h2 className="text-xl font-bold mb-4">Pending Achievements</h2>
-            <div className="space-y-4">
-              {achievements.map((achievement) => (
-                <Card key={achievement.id} className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-medium">{achievement.title}</h3>
-                      <p className="text-sm text-gray-600">
-                        By {achievement.teacher_details?.full_name} ({achievement.teacher_details?.department})
-                      </p>
-                      <p className="text-sm text-gray-600">Type: {achievement.achievement_type}</p>
-                      <p className="text-sm text-gray-600">Date: {formatDate(achievement.date_achieved)}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-green-600"
-                        onClick={() => handleAchievementAction(achievement.id, 'Approved')}
-                      >
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-red-600"
-                        onClick={() => handleAchievementAction(achievement.id, 'Rejected')}
-                      >
-                        <XCircle className="w-4 h-4 mr-1" />
-                        Reject
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
+        {/* Important Messages & Details Side by Side */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Card className="p-6">
+            <h2 className="text-xl font-bold mb-4">Important Messages</h2>
+            <div className="space-y-4 max-h-60 overflow-y-auto">
+              {importantMessages.map((msg) => (
+                <div key={msg.id} className="flex justify-between items-center bg-gray-100 p-2 rounded">
+                  <p>{msg.text}</p>
+                  <Button size="sm" variant="ghost" onClick={() => deleteMessage(msg.id)}>
+                    <Trash className="w-4 h-4 text-red-500" />
+                  </Button>
+                </div>
               ))}
-              {achievements.length === 0 && (
-                <p className="text-gray-600 text-center py-4">No pending achievements</p>
-              )}
             </div>
-          </div>
-        </Card>
+            <div className="mt-4 flex">
+              <input
+                type="text"
+                className="border p-2 w-full rounded"
+                placeholder="Add a message..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+              />
+              <Button onClick={addMessage} className="ml-2">Add</Button>
+            </div>
+          </Card>
 
-        {/* Feedback Messages */}
-        <Card>
-          <div className="p-6">
-            <h2 className="text-xl font-bold mb-4">Recent Feedback</h2>
-            <div className="space-y-4">
-              {feedback.map((item) => (
-                <Card key={item.id} className="p-4">
-                  <div>
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-medium">{item.subject}</h3>
-                      <span className="text-sm text-gray-600">{formatDate(item.created_at)}</span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">
-                      From: {item.name} ({item.identifier})
-                    </p>
-                    <p className="text-gray-700">{item.message}</p>
-                  </div>
-                </Card>
+          <Card className="p-6">
+            <h2 className="text-xl font-bold mb-4">Important Details</h2>
+            <div className="space-y-4 max-h-60 overflow-y-auto">
+              {importantDetails.map((detail) => (
+                <div key={detail.id} className="flex justify-between items-center bg-gray-100 p-2 rounded">
+                  <p>{detail.text}</p>
+                  <Button size="sm" variant="ghost" onClick={() => deleteDetail(detail.id)}>
+                    <Trash className="w-4 h-4 text-red-500" />
+                  </Button>
+                </div>
               ))}
-              {feedback.length === 0 && (
-                <p className="text-gray-600 text-center py-4">No feedback messages</p>
-              )}
             </div>
+            <div className="mt-4 flex">
+              <input
+                type="text"
+                className="border p-2 w-full rounded"
+                placeholder="Add a detail..."
+                value={newDetail}
+                onChange={(e) => setNewDetail(e.target.value)}
+              />
+              <Button onClick={addDetail} className="ml-2">Add</Button>
+            </div>
+          </Card>
+        </div>
+
+        {/* Recent Feedback Section */}
+        <Card className="p-6 mb-8">
+          <h2 className="text-xl font-bold mb-4">Recent Feedback</h2>
+          <div className="space-y-4 max-h-60 overflow-y-auto">
+            {feedback.length > 0 ? (
+              feedback.map((item, index) => (
+                <div key={index} className="bg-gray-100 p-3 rounded">
+                  <p className="font-semibold">{item.name}</p>
+                  <p className="text-gray-700">{item.message}</p>
+                  <p className="text-xs text-gray-500">{new Date(item.created_at).toLocaleString()}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500">No feedback available.</p>
+            )}
           </div>
         </Card>
       </div>
