@@ -1,16 +1,16 @@
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 
 type TeacherDetail = {
-  profile_pic_url: string;
+  profile_pic_url: string | null;
   full_name: string;
   eid: string;
   designation: string;
-  cabin_no: string;
-  block: string;
-  timetable_url: string;
+  cabin_no: string | null;
+  block: string | null;
+  timetable_url: string | null;
 };
 
 const TeacherDetails = () => {
@@ -36,7 +36,7 @@ const TeacherDetails = () => {
             <CardContent className="p-6">
               <div className="flex flex-col items-center text-center">
                 <img
-                  src={teacher.profile_pic_url}
+                  src={teacher.profile_pic_url || '/placeholder.svg'}
                   alt={teacher.full_name}
                   className="w-24 h-24 rounded-full mb-4 object-cover"
                 />

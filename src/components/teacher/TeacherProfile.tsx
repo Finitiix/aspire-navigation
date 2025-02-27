@@ -6,11 +6,29 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Edit } from "lucide-react";
 
+type TeacherProfileData = {
+  full_name: string;
+  designation: string;
+  department: string;
+  mobile_number: string;
+  email_id: string;
+  gender: string;
+  date_of_joining: string;
+  highest_qualification: string;
+  skills: string;
+  address: string;
+  cabin_no: string;
+  eid: string;
+  profile_pic_url: string;
+  block: string;
+  timetable_url: string;
+};
+
 export const TeacherProfile = () => {
   const [teacherDetails, setTeacherDetails] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<TeacherProfileData>({
     full_name: "",
     designation: "",
     department: "",
@@ -46,6 +64,8 @@ export const TeacherProfile = () => {
         setFormData({
           ...data,
           skills: data.skills ? data.skills.join(", ") : "",
+          block: data.block || "",
+          timetable_url: data.timetable_url || "",
         });
       }
     }

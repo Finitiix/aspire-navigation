@@ -140,6 +140,7 @@ export type Database = {
       teacher_details: {
         Row: {
           address: string | null
+          block: string | null
           cabin_no: string | null
           created_at: string | null
           date_of_joining: string
@@ -154,10 +155,12 @@ export type Database = {
           mobile_number: string
           profile_pic_url: string | null
           skills: string[] | null
+          timetable_url: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
+          block?: string | null
           cabin_no?: string | null
           created_at?: string | null
           date_of_joining: string
@@ -172,10 +175,12 @@ export type Database = {
           mobile_number: string
           profile_pic_url?: string | null
           skills?: string[] | null
+          timetable_url?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
+          block?: string | null
           cabin_no?: string | null
           created_at?: string | null
           date_of_joining?: string
@@ -190,6 +195,7 @@ export type Database = {
           mobile_number?: string
           profile_pic_url?: string | null
           skills?: string[] | null
+          timetable_url?: string | null
           updated_at?: string | null
         }
         Relationships: []

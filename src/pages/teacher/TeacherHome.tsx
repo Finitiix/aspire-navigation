@@ -2,17 +2,20 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AchievementForm } from "@/components/teacher/AchievementForm";
 import { supabase } from "@/integrations/supabase/client";
 
+type AdminMessages = {
+  important_message: string | null;
+  important_details: string | null;
+};
+
 const TeacherHome = () => {
-  const navigate = useNavigate();
-  const [messages, setMessages] = useState({
-    important: '',
-    details: ''
+  const [messages, setMessages] = useState<AdminMessages>({
+    important_message: '',
+    important_details: ''
   });
   const [isAchievementFormOpen, setIsAchievementFormOpen] = useState(false);
 
@@ -22,13 +25,11 @@ const TeacherHome = () => {
       try {
         const { data } = await supabase
           .from('admin_messages')
-          .select('*')
+          .select('important_message, important_details')
           .single();
+        
         if (data) {
-          setMessages({
-            important: data.important_message || '',
-            details: data.important_details || ''
-          });
+          setMessages(data);
         }
       } catch (error) {
         console.error('Error fetching messages:', error);
@@ -47,7 +48,7 @@ const TeacherHome = () => {
             <CardTitle>Important Messages</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-600">{messages.important || 'No important messages'}</p>
+            <p className="text-gray-600">{messages.important_message || 'No important messages'}</p>
           </CardContent>
         </Card>
 
@@ -76,7 +77,7 @@ const TeacherHome = () => {
           <CardTitle>Important Details</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-gray-600">{messages.details || 'No important details'}</p>
+          <p className="text-gray-600">{messages.important_details || 'No important details'}</p>
         </CardContent>
       </Card>
 
