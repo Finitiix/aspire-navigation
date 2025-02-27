@@ -5,21 +5,32 @@ import { Trash } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+// Helper to ensure the URL includes a protocol and has no extra whitespace
+const ensureValidUrl = (url: string) => {
+  const trimmed = url.trim();
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+  return trimmed;
+};
+
 const AdminDashboard = () => {
   const [feedback, setFeedback] = useState<any[]>([]);
+  const [pendingAchievements, setPendingAchievements] = useState<any[]>([]);
   const [stats, setStats] = useState({
     totalTeachers: 0,
     pendingAchievements: 0,
     totalFeedback: 0,
   });
 
-  const [importantMessages, setImportantMessages] = useState<string[]>([]);
-  const [importantDetails, setImportantDetails] = useState<string[]>([]);
+  const [importantMessages, setImportantMessages] = useState<any[]>([]);
+  const [importantDetails, setImportantDetails] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [newDetail, setNewDetail] = useState("");
 
   useEffect(() => {
     fetchData();
+    fetchPendingAchievements();
     fetchImportantMessages();
     fetchImportantDetails();
   }, []);
@@ -53,6 +64,55 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Error loading dashboard data");
+    }
+  };
+
+  // Fetch achievements with joined teacher details
+  const fetchPendingAchievements = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("achievements")
+        .select(`
+          achievement_type,
+          title,
+          issuing_organization,
+          link_url,
+          teacher_details (
+            full_name,
+            eid,
+            designation
+          )
+        `)
+        .eq("status", "Pending Approval")
+        .order("created_at", { ascending: false });
+      if (error) {
+        console.error("Error fetching achievements:", error);
+        toast.error("Error fetching pending achievements");
+      } else {
+        setPendingAchievements(data || []);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("Error fetching pending achievements");
+    }
+  };
+
+  const handleApproval = async (id: string, status: "Approved" | "Rejected") => {
+    try {
+      const { error } = await supabase
+        .from("achievements")
+        .update({ status })
+        .eq("id", id);
+      if (error) {
+        toast.error("Error updating achievement status");
+      } else {
+        toast.success(`Achievement ${status}`);
+        // Refresh the achievements list and stats
+        fetchPendingAchievements();
+        fetchData();
+      }
+    } catch (error) {
+      toast.error("Error processing request");
     }
   };
 
@@ -101,6 +161,7 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
+        {/* Stats Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="p-6">
             <h3 className="text-lg font-medium mb-2">Total Teachers</h3>
@@ -115,6 +176,68 @@ const AdminDashboard = () => {
             <p className="text-3xl font-bold text-primary">{stats.totalFeedback}</p>
           </Card>
         </div>
+
+        {/* Approval Requests for Achievements Section */}
+        <Card className="p-6 mb-8">
+          <h2 className="text-xl font-bold mb-4">Approval Requests for Achievements</h2>
+          <div className="space-y-4">
+            {pendingAchievements.length > 0 ? (
+              pendingAchievements.map((achievement) => {
+                const teacher = achievement.teacher_details;
+                return (
+                  <div key={achievement.id} className="relative bg-white shadow rounded p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-bold text-lg">
+                          {teacher?.full_name || "Unknown Teacher"}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          EID: {teacher?.eid} | {teacher?.designation}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end space-y-1">
+                        <Button
+                          variant="success"
+                          size="sm"
+                          className="bg-green-500 hover:bg-green-600 text-white"
+                          onClick={() => handleApproval(achievement.id, "Approved")}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="bg-red-500 hover:bg-red-600 text-white"
+                          onClick={() => handleApproval(achievement.id, "Rejected")}
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <p className="text-md font-medium">
+                        {achievement.achievement_type} - {achievement.title}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Issuing Organization: {achievement.issuing_organization}
+                      </p>
+                      <a
+                        href={ensureValidUrl(achievement.link_url)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 underline"
+                      >
+                        View Uploaded Link
+                      </a>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-gray-500">No pending achievements.</p>
+            )}
+          </div>
+        </Card>
 
         {/* Important Messages & Details Side by Side */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -138,7 +261,9 @@ const AdminDashboard = () => {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
               />
-              <Button onClick={addMessage} className="ml-2">Add</Button>
+              <Button onClick={addMessage} className="ml-2">
+                Add
+              </Button>
             </div>
           </Card>
 
@@ -162,7 +287,9 @@ const AdminDashboard = () => {
                 value={newDetail}
                 onChange={(e) => setNewDetail(e.target.value)}
               />
-              <Button onClick={addDetail} className="ml-2">Add</Button>
+              <Button onClick={addDetail} className="ml-2">
+                Add
+              </Button>
             </div>
           </Card>
         </div>
