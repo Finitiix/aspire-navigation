@@ -1,7 +1,9 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { X, Search } from "lucide-react";
 
 type TeacherDetail = {
   profile_pic_url: string | null;
@@ -15,6 +17,8 @@ type TeacherDetail = {
 
 const TeacherDetails = () => {
   const [teachers, setTeachers] = useState<TeacherDetail[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTimetable, setSelectedTimetable] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTeachers = async () => {
@@ -28,10 +32,32 @@ const TeacherDetails = () => {
     fetchTeachers();
   }, []);
 
+  const filteredTeachers = teachers.filter((teacher) =>
+    teacher.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    teacher.eid.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    teacher.designation.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (teacher.cabin_no && teacher.cabin_no.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (teacher.block && teacher.block.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Search Box */}
+      <div className="mb-6 flex justify-center">
+        <div className="relative w-full max-w-lg"> {/* Responsive Width */}
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+          <Input
+            type="text"
+            placeholder="Search by name, EID, designation..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 w-full"
+          />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {teachers.map((teacher) => (
+        {filteredTeachers.map((teacher) => (
           <Card key={teacher.eid}>
             <CardContent className="p-6">
               <div className="flex flex-col items-center text-center">
@@ -50,20 +76,40 @@ const TeacherDetails = () => {
                   <p className="text-gray-600 mb-1">Block: {teacher.block}</p>
                 )}
                 {teacher.timetable_url && (
-                  <a
-                    href={teacher.timetable_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline mt-2"
+                  <Button
+                    variant="default"
+                    className="mt-3"
+                    onClick={() => setSelectedTimetable(teacher.timetable_url)}
                   >
                     View Timetable
-                  </a>
+                  </Button>
                 )}
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* Timetable Modal */}
+      {selectedTimetable && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="relative bg-white p-4 rounded-lg max-w-4xl max-h-[90vh] overflow-auto">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-2"
+              onClick={() => setSelectedTimetable(null)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <img
+              src={selectedTimetable}
+              alt="Timetable"
+              className="max-w-full h-auto"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
