@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -48,7 +47,7 @@ type FormData = {
   remarks: string;
 };
 
-export const AchievementForm = () => {
+export const AchievementForm = ({ onSuccess }: { onSuccess?: () => void }) => {
   const [loading, setLoading] = useState(false);
   const [teacherDetails, setTeacherDetails] = useState<any>(null);
   const [date, setDate] = useState<Date>();
@@ -104,6 +103,7 @@ export const AchievementForm = () => {
       if (error) throw error;
 
       toast.success("Achievement submitted successfully!");
+      
       // Reset form
       setFormData({
         achievement_type: '',
@@ -116,6 +116,10 @@ export const AchievementForm = () => {
         remarks: '',
       });
       setDate(undefined);
+      
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to submit achievement");
     } finally {

@@ -24,6 +24,8 @@ export const TeacherProfile = () => {
     cabin_no: "",
     profile_pic_url: "",
     eid: "",
+    block: "",
+    timetable_url: "",
   });
 
   useEffect(() => {
@@ -223,6 +225,25 @@ export const TeacherProfile = () => {
                     onChange={handleChange}
                   />
                 </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Block</label>
+                  <Input
+                    name="block"
+                    value={formData.block}
+                    onChange={handleChange}
+                    placeholder="Optional"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Timetable URL</label>
+                  <Input
+                    type="url"
+                    name="timetable_url"
+                    value={formData.timetable_url}
+                    onChange={handleChange}
+                    placeholder="Optional - Link to your timetable"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Address</label>
@@ -276,6 +297,26 @@ export const TeacherProfile = () => {
                   <p><span className="text-gray-600">Date of Joining:</span> {teacherDetails.date_of_joining}</p>
                   <p><span className="text-gray-600">Qualification:</span> {teacherDetails.highest_qualification}</p>
                   <p><span className="text-gray-600">Skills:</span> {teacherDetails.skills?.join(", ") || 'N/A'}</p>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-semibold">Block</h3>
+                  <p>{teacherDetails?.block || 'Not specified'}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="font-semibold">Timetable</h3>
+                  {teacherDetails?.timetable_url ? (
+                    <a
+                      href={teacherDetails.timetable_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      View Timetable
+                    </a>
+                  ) : (
+                    <p>Not specified</p>
+                  )}
                 </div>
               </div>
             </div>
