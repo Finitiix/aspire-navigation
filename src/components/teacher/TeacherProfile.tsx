@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Edit } from "lucide-react";
+import { Edit, X } from "lucide-react";
 
 type TeacherProfileData = {
   full_name: string;
@@ -45,6 +45,7 @@ export const TeacherProfile = () => {
     block: "",
     timetable_url: "",
   });
+  const [showTimetable, setShowTimetable] = useState(false);
 
   useEffect(() => {
     fetchTeacherDetails();
@@ -326,14 +327,13 @@ export const TeacherProfile = () => {
                 <div className="space-y-2">
                   <h3 className="font-semibold">Timetable</h3>
                   {teacherDetails?.timetable_url ? (
-                    <a
-                      href={teacherDetails.timetable_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
+                    <Button
+                      variant="link"
+                      className="text-primary hover:underline p-0"
+                      onClick={() => setShowTimetable(true)}
                     >
                       View Timetable
-                    </a>
+                    </Button>
                   ) : (
                     <p>Not specified</p>
                   )}
@@ -343,6 +343,27 @@ export const TeacherProfile = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Timetable Modal */}
+      {showTimetable && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="relative bg-white p-4 rounded-lg max-w-4xl max-h-[90vh] overflow-auto">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-2"
+              onClick={() => setShowTimetable(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <img
+              src={teacherDetails.timetable_url}
+              alt="Timetable"
+              className="max-w-full h-auto"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
