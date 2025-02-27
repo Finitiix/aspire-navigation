@@ -43,7 +43,7 @@ const TeacherAchievements = () => {
 
         {/* Add Achievement Button */}
         <Button 
-          className="bg-[#ea384c] hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg text-lg w-full"
+          className="bg-[#ea384c] hover:bg-red-700 text-white font-bold py-10 px-6 rounded-lg text-lg w-full"
           onClick={() => setShowForm(true)}
         >
           Add Achievement
