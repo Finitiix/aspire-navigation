@@ -1,9 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AchievementForm } from "@/components/teacher/AchievementForm";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
+import { AchievementForm } from "@/components/teacher/AchievementForm";
 
 type Achievement = {
   id: string;
@@ -17,6 +18,7 @@ type Achievement = {
 
 const TeacherAchievements = () => {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [showForm, setShowForm] = useState(false); // Control modal visibility
 
   useEffect(() => {
     const fetchAchievements = async () => {
@@ -38,8 +40,16 @@ const TeacherAchievements = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="grid gap-8">
-        <AchievementForm />
-        
+
+        {/* Add Achievement Button */}
+        <Button 
+          className="bg-red-600 hover:bg-red-700 text-white font-bold py-10 px-6 rounded-lg text-lg w-full"
+          onClick={() => setShowForm(true)}
+        >
+          Add Achievement
+        </Button>
+
+        {/* Achievement History */}
         <Card>
           <CardHeader>
             <CardTitle>Achievement History</CardTitle>
@@ -79,6 +89,29 @@ const TeacherAchievements = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Popup Form (Modal) */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="relative bg-white p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* Close Button */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute right-3 top-3"
+              onClick={() => setShowForm(false)}
+            >
+              <X className="h-5 w-5" />
+            </Button>
+            
+            {/* Scrollable Form */}
+            <h2 className="text-xl font-bold mb-4">Add Achievement</h2>
+            <div className="max-h-[70vh] overflow-y-auto">
+              <AchievementForm />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
