@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Index from "./pages/Index";
 import Teacher from "./pages/Teacher";
 import Admin from "./pages/Admin";
+import AdminAuth from "./pages/AdminAuth";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import TeacherHome from "./pages/teacher/TeacherHome";
 import TeacherProfile from "./pages/teacher/TeacherProfile";
@@ -25,15 +26,13 @@ const RouteGuard = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
 
   useEffect(() => {
-    const handleBackButton = async () => {
-      if (location.pathname.includes('dashboard')) {
-        await supabase.auth.signOut();
-        navigate('/');
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user && location.pathname.includes('admin-dashboard')) {
+        navigate('/admin-auth');
       }
     };
-
-    window.addEventListener('popstate', handleBackButton);
-    return () => window.removeEventListener('popstate', handleBackButton);
+    checkAuth();
   }, [navigate, location]);
 
   return <>{children}</>;
@@ -51,7 +50,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/teacher" element={<Teacher />} />
-            <Route path="/admin" element={<Admin />} />
+            <Route path="/admin-auth" element={<AdminAuth />} />
             <Route path="/feedback" element={<FeedbackForm />} />
             <Route path="/teacher-dashboard" element={<TeacherDashboard />}>
               <Route index element={<TeacherHome />} />
@@ -59,8 +58,8 @@ const App = () => (
               <Route path="achievements" element={<TeacherAchievements />} />
               <Route path="details" element={<TeacherDetails />} />
             </Route>
-            <Route path="/admin-dashboard" element={<AdminDashboard />}>
-              <Route index element={<AdminTeachers />} />
+            <Route path="/admin-dashboard" element={<Admin />}>
+              <Route index element={<AdminDashboard />} />
               <Route path="teachers" element={<AdminTeachers />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>

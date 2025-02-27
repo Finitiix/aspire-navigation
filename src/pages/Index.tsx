@@ -23,7 +23,7 @@ const Index = () => {
       title: "Admin",
       icon: Shield,
       description: "Oversee system operations and user management",
-      onClick: () => navigate("/admin")
+      onClick: () => navigate("/admin-auth")
     },
     {
       title: "Feedback",
