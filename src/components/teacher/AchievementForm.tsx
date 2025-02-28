@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -97,7 +98,10 @@ export const AchievementForm = ({ onSuccess }: { onSuccess?: () => void }) => {
           link_url: formData.link_url || null,
           quantity: formData.quantity ? parseInt(formData.quantity) : null,
           collaboration: formData.collaboration || null,
-          remarks: formData.remarks || null
+          remarks: formData.remarks || null,
+          teacher_name: teacherDetails.full_name,
+          teacher_eid: teacherDetails.eid,
+          teacher_department: teacherDetails.department
         });
 
       if (error) throw error;
@@ -130,7 +134,7 @@ export const AchievementForm = ({ onSuccess }: { onSuccess?: () => void }) => {
   const showQuantityField = ['Research & Publications', 'Book Published', 'Patents & Grants'].includes(formData.achievement_type);
 
   return (
-    <Card>
+    <Card className="animate-fadeIn">
       <CardHeader>
         <CardTitle>Add New Achievement</CardTitle>
       </CardHeader>
@@ -233,9 +237,8 @@ export const AchievementForm = ({ onSuccess }: { onSuccess?: () => void }) => {
           </div>
           
           <div className="space-y-2">
-            <label className="text-sm font-medium">Link *</label>
+            <label className="text-sm font-medium">Link</label>
             <Input
-              required
               type="url"
               value={formData.link_url}
               onChange={(e) => setFormData(prev => ({ ...prev, link_url: e.target.value }))}
@@ -261,7 +264,11 @@ export const AchievementForm = ({ onSuccess }: { onSuccess?: () => void }) => {
             />
           </div>
           
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button 
+            type="submit" 
+            className="w-full bg-gradient-to-r from-red-500 to-red-400 hover:from-red-600 hover:to-red-500 transition-all duration-300 transform hover:scale-[1.02]" 
+            disabled={loading}
+          >
             {loading ? "Submitting..." : "Submit Achievement"}
           </Button>
         </form>

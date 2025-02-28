@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, Award } from "lucide-react";
 import { AchievementForm } from "@/components/teacher/AchievementForm";
 
 type Achievement = {
@@ -38,26 +39,32 @@ const TeacherAchievements = () => {
   }, []);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 animate-fadeIn">
       <div className="grid gap-8">
 
         {/* Add Achievement Button */}
         <Button 
-          className="bg-[#ea384c] hover:bg-red-700 text-white font-bold py-10 px-6 rounded-lg text-lg w-full"
+          className="bg-gradient-to-r from-red-500 to-red-400 hover:from-red-600 hover:to-red-500 text-white font-bold py-10 px-6 rounded-full text-lg w-full transform hover:scale-[1.02] transition-all duration-300 shadow-md"
           onClick={() => setShowForm(true)}
         >
+          <Award className="w-6 h-6 mr-3" />
           Add Achievement
         </Button>
 
         {/* Achievement History */}
-        <Card>
+        <Card className="hover:shadow-md transition-all duration-300">
           <CardHeader>
-            <CardTitle>Achievement History</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <div className="bg-red-100 p-1.5 rounded-full">
+                <Award className="w-5 h-5 text-red-500" />
+              </div>
+              Achievement History
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {achievements.map((achievement) => (
-                <Card key={achievement.id} className="p-4">
+                <Card key={achievement.id} className="p-4 hover:shadow-md transition-all duration-300">
                   <div className="space-y-2">
                     <div className="flex justify-between items-start">
                       <div>
@@ -92,7 +99,7 @@ const TeacherAchievements = () => {
 
       {/* Popup Form (Modal) */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn">
           <div className="relative bg-white p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             {/* Close Button */}
             <Button 
