@@ -1,54 +1,71 @@
 
-import { Home, Award, FileText, User } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Home, BookOpen, Award, User, Menu } from "lucide-react";
+import { Button } from "../ui/button";
 
 export const TeacherBottomNav = () => {
+  const navigate = useNavigate();
   const location = useLocation();
+  const path = location.pathname;
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (route: string) => {
+    return path === route;
+  };
+
+  const activeClasses = "bg-red-100 text-red-500";
+  const inactiveClasses = "text-gray-500 hover:text-red-500 hover:bg-gray-100";
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t">
-      <div className="container mx-auto px-4">
-        <div className="h-20 flex items-center justify-around">
-          <Link
-            to="/teacher-dashboard"
-            className={`flex flex-col items-center ${
-              isActive("/teacher-dashboard") ? "text-primary" : "text-gray-600"
-            }`}
-          >
-            <Home className="w-7 h-7" />
-            <span className="text-sm mt-1">Home</span>
-          </Link>
-          <Link
-            to="/teacher-dashboard/achievements"
-            className={`flex flex-col items-center ${
-              isActive("/teacher-dashboard/achievements") ? "text-primary" : "text-gray-600"
-            }`}
-          >
-            <Award className="w-7 h-7" />
-            <span className="text-sm mt-1">Achievements</span>
-          </Link>
-          <Link
-            to="/teacher-dashboard/details"
-            className={`flex flex-col items-center ${
-              isActive("/teacher-dashboard/details") ? "text-primary" : "text-gray-600"
-            }`}
-          >
-            <FileText className="w-7 h-7" />
-            <span className="text-sm mt-1">Details</span>
-          </Link>
-          <Link
-            to="/teacher-dashboard/profile"
-            className={`flex flex-col items-center ${
-              isActive("/teacher-dashboard/profile") ? "text-primary" : "text-gray-600"
-            }`}
-          >
-            <User className="w-7 h-7" />
-            <span className="text-sm mt-1">Profile</span>
-          </Link>
-        </div>
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-2 px-4 z-50">
+      <div className="container mx-auto flex justify-around items-center">
+        <Button
+          variant="ghost"
+          size="lg"
+          className={`flex flex-col items-center rounded-full p-2 ${
+            isActive("/teacher-dashboard") ? activeClasses : inactiveClasses
+          } transition-all duration-200`}
+          onClick={() => navigate("/teacher-dashboard")}
+        >
+          <Home className="w-6 h-6 mb-1" />
+          <span className="text-xs">Home</span>
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="lg"
+          className={`flex flex-col items-center rounded-full p-2 ${
+            isActive("/teacher-dashboard/details") ? activeClasses : inactiveClasses
+          } transition-all duration-200`}
+          onClick={() => navigate("/teacher-dashboard/details")}
+        >
+          <BookOpen className="w-6 h-6 mb-1" />
+          <span className="text-xs">Faculty</span>
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="lg"
+          className={`flex flex-col items-center rounded-full p-2 ${
+            isActive("/teacher-dashboard/achievements") ? activeClasses : inactiveClasses
+          } transition-all duration-200`}
+          onClick={() => navigate("/teacher-dashboard/achievements")}
+        >
+          <Award className="w-6 h-6 mb-1" />
+          <span className="text-xs">Achievements</span>
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="lg"
+          className={`flex flex-col items-center rounded-full p-2 ${
+            isActive("/teacher-dashboard/profile") ? activeClasses : inactiveClasses
+          } transition-all duration-200`}
+          onClick={() => navigate("/teacher-dashboard/profile")}
+        >
+          <User className="w-6 h-6 mb-1" />
+          <span className="text-xs">Profile</span>
+        </Button>
       </div>
-    </nav>
+    </div>
   );
 };

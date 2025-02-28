@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Award, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AchievementForm } from "@/components/teacher/AchievementForm";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,17 +63,25 @@ const TeacherHome = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 animate-fadeIn">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Important Messages Section */}
-        <Card className="h-80"> {/* Increased height slightly */}
+        <Card className="h-80 hover:shadow-lg transition-all duration-300"> {/* Increased height slightly */}
           <CardHeader>
-            <CardTitle>Important Messages</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <div className="bg-red-100 p-1.5 rounded-full">
+                <Clock className="w-5 h-5 text-red-500" />
+              </div>
+              Important Messages
+            </CardTitle>
           </CardHeader>
           <CardContent className="h-64 overflow-y-auto"> {/* Scroll inside card */}
             {messages.important_messages.length > 0 ? (
-              messages.important_messages.map((msg, index) => (
-                <p key={index} className="text-gray-600 mb-2">{msg.message}</p>
+              messages.important_messages.map((msg: any, index) => (
+                <div key={index} className="flex items-start gap-2 mb-3 leading-relaxed">
+                  <div className="min-w-6 text-gray-400">•</div>
+                  <p className="text-gray-600">{msg.message}</p>
+                </div>
               ))
             ) : (
               <p className="text-gray-600">No important messages</p>
@@ -84,8 +93,8 @@ const TeacherHome = () => {
         <div className="flex flex-col gap-6">
           <Dialog open={isAchievementFormOpen} onOpenChange={setIsAchievementFormOpen}>
             <DialogTrigger asChild>
-              <Button className="w-full h-32 bg-red-500 hover:bg-red-600">
-                <Plus className="w-6 h-6 mr-2" />
+              <Button className="w-full h-32 bg-red-500 hover:bg-red-600 rounded-full transform hover:scale-[1.02] transition-all duration-300">
+                <Award className="w-6 h-6 mr-2" />
                 Add Achievement
               </Button>
             </DialogTrigger>
@@ -98,14 +107,22 @@ const TeacherHome = () => {
           </Dialog>
 
           {/* Important Details Section (Scrollable) */}
-          <Card className="h-48"> {/* Increased height slightly */}
+          <Card className="h-48 hover:shadow-lg transition-all duration-300"> {/* Increased height slightly */}
             <CardHeader>
-              <CardTitle>Important Details</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <div className="bg-red-100 p-1.5 rounded-full">
+                  <Clock className="w-5 h-5 text-red-500" />
+                </div>
+                Important Details
+              </CardTitle>
             </CardHeader>
             <CardContent className="h-32 overflow-y-auto"> {/* Scroll inside card */}
               {messages.important_details.length > 0 ? (
-                messages.important_details.map((detail, index) => (
-                  <p key={index} className="text-gray-600 mb-2">{detail.detail}</p>
+                messages.important_details.map((detail: any, index) => (
+                  <div key={index} className="flex items-start gap-2 mb-3 leading-relaxed">
+                    <div className="min-w-6 text-gray-400">•</div>
+                    <p className="text-gray-600">{detail.detail}</p>
+                  </div>
                 ))
               ) : (
                 <p className="text-gray-600">No important details</p>
@@ -116,16 +133,20 @@ const TeacherHome = () => {
       </div>
 
       {/* Timetable Section */}
-      <Card className="h-40">
+      <Card className="hover:shadow-md transition-all duration-300">
         <CardHeader>
-          <CardTitle>My Timetable</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <div className="bg-red-100 p-1.5 rounded-full">
+              <Clock className="w-5 h-5 text-red-500" />
+            </div>
+            My Timetable
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex justify-center items-center">
           {teacherDetails?.timetable_url ? (
             <Button
-              style={{ backgroundColor: "#ea384c", color: "#fff" }}
+              className="w-full bg-gradient-to-r from-red-500 to-red-400 hover:from-red-600 hover:to-red-500 hover:shadow-md transition-all duration-300"
               onClick={() => setShowTimetable(true)}
-              className="w-full"
             >
               View Timetable
             </Button>

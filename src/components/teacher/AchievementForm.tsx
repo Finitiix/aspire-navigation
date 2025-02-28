@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 type AchievementType = 
   | "Research & Publications"
@@ -50,7 +52,7 @@ type FormData = {
 export const AchievementForm = ({ onSuccess }: { onSuccess?: () => void }) => {
   const [loading, setLoading] = useState(false);
   const [teacherDetails, setTeacherDetails] = useState<any>(null);
-  const [date, setDate] = useState<Date>();
+  const [date, setDate] = useState<Date | undefined>(undefined);
 
   const [formData, setFormData] = useState<FormData>({
     achievement_type: '',
@@ -65,14 +67,18 @@ export const AchievementForm = ({ onSuccess }: { onSuccess?: () => void }) => {
 
   useEffect(() => {
     const fetchTeacherDetails = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase
-          .from('teacher_details')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        setTeacherDetails(data);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data } = await supabase
+            .from('teacher_details')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          setTeacherDetails(data);
+        }
+      } catch (error) {
+        console.error("Error fetching teacher details:", error);
       }
     };
 
@@ -81,7 +87,10 @@ export const AchievementForm = ({ onSuccess }: { onSuccess?: () => void }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!date || !teacherDetails || !formData.achievement_type) return;
+    if (!date || !teacherDetails || !formData.achievement_type) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -97,7 +106,10 @@ export const AchievementForm = ({ onSuccess }: { onSuccess?: () => void }) => {
           link_url: formData.link_url || null,
           quantity: formData.quantity ? parseInt(formData.quantity) : null,
           collaboration: formData.collaboration || null,
-          remarks: formData.remarks || null
+          remarks: formData.remarks || null,
+          teacher_name: teacherDetails.full_name,
+          teacher_eid: teacherDetails.eid,
+          teacher_department: teacherDetails.department
         });
 
       if (error) throw error;
@@ -130,7 +142,7 @@ export const AchievementForm = ({ onSuccess }: { onSuccess?: () => void }) => {
   const showQuantityField = ['Research & Publications', 'Book Published', 'Patents & Grants'].includes(formData.achievement_type);
 
   return (
-    <Card>
+    <Card className="animate-fadeIn">
       <CardHeader>
         <CardTitle>Add New Achievement</CardTitle>
       </CardHeader>
@@ -154,7 +166,6 @@ export const AchievementForm = ({ onSuccess }: { onSuccess?: () => void }) => {
           <div className="space-y-2">
             <label className="text-sm font-medium">Achievement Type *</label>
             <Select
-              required
               value={formData.achievement_type}
               onValueChange={(value: AchievementType) => setFormData(prev => ({ ...prev, achievement_type: value }))}
             >
@@ -198,7 +209,10 @@ export const AchievementForm = ({ onSuccess }: { onSuccess?: () => void }) => {
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className={`w-full justify-start text-left font-normal ${!date && "text-muted-foreground"}`}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
+                  )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {date ? format(date, "PPP") : "Pick a date"}
@@ -233,9 +247,8 @@ export const AchievementForm = ({ onSuccess }: { onSuccess?: () => void }) => {
           </div>
           
           <div className="space-y-2">
-            <label className="text-sm font-medium">Link *</label>
+            <label className="text-sm font-medium">Link</label>
             <Input
-              required
               type="url"
               value={formData.link_url}
               onChange={(e) => setFormData(prev => ({ ...prev, link_url: e.target.value }))}
@@ -261,7 +274,11 @@ export const AchievementForm = ({ onSuccess }: { onSuccess?: () => void }) => {
             />
           </div>
           
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button 
+            type="submit" 
+            className="w-full bg-gradient-to-r from-red-500 to-red-400 hover:from-red-600 hover:to-red-500 transition-all duration-300" 
+            disabled={loading}
+          >
             {loading ? "Submitting..." : "Submit Achievement"}
           </Button>
         </form>
