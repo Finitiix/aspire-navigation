@@ -1,65 +1,74 @@
 
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as SonnerToaster } from "sonner";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import Index from "./pages/Index";
+import Teacher from "./pages/Teacher";
+import Admin from "./pages/Admin";
+import AdminAuth from "./pages/AdminAuth";
+import TeacherDashboard from "./pages/teacher/TeacherDashboard";
+import TeacherHome from "./pages/teacher/TeacherHome";
+import TeacherProfile from "./pages/teacher/TeacherProfile";
+import TeacherAchievements from "./pages/teacher/TeacherAchievements";
+import TeacherDetails from "./pages/teacher/TeacherDetails";
+import NotFound from "./pages/NotFound";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminTeachers from "./pages/admin/AdminTeachers";
+import AdminSettings from "./pages/admin/AdminSettings";
+import { FeedbackForm } from "./components/FeedbackForm";
 
-// Layouts
-const Admin = lazy(() => import("@/pages/Admin"));
-const Teacher = lazy(() => import("@/pages/Teacher"));
+const RouteGuard = ({ children }: { children: React.ReactNode }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
 
-// Home / Auth
-const Index = lazy(() => import("@/pages/Index"));
-const AuthPage = lazy(() => import("@/components/AuthPage"));
-const NotFound = lazy(() => import("@/pages/NotFound"));
-const AdminAuth = lazy(() => import("@/pages/AdminAuth"));
-const FeedbackForm = lazy(() => import("@/components/FeedbackForm"));
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user && location.pathname.includes('admin-dashboard')) {
+        navigate('/admin-auth');
+      }
+    };
+    checkAuth();
+  }, [navigate, location]);
 
-// Admin Pages
-const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
-const AdminTeachers = lazy(() => import("@/pages/admin/AdminTeachers"));
-const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
-const AdminFeedback = lazy(() => import("@/pages/admin/AdminFeedback"));
+  return <>{children}</>;
+};
 
-// Teacher Pages
-const TeacherHome = lazy(() => import("@/pages/teacher/TeacherHome"));
-const TeacherAchievements = lazy(() => import("@/pages/teacher/TeacherAchievements"));
-const TeacherDetails = lazy(() => import("@/pages/teacher/TeacherDetails"));
-const TeacherProfile = lazy(() => import("@/pages/teacher/TeacherProfile"));
+const queryClient = new QueryClient();
 
-function App() {
-  return (
-    <BrowserRouter>
-      <Suspense fallback={<div>Loading...</div>}>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/feedback" element={<FeedbackForm />} />
-          <Route path="/teacher-auth" element={<AuthPage role="teacher" />} />
-          <Route path="/admin-auth" element={<AdminAuth />} />
-
-          {/* Admin Routes */}
-          <Route path="/admin-dashboard" element={<Admin />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="teachers" element={<AdminTeachers />} />
-            <Route path="settings" element={<AdminSettings />} />
-            <Route path="feedback" element={<AdminFeedback />} />
-          </Route>
-
-          {/* Teacher Routes */}
-          <Route path="/teacher-dashboard" element={<Teacher />}>
-            <Route index element={<TeacherHome />} />
-            <Route path="achievements" element={<TeacherAchievements />} />
-            <Route path="details" element={<TeacherDetails />} />
-            <Route path="profile" element={<TeacherProfile />} />
-          </Route>
-
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Suspense>
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
       <Toaster />
-      <SonnerToaster position="top-right" />
-    </BrowserRouter>
-  );
-}
+      <Sonner />
+      <BrowserRouter>
+        <RouteGuard>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/teacher" element={<Teacher />} />
+            <Route path="/admin-auth" element={<AdminAuth />} />
+            <Route path="/feedback" element={<FeedbackForm />} />
+            <Route path="/teacher-dashboard" element={<TeacherDashboard />}>
+              <Route index element={<TeacherHome />} />
+              <Route path="profile" element={<TeacherProfile />} />
+              <Route path="achievements" element={<TeacherAchievements />} />
+              <Route path="details" element={<TeacherDetails />} />
+            </Route>
+            <Route path="/admin-dashboard" element={<Admin />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="teachers" element={<AdminTeachers />} />
+              <Route path="settings" element={<AdminSettings />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </RouteGuard>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;
