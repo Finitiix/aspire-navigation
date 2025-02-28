@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Award, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AchievementForm } from "@/components/teacher/AchievementForm";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,15 +65,23 @@ const TeacherHome = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {/* Important Messages Section */}
-        <Card className="h-80"> {/* Increased height slightly */}
+        {/* Important Messages Section - With shadow and hover effect */}
+        <Card className="h-80 shadow-md hover:shadow-lg transition-all duration-300">
           <CardHeader>
-            <CardTitle>Important Messages</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <div className="bg-red-100 p-1.5 rounded-full">
+                <Clock className="w-5 h-5 text-red-500" />
+              </div>
+              Important Messages
+            </CardTitle>
           </CardHeader>
-          <CardContent className="h-64 overflow-y-auto"> {/* Scroll inside card */}
+          <CardContent className="h-64 overflow-y-auto">
             {messages.important_messages.length > 0 ? (
-              messages.important_messages.map((msg, index) => (
-                <p key={index} className="text-gray-600 mb-2">{msg.message}</p>
+              messages.important_messages.map((msg: any, index) => (
+                <div key={index} className="flex items-start gap-3 mb-4 leading-relaxed">
+                  <div className="min-w-6 text-gray-500">•</div>
+                  <p className="text-gray-700 leading-relaxed">{msg.message}</p>
+                </div>
               ))
             ) : (
               <p className="text-gray-600">No important messages</p>
@@ -80,12 +89,12 @@ const TeacherHome = () => {
           </CardContent>
         </Card>
 
-        {/* Add Achievement Button & Important Details */}
+        {/* Add Achievement Button & Important Details - Ensuring same height */}
         <div className="flex flex-col gap-6">
           <Dialog open={isAchievementFormOpen} onOpenChange={setIsAchievementFormOpen}>
             <DialogTrigger asChild>
-              <Button className="w-full h-32 bg-red-500 hover:bg-red-600">
-                <Plus className="w-6 h-6 mr-2" />
+              <Button className="w-full h-32 bg-[#ea384c] hover:bg-red-700 text-white font-bold rounded-lg text-lg">
+                <Award className="w-6 h-6 mr-2" />
                 Add Achievement
               </Button>
             </DialogTrigger>
@@ -97,15 +106,23 @@ const TeacherHome = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Important Details Section (Scrollable) */}
-          <Card className="h-48"> {/* Increased height slightly */}
+          {/* Important Details Section - With exact same height as the message section minus achievement button */}
+          <Card className="h-48 shadow-md hover:shadow-lg transition-all duration-300">
             <CardHeader>
-              <CardTitle>Important Details</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <div className="bg-red-100 p-1.5 rounded-full">
+                  <Clock className="w-5 h-5 text-red-500" />
+                </div>
+                Important Details
+              </CardTitle>
             </CardHeader>
-            <CardContent className="h-32 overflow-y-auto"> {/* Scroll inside card */}
+            <CardContent className="h-32 overflow-y-auto">
               {messages.important_details.length > 0 ? (
-                messages.important_details.map((detail, index) => (
-                  <p key={index} className="text-gray-600 mb-2">{detail.detail}</p>
+                messages.important_details.map((detail: any, index) => (
+                  <div key={index} className="flex items-start gap-3 mb-4 leading-relaxed">
+                    <div className="min-w-6 text-gray-500">•</div>
+                    <p className="text-gray-700 leading-relaxed">{detail.detail}</p>
+                  </div>
                 ))
               ) : (
                 <p className="text-gray-600">No important details</p>
@@ -116,16 +133,20 @@ const TeacherHome = () => {
       </div>
 
       {/* Timetable Section */}
-      <Card className="h-40">
+      <Card className="shadow-md hover:shadow-lg transition-all duration-300 mt-8">
         <CardHeader>
-          <CardTitle>My Timetable</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <div className="bg-red-100 p-1.5 rounded-full">
+              <Clock className="w-5 h-5 text-red-500" />
+            </div>
+            My Timetable
+          </CardTitle>
         </CardHeader>
-        <CardContent className="flex justify-center items-center">
+        <CardContent className="flex justify-center items-center p-6">
           {teacherDetails?.timetable_url ? (
             <Button
-              style={{ backgroundColor: "#ea384c", color: "#fff" }}
+              className="w-full bg-[#ea384c] hover:bg-red-700 text-white font-bold py-3 rounded-lg"
               onClick={() => setShowTimetable(true)}
-              className="w-full"
             >
               View Timetable
             </Button>

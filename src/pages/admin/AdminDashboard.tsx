@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,7 @@ const AdminDashboard = () => {
       const { data, error } = await supabase
         .from("achievements")
         .select(`
+          id,
           achievement_type,
           title,
           issuing_organization,
@@ -118,20 +120,20 @@ const AdminDashboard = () => {
 
   const fetchImportantMessages = async () => {
     const { data } = await supabase.from("important_messages").select("*");
-    setImportantMessages(data?.map((msg) => ({ id: msg.id, text: msg.message })) || []);
+    setImportantMessages(data ? data.map((msg) => ({ id: msg.id, text: msg.message })) : []);
   };
 
   const fetchImportantDetails = async () => {
     const { data } = await supabase.from("important_details").select("*");
-    setImportantDetails(data?.map((detail) => ({ id: detail.id, text: detail.detail })) || []);
+    setImportantDetails(data ? data.map((detail) => ({ id: detail.id, text: detail.detail })) : []);
   };
 
   const addMessage = async () => {
     if (!newMessage.trim()) return;
-    const { data, error } = await supabase.from("important_messages").insert([{ message: newMessage }]);
+    const { data, error } = await supabase.from("important_messages").insert([{ message: newMessage }]).select();
     if (error) {
       toast.error("Error adding message");
-    } else {
+    } else if (data && data.length > 0) {
       setImportantMessages([...importantMessages, { id: data[0].id, text: newMessage }]);
       setNewMessage("");
     }
@@ -139,10 +141,10 @@ const AdminDashboard = () => {
 
   const addDetail = async () => {
     if (!newDetail.trim()) return;
-    const { data, error } = await supabase.from("important_details").insert([{ detail: newDetail }]);
+    const { data, error } = await supabase.from("important_details").insert([{ detail: newDetail }]).select();
     if (error) {
       toast.error("Error adding detail");
-    } else {
+    } else if (data && data.length > 0) {
       setImportantDetails([...importantDetails, { id: data[0].id, text: newDetail }]);
       setNewDetail("");
     }
@@ -197,7 +199,7 @@ const AdminDashboard = () => {
                       </div>
                       <div className="flex flex-col items-end space-y-1">
                         <Button
-                          variant="success"
+                          variant="outline"
                           size="sm"
                           className="bg-green-500 hover:bg-green-600 text-white"
                           onClick={() => handleApproval(achievement.id, "Approved")}
@@ -207,7 +209,6 @@ const AdminDashboard = () => {
                         <Button
                           variant="destructive"
                           size="sm"
-                          className="bg-red-500 hover:bg-red-600 text-white"
                           onClick={() => handleApproval(achievement.id, "Rejected")}
                         >
                           Reject
@@ -221,14 +222,16 @@ const AdminDashboard = () => {
                       <p className="text-sm text-gray-600">
                         Issuing Organization: {achievement.issuing_organization}
                       </p>
-                      <a
-                        href={ensureValidUrl(achievement.link_url)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 underline"
-                      >
-                        View Uploaded Link
-                      </a>
+                      {achievement.link_url && (
+                        <a
+                          href={ensureValidUrl(achievement.link_url)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-500 underline"
+                        >
+                          View Uploaded Link
+                        </a>
+                      )}
                     </div>
                   </div>
                 );
