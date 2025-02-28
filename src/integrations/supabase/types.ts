@@ -14,14 +14,14 @@ export type Database = {
           achievement_type: Database["public"]["Enums"]["achievement_type"]
           collaboration: string | null
           created_at: string | null
-          date_achieved: string
+          date_achieved: string | null
           id: string
           issuing_organization: string
           link_url: string | null
           quantity: number | null
           related_field: string | null
           remarks: string | null
-          status: Database["public"]["Enums"]["achievement_status"] | null
+          status: string | null
           submitted_at: string | null
           teacher_id: string
           title: string
@@ -31,14 +31,14 @@ export type Database = {
           achievement_type: Database["public"]["Enums"]["achievement_type"]
           collaboration?: string | null
           created_at?: string | null
-          date_achieved: string
+          date_achieved?: string | null
           id?: string
           issuing_organization: string
           link_url?: string | null
           quantity?: number | null
           related_field?: string | null
           remarks?: string | null
-          status?: Database["public"]["Enums"]["achievement_status"] | null
+          status?: string | null
           submitted_at?: string | null
           teacher_id: string
           title: string
@@ -48,14 +48,14 @@ export type Database = {
           achievement_type?: Database["public"]["Enums"]["achievement_type"]
           collaboration?: string | null
           created_at?: string | null
-          date_achieved?: string
+          date_achieved?: string | null
           id?: string
           issuing_organization?: string
           link_url?: string | null
           quantity?: number | null
           related_field?: string | null
           remarks?: string | null
-          status?: Database["public"]["Enums"]["achievement_status"] | null
+          status?: string | null
           submitted_at?: string | null
           teacher_id?: string
           title?: string
@@ -70,30 +70,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      admin_messages: {
-        Row: {
-          created_at: string | null
-          id: string
-          important_details: string | null
-          important_message: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          important_details?: string | null
-          important_message?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          important_details?: string | null
-          important_message?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
       }
       departments: {
         Row: {
@@ -137,42 +113,6 @@ export type Database = {
           message?: string
           name?: string
           subject?: string
-        }
-        Relationships: []
-      }
-      important_details: {
-        Row: {
-          created_at: string | null
-          detail: string
-          id: string
-        }
-        Insert: {
-          created_at?: string | null
-          detail: string
-          id?: string
-        }
-        Update: {
-          created_at?: string | null
-          detail?: string
-          id?: string
-        }
-        Relationships: []
-      }
-      important_messages: {
-        Row: {
-          created_at: string | null
-          id: string
-          message: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          message: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          message?: string
         }
         Relationships: []
       }
@@ -265,13 +205,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      [_ in never]: never
     }
     Enums: {
-      achievement_status: "Pending Approval" | "Approved" | "Rejected"
       achievement_type:
         | "Research & Publications"
         | "Book Published"
