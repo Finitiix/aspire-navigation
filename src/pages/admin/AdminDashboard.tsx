@@ -73,12 +73,9 @@ const AdminDashboard = () => {
       const { data, error } = await supabase
         .from("achievements")
         .select(`
-          id,
-          achievement_type,
-          title,
-          issuing_organization,
-          link_url,
-          teacher_details (
+          *,
+          teacher_details!inner (
+            id,
             full_name,
             eid,
             designation
@@ -86,15 +83,14 @@ const AdminDashboard = () => {
         `)
         .eq("status", "Pending Approval")
         .order("created_at", { ascending: false });
-      if (error) {
-        console.error("Error fetching achievements:", error);
-        toast.error("Error fetching pending achievements");
-      } else {
-        setPendingAchievements(data || []);
-      }
+
+      if (error) throw error;
+      
+      setPendingAchievements(data || []);
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error fetching achievements:", error);
       toast.error("Error fetching pending achievements");
+      setPendingAchievements([]);
     }
   };
 
