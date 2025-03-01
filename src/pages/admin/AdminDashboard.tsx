@@ -72,7 +72,8 @@ const AdminDashboard = () => {
     try {
       const { data, error } = await supabase
         .from("achievements")
-        .select(`
+        .select(
+          `
           *,
           teacher_details!inner (
             id,
@@ -80,12 +81,13 @@ const AdminDashboard = () => {
             eid,
             designation
           )
-        `)
+          `
+        )
         .eq("status", "Pending Approval")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      
+
       setPendingAchievements(data || []);
     } catch (error) {
       console.error("Error fetching achievements:", error);
@@ -94,38 +96,48 @@ const AdminDashboard = () => {
     }
   };
 
+  // Updated approval handler with improved error logging
   const handleApproval = async (id: string, status: "Approved" | "Rejected") => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("achievements")
         .update({ status })
         .eq("id", id);
       if (error) {
-        toast.error("Error updating achievement status");
+        console.error("Update error:", error);
+        toast.error("Error updating achievement status: " + error.message);
       } else {
         toast.success(`Achievement ${status}`);
         // Refresh the achievements list and stats
         fetchPendingAchievements();
         fetchData();
       }
-    } catch (error) {
-      toast.error("Error processing request");
+    } catch (error: any) {
+      console.error("Exception in handleApproval:", error);
+      toast.error("Error processing request: " + error.message);
     }
   };
 
   const fetchImportantMessages = async () => {
     const { data } = await supabase.from("important_messages").select("*");
-    setImportantMessages(data ? data.map((msg) => ({ id: msg.id, text: msg.message })) : []);
+    setImportantMessages(
+      data ? data.map((msg) => ({ id: msg.id, text: msg.message })) : []
+    );
   };
 
   const fetchImportantDetails = async () => {
     const { data } = await supabase.from("important_details").select("*");
-    setImportantDetails(data ? data.map((detail) => ({ id: detail.id, text: detail.detail })) : []);
+    setImportantDetails(
+      data ? data.map((detail) => ({ id: detail.id, text: detail.detail })) : []
+    );
   };
 
   const addMessage = async () => {
     if (!newMessage.trim()) return;
-    const { data, error } = await supabase.from("important_messages").insert([{ message: newMessage }]).select();
+    const { data, error } = await supabase
+      .from("important_messages")
+      .insert([{ message: newMessage }])
+      .select();
     if (error) {
       toast.error("Error adding message");
     } else if (data && data.length > 0) {
@@ -136,7 +148,10 @@ const AdminDashboard = () => {
 
   const addDetail = async () => {
     if (!newDetail.trim()) return;
-    const { data, error } = await supabase.from("important_details").insert([{ detail: newDetail }]).select();
+    const { data, error } = await supabase
+      .from("important_details")
+      .insert([{ detail: newDetail }])
+      .select();
     if (error) {
       toast.error("Error adding detail");
     } else if (data && data.length > 0) {
@@ -153,15 +168,6 @@ const AdminDashboard = () => {
   const deleteDetail = async (id: string) => {
     await supabase.from("important_details").delete().eq("id", id);
     setImportantDetails(importantDetails.filter((detail) => detail.id !== id));
-  };
-
-  const ensureValidUrl = (url: string) => {
-    if (!url) return '';
-    const trimmed = url.trim();
-    if (!/^https?:\/\//i.test(trimmed)) {
-      return `https://${trimmed}`;
-    }
-    return trimmed;
   };
 
   return (
@@ -182,7 +188,7 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Approval Requests for Achievements Section - Improved with details and clickable links */}
+      {/* Approval Requests for Achievements Section */}
       <Card className="p-6 mb-8">
         <h2 className="text-xl font-bold mb-4">Approval Requests for Achievements</h2>
         <div className="space-y-4">
@@ -225,7 +231,6 @@ const AdminDashboard = () => {
                     <p className="text-sm text-gray-600 mt-1">
                       Issuing Organization: {achievement.issuing_organization || 'Not specified'}
                     </p>
-                    
                     {/* Detailed achievement information */}
                     <div className="mt-2 text-sm">
                       {achievement.achievement_type === 'Research & Publications' && (
@@ -236,7 +241,6 @@ const AdminDashboard = () => {
                           {achievement.research_area && <p>Research Areas: {achievement.research_area}</p>}
                         </div>
                       )}
-                      
                       {achievement.achievement_type === 'Patents & Grants' && (
                         <div className="mt-2 space-y-1">
                           {achievement.patents_count && <p>Patents: {achievement.patents_count}</p>}
@@ -244,7 +248,6 @@ const AdminDashboard = () => {
                         </div>
                       )}
                     </div>
-                    
                     {/* Display clickable links */}
                     <div className="mt-3 space-y-1">
                       {achievement.link_url && (
@@ -257,7 +260,6 @@ const AdminDashboard = () => {
                           View Uploaded Link <ExternalLink className="w-3 h-3 ml-1" />
                         </a>
                       )}
-                      
                       {achievement.scopus_id_link && (
                         <a
                           href={ensureValidUrl(achievement.scopus_id_link)}
@@ -268,7 +270,6 @@ const AdminDashboard = () => {
                           Scopus ID <ExternalLink className="w-3 h-3 ml-1" />
                         </a>
                       )}
-                      
                       {achievement.google_scholar_link && (
                         <a
                           href={ensureValidUrl(achievement.google_scholar_link)}
@@ -279,7 +280,6 @@ const AdminDashboard = () => {
                           Google Scholar <ExternalLink className="w-3 h-3 ml-1" />
                         </a>
                       )}
-                      
                       {achievement.patent_link && (
                         <a
                           href={ensureValidUrl(achievement.patent_link)}
@@ -290,7 +290,6 @@ const AdminDashboard = () => {
                           Patent Link <ExternalLink className="w-3 h-3 ml-1" />
                         </a>
                       )}
-                      
                       {achievement.book_drive_link && (
                         <a
                           href={ensureValidUrl(achievement.book_drive_link)}
