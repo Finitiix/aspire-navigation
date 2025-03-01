@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -364,7 +365,7 @@ const AdminTeachers = () => {
                                   <div>
                                     <p className="font-medium">{achievement.title}</p>
                                     <p className="text-sm text-gray-600">
-                                      {achievement.achievement_type} | {format(new Date(achievement.date_achieved), 'PPP')}
+                                      {achievement.achievement_type} | {new Date(achievement.date_achieved).toLocaleDateString()}
                                     </p>
                                   </div>
                                   <div className="flex items-center space-x-2">
