@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,8 +18,14 @@ import {
 } from "@/components/ui/select";
 import { Pencil, X, Check, ExternalLink, Download, Search, Filter } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { format } from "date-fns"; // Fixed import to avoid naming conflict
+import { format as dateFormat } from 'date-fns';
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type Achievement = {
   id: string;
@@ -42,229 +47,124 @@ type Teacher = {
   [key: string]: any; // For additional fields
 };
 
+interface TeacherState {
+  teachers: Teacher[];
+  loading: boolean;
+  error: string | null;
+  searchQuery: string;
+  departmentFilter: string;
+}
+
 const AdminTeachers = () => {
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [filteredTeachers, setFilteredTeachers] = useState<Teacher[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("");
-  const [departments, setDepartments] = useState<string[]>([]);
-  const [editingAchievement, setEditingAchievement] = useState<Achievement | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<TeacherState>({
+    teachers: [],
+    loading: false,
+    error: null,
+    searchQuery: '',
+    departmentFilter: 'all'
+  });
+
+  const fetchTeachers = async () => {
+    setState(prev => ({ ...prev, loading: true, error: null }));
+    try {
+      const { data: teachers, error } = await supabase
+        .from('teacher_details')
+        .select(`
+          *,
+          achievements (
+            id,
+            achievement_type,
+            title,
+            date_achieved,
+            status,
+            sci_papers,
+            scopus_papers,
+            ugc_papers,
+            patents_count,
+            research_area,
+            links
+          )
+        `);
+
+      if (error) throw error;
+      setState(prev => ({ ...prev, teachers: teachers || [], loading: false }));
+    } catch (error) {
+      setState(prev => ({ 
+        ...prev, 
+        error: 'Error fetching teachers data', 
+        loading: false 
+      }));
+    }
+  };
 
   useEffect(() => {
     fetchTeachers();
   }, []);
 
-  const fetchTeachers = async () => {
+  const handleEdit = async (teacherId: string, updatedData: Partial<Teacher>) => {
     try {
-      setLoading(true);
-      console.log("Fetching teachers data...");
-      
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('teacher_details')
-        .select(`
-          *,
-          achievements (*)
-        `);
-      
-      if (error) {
-        console.error("Error fetching teachers:", error);
-        toast.error("Failed to load teachers data");
-        setLoading(false);
-        return;
-      }
-      
-      console.log("Teachers data fetched:", data);
-      
-      if (data) {
-        setTeachers(data);
-        setFilteredTeachers(data);
-        
-        // Extract unique departments for filtering
-        const uniqueDepartments = Array.from(new Set(data.map(teacher => teacher.department)));
-        setDepartments(uniqueDepartments);
-      }
-      setLoading(false);
-    } catch (error) {
-      console.error("Exception when fetching teachers:", error);
-      toast.error("An unexpected error occurred");
-      setLoading(false);
-    }
-  };
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    applyFilters(query, departmentFilter);
-  };
-
-  const handleDepartmentFilter = (department: string) => {
-    setDepartmentFilter(department);
-    applyFilters(searchQuery, department);
-  };
-
-  const applyFilters = (query: string, department: string) => {
-    let filtered = [...teachers];
-    
-    if (query) {
-      const lowerQuery = query.toLowerCase();
-      filtered = filtered.filter(teacher => 
-        teacher.full_name.toLowerCase().includes(lowerQuery) ||
-        teacher.eid.toLowerCase().includes(lowerQuery)
-      );
-    }
-    
-    if (department) {
-      filtered = filtered.filter(teacher => teacher.department === department);
-    }
-    
-    setFilteredTeachers(filtered);
-  };
-
-  const updateAchievementStatus = async (achievementId: string, status: 'Approved' | 'Rejected' | 'Pending Approval') => {
-    try {
-      const { error } = await supabase
-        .from('achievements')
-        .update({ status })
-        .eq('id', achievementId);
+        .update(updatedData)
+        .eq('id', teacherId);
       
       if (error) throw error;
-      
-      // Update local state
-      const updatedTeachers = teachers.map(teacher => {
-        if (teacher.achievements && teacher.achievements.some(a => a.id === achievementId)) {
-          return {
-            ...teacher,
-            achievements: teacher.achievements.map(achievement => 
-              achievement.id === achievementId 
-                ? { ...achievement, status } 
-                : achievement
-            )
-          };
-        }
-        return teacher;
-      });
-      
-      setTeachers(updatedTeachers);
-      setFilteredTeachers(updatedTeachers);
-      toast.success(`Achievement ${status.toLowerCase()}`);
+      fetchTeachers();
     } catch (error) {
-      toast.error("Failed to update achievement status");
-      console.error(error);
+      console.error('Error updating teacher:', error);
     }
   };
 
-  const handleEditAchievement = async () => {
-    if (!editingAchievement) return;
-    
+  const handleDelete = async (teacherId: string) => {
     try {
       const { error } = await supabase
-        .from('achievements')
-        .update(editingAchievement)
-        .eq('id', editingAchievement.id);
+        .from('teacher_details')
+        .delete()
+        .eq('id', teacherId);
       
       if (error) throw error;
-      
-      // Update local state
-      const updatedTeachers = teachers.map(teacher => {
-        if (teacher.achievements && teacher.achievements.some(a => a.id === editingAchievement.id)) {
-          return {
-            ...teacher,
-            achievements: teacher.achievements.map(achievement => 
-              achievement.id === editingAchievement.id 
-                ? editingAchievement 
-                : achievement
-            )
-          };
-        }
-        return teacher;
-      });
-      
-      setTeachers(updatedTeachers);
-      setFilteredTeachers(updatedTeachers);
-      setIsEditDialogOpen(false);
-      setEditingAchievement(null);
-      toast.success("Achievement updated successfully");
+      fetchTeachers();
     } catch (error) {
-      toast.error("Failed to update achievement");
-      console.error(error);
+      console.error('Error deleting teacher:', error);
     }
-  };
-
-  const handleEditClick = (achievement: Achievement) => {
-    setEditingAchievement({ ...achievement });
-    setIsEditDialogOpen(true);
   };
 
   const exportTeacherData = (teacher: Teacher, format: string) => {
-    // This is a simplified example for CSV export
-    // For PDF and other formats, you would use libraries like jsPDF or docx
     if (format === 'csv') {
       const achievementsData = teacher.achievements?.map(a => {
         return {
           'Type': a.achievement_type,
           'Title': a.title,
-          'Date': a.date_achieved ? format(new Date(a.date_achieved), 'yyyy-MM-dd') : '',
+          'Date': a.date_achieved ? dateFormat(new Date(a.date_achieved), 'yyyy-MM-dd') : '',
           'Status': a.status,
           'SCI Papers': a.sci_papers || '',
           'Scopus Papers': a.scopus_papers || '',
           'UGC Papers': a.ugc_papers || '',
           'Patent Count': a.patents_count || '',
           'Research Area': a.research_area || '',
-          // Add more fields as needed
         };
       }) || [];
       
-      // Convert to CSV
       const headers = Object.keys(achievementsData[0] || {}).join(',');
       const rows = achievementsData.map(obj => Object.values(obj).join(',')).join('\n');
       const csv = `${headers}\n${rows}`;
       
-      // Create download link
       const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.setAttribute('hidden', '');
-      a.setAttribute('href', url);
-      a.setAttribute('download', `${teacher.eid}_achievements.csv`);
-      document.body.appendChild(a);
+      a.href = url;
+      a.download = `${teacher.eid}_achievements.csv`;
       a.click();
-      document.body.removeChild(a);
-      toast.success(`Exported ${teacher.full_name}'s data as CSV`);
-    } else {
-      toast.info(`Export as ${format.toUpperCase()} is not implemented yet`);
+      window.URL.revokeObjectURL(url);
     }
   };
 
-  const renderFieldValue = (value: any, isLink = false) => {
-    if (!value) return <span className="text-gray-400">Not provided</span>;
-    
-    if (isLink && typeof value === 'string' && value.startsWith('http')) {
-      return (
-        <a 
-          href={value} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-blue-600 hover:underline flex items-center"
-        >
-          {value.substring(0, 30)}... <ExternalLink className="h-3 w-3 ml-1" />
-        </a>
-      );
-    }
-    
-    return value;
-  };
-
-  const getStatusBadgeClass = (status: string) => {
-    switch(status) {
-      case 'Approved':
-        return 'bg-green-100 text-green-800';
-      case 'Rejected':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-yellow-100 text-yellow-800';
-    }
-  };
+  const filteredTeachers = state.teachers.filter(teacher => {
+    const matchesSearch = teacher.full_name.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
+                         teacher.eid.toLowerCase().includes(state.searchQuery.toLowerCase());
+    const matchesDepartment = state.departmentFilter === 'all' || teacher.department === state.departmentFilter;
+    return matchesSearch && matchesDepartment;
+  });
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -275,24 +175,27 @@ const AdminTeachers = () => {
           {/* Search and Filter Bar */}
           <div className="flex flex-col md:flex-row gap-4 mt-4">
             <div className="relative flex-grow">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <Input 
                 className="pl-10" 
                 placeholder="Search by name or EID..." 
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
+                value={state.searchQuery}
+                onChange={(e) => setState(prev => ({ ...prev, searchQuery: e.target.value }))}
               />
             </div>
             
             <div className="flex gap-2 items-center">
               <Filter className="h-4 w-4 text-gray-500" />
-              <Select value={departmentFilter} onValueChange={handleDepartmentFilter}>
+              <Select
+                value={state.departmentFilter}
+                onValueChange={(value) => setState(prev => ({ ...prev, departmentFilter: value }))}
+              >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Filter by department" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Departments</SelectItem>
-                  {departments.map((dept) => (
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {Array.from(new Set(state.teachers.map(teacher => teacher.department))).map((dept) => (
                     <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                   ))}
                 </SelectContent>
@@ -301,7 +204,7 @@ const AdminTeachers = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {state.loading ? (
             <div className="flex justify-center items-center py-8">
               <p>Loading teachers data...</p>
             </div>
@@ -393,7 +296,7 @@ const AdminTeachers = () => {
                                         </p>
                                       </div>
                                       <div className="flex items-center space-x-2">
-                                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadgeClass(achievement.status)}`}>
+                                        <span className={`px-2 py-1 text-xs rounded-full ${getBadgeClass(achievement.status)}`}>
                                           {achievement.status}
                                         </span>
                                         <Button 
