@@ -9,6 +9,119 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          achievement_type: string
+          awards_recognitions: string | null
+          book_chapters: string | null
+          book_details: string | null
+          book_drive_link: string | null
+          consultancy_services: string | null
+          created_at: string | null
+          date_achieved: string
+          funded_projects: string | null
+          general_remarks: string | null
+          google_scholar_link: string | null
+          id: string
+          patent_link: string | null
+          patents_count: string | null
+          patents_remarks: string | null
+          q_papers: string | null
+          research_area: string | null
+          research_collaboration: string | null
+          research_remarks: string | null
+          sci_papers: string | null
+          scopus_id_link: string | null
+          scopus_papers: string | null
+          startup_details: string | null
+          status: string
+          teacher_department: string
+          teacher_designation: string
+          teacher_eid: string
+          teacher_id: string
+          teacher_mobile: string
+          teacher_name: string
+          title: string
+          ugc_papers: string | null
+        }
+        Insert: {
+          achievement_type: string
+          awards_recognitions?: string | null
+          book_chapters?: string | null
+          book_details?: string | null
+          book_drive_link?: string | null
+          consultancy_services?: string | null
+          created_at?: string | null
+          date_achieved: string
+          funded_projects?: string | null
+          general_remarks?: string | null
+          google_scholar_link?: string | null
+          id?: string
+          patent_link?: string | null
+          patents_count?: string | null
+          patents_remarks?: string | null
+          q_papers?: string | null
+          research_area?: string | null
+          research_collaboration?: string | null
+          research_remarks?: string | null
+          sci_papers?: string | null
+          scopus_id_link?: string | null
+          scopus_papers?: string | null
+          startup_details?: string | null
+          status?: string
+          teacher_department: string
+          teacher_designation: string
+          teacher_eid: string
+          teacher_id: string
+          teacher_mobile: string
+          teacher_name: string
+          title: string
+          ugc_papers?: string | null
+        }
+        Update: {
+          achievement_type?: string
+          awards_recognitions?: string | null
+          book_chapters?: string | null
+          book_details?: string | null
+          book_drive_link?: string | null
+          consultancy_services?: string | null
+          created_at?: string | null
+          date_achieved?: string
+          funded_projects?: string | null
+          general_remarks?: string | null
+          google_scholar_link?: string | null
+          id?: string
+          patent_link?: string | null
+          patents_count?: string | null
+          patents_remarks?: string | null
+          q_papers?: string | null
+          research_area?: string | null
+          research_collaboration?: string | null
+          research_remarks?: string | null
+          sci_papers?: string | null
+          scopus_id_link?: string | null
+          scopus_papers?: string | null
+          startup_details?: string | null
+          status?: string
+          teacher_department?: string
+          teacher_designation?: string
+          teacher_eid?: string
+          teacher_id?: string
+          teacher_mobile?: string
+          teacher_name?: string
+          title?: string
+          ugc_papers?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "achievements_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_details"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departments: {
         Row: {
           created_at: string | null
