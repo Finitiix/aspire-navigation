@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,6 +18,7 @@ import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminTeachers from "./pages/admin/AdminTeachers";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminFeedback from "./pages/admin/AdminFeedback";
 import { FeedbackForm } from "./components/FeedbackForm";
 
 const RouteGuard = ({ children }: { children: React.ReactNode }) => {
@@ -40,35 +40,38 @@ const RouteGuard = ({ children }: { children: React.ReactNode }) => {
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <RouteGuard>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/teacher" element={<Teacher />} />
-            <Route path="/admin-auth" element={<AdminAuth />} />
-            <Route path="/feedback" element={<FeedbackForm />} />
-            <Route path="/teacher-dashboard" element={<TeacherDashboard />}>
-              <Route index element={<TeacherHome />} />
-              <Route path="profile" element={<TeacherProfile />} />
-              <Route path="achievements" element={<TeacherAchievements />} />
-              <Route path="details" element={<TeacherDetails />} />
-            </Route>
-            <Route path="/admin-dashboard" element={<Admin />}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="teachers" element={<AdminTeachers />} />
-              <Route path="settings" element={<AdminSettings />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </RouteGuard>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <RouteGuard>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/teacher" element={<Teacher />} />
+              <Route path="admin-auth" element={<AdminAuth />} />
+              <Route path="feedback" element={<FeedbackForm />} />
+              <Route path="/teacher-dashboard" element={<TeacherDashboard />}>
+                <Route index element={<TeacherHome />} />
+                <Route path="profile" element={<TeacherProfile />} />
+                <Route path="achievements" element={<TeacherAchievements />} />
+                <Route path="details" element={<TeacherDetails />} />
+              </Route>
+              <Route path="/admin-dashboard" element={<Admin />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="teachers" element={<AdminTeachers />} />
+                <Route path="feedback" element={<AdminFeedback />} />
+                <Route path="settings" element={<AdminSettings />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </RouteGuard>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;

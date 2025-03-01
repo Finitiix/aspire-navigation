@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { LogOut, UserCircle2, Home, Users, Settings } from "lucide-react";
+import { LogOut, UserCircle2, Home, Users, Settings, MessageSquare } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -88,16 +88,16 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top Navigation */}
-      <nav className="fixed top-0 left-0 right-0 bg-white border-b z-50">
-        <div className="container mx-auto px-4">
+      {/* Top Navigation - Updated with blue color and rounded edges */}
+      <nav className="fixed top-0 left-0 right-0 bg-[#1EAEDB] text-white border-b z-50">
+        <div className="container mx-auto px-4 py-2">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <Link to="/admin-dashboard" className="text-xl font-bold text-primary">
+              <Link to="/admin-dashboard" className="text-xl font-bold text-white">
                 Admin Panel
               </Link>
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-white text-[#1EAEDB] flex items-center justify-center">
                   <UserCircle2 className="w-5 h-5" />
                 </div>
                 <span>Welcome, {adminData?.name}!</span>
@@ -106,7 +106,7 @@ const Admin = () => {
             <div className="flex items-center space-x-2">
               <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline">Change Password</Button>
+                  <Button variant="outline" className="bg-white text-[#1EAEDB] hover:bg-gray-100">Change Password</Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
@@ -124,7 +124,7 @@ const Admin = () => {
                   </form>
                 </DialogContent>
               </Dialog>
-              <Button variant="ghost" onClick={handleSignOut}>
+              <Button variant="ghost" onClick={handleSignOut} className="text-white hover:bg-[#0FA0CE]">
                 <LogOut className="h-5 w-5" />
               </Button>
             </div>
@@ -132,19 +132,21 @@ const Admin = () => {
         </div>
       </nav>
 
-      {/* Main Content */}
-      <main className="pt-16 pb-20">
-        <Outlet />
+      {/* Main Content - Added margin for gap */}
+      <main className="pt-20 pb-20 px-4">
+        <Card className="rounded-lg overflow-hidden shadow-md mt-4 mx-4">
+          <Outlet />
+        </Card>
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t z-50">
+      {/* Bottom Navigation - Updated with blue color and added Feedback tab */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-[#1EAEDB] text-white border-t z-50">
         <div className="container mx-auto px-4">
           <div className="flex justify-around items-center h-16">
             <Link
               to="/admin-dashboard"
               className={`flex flex-col items-center ${
-                location.pathname === '/admin-dashboard' ? 'text-primary' : 'text-gray-500'
+                location.pathname === '/admin-dashboard' ? 'text-white font-bold' : 'text-gray-100'
               }`}
             >
               <Home className="h-5 w-5" />
@@ -153,16 +155,25 @@ const Admin = () => {
             <Link
               to="/admin-dashboard/teachers"
               className={`flex flex-col items-center ${
-                location.pathname === '/admin-dashboard/teachers' ? 'text-primary' : 'text-gray-500'
+                location.pathname === '/admin-dashboard/teachers' ? 'text-white font-bold' : 'text-gray-100'
               }`}
             >
               <Users className="h-5 w-5" />
               <span className="text-xs mt-1">Teachers</span>
             </Link>
             <Link
+              to="/admin-dashboard/feedback"
+              className={`flex flex-col items-center ${
+                location.pathname === '/admin-dashboard/feedback' ? 'text-white font-bold' : 'text-gray-100'
+              }`}
+            >
+              <MessageSquare className="h-5 w-5" />
+              <span className="text-xs mt-1">Feedback</span>
+            </Link>
+            <Link
               to="/admin-dashboard/settings"
               className={`flex flex-col items-center ${
-                location.pathname === '/admin-dashboard/settings' ? 'text-primary' : 'text-gray-500'
+                location.pathname === '/admin-dashboard/settings' ? 'text-white font-bold' : 'text-gray-100'
               }`}
             >
               <Settings className="h-5 w-5" />
