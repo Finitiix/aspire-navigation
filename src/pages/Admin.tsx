@@ -1,23 +1,16 @@
 
-import { useEffect, useState } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate, Outlet, Link, useLocation } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { LogOut, UserCircle2, Home, Users, Settings, MessageSquare } from "lucide-react";
-import { Link } from "react-router-dom";
-import { toast } from "sonner";
+import { Users, BarChart3, Cog, LogOut, MessageSquare } from "lucide-react";
 
 const Admin = () => {
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
-  const [loading, setLoading] = useState(true);
-  const [adminData, setAdminData] = useState<any>(null);
-  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
-  const [newPassword, setNewPassword] = useState('');
-
+  
   useEffect(() => {
     checkUser();
   }, []);
@@ -26,162 +19,96 @@ const Admin = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        navigate('/admin-auth');
-        return;
+        navigate("/admin-auth");
       }
-
-      // Check if user has admin role
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (profile?.role !== 'admin') {
-        navigate('/');
-        return;
-      }
-
-      setAdminData({
-        email: user.email,
-        name: user.email?.split('@')[0] || 'Admin'
-      });
     } catch (error) {
-      console.error('Error checking user:', error);
-      navigate('/admin-auth');
+      console.error("Error checking auth:", error);
+      navigate("/admin-auth");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSignOut = async () => {
+  const handleLogout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      navigate('/');
+      await supabase.auth.signOut();
+      navigate("/admin-auth");
     } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
-
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-
-      if (error) throw error;
-
-      toast.success('Password updated successfully');
-      setNewPassword('');
-      setIsChangePasswordOpen(false);
-    } catch (error) {
-      toast.error('Error updating password');
-      console.error('Error:', error);
+      console.error("Error signing out:", error);
     }
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Top Navigation - Updated with blue color and rounded edges */}
-      <nav className="fixed top-0 left-0 right-0 bg-[#1EAEDB] text-white border-b z-50">
-        <div className="container mx-auto px-4 py-2">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Link to="/admin-dashboard" className="text-xl font-bold text-white">
-                Admin Panel
-              </Link>
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 rounded-full bg-white text-[#1EAEDB] flex items-center justify-center">
-                  <UserCircle2 className="w-5 h-5" />
-                </div>
-                <span>Welcome, {adminData?.name}!</span>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="bg-white text-[#1EAEDB] hover:bg-gray-100">Change Password</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Change Password</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleChangePassword} className="space-y-4">
-                    <Input
-                      type="password"
-                      placeholder="New Password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      required
-                    />
-                    <Button type="submit">Update Password</Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-              <Button variant="ghost" onClick={handleSignOut} className="text-white hover:bg-[#0FA0CE]">
-                <LogOut className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-100">
+      {/* Top Navigation */}
+      <div className="bg-blue-600 text-white p-4 shadow-md">
+        <div className="container mx-auto flex justify-between items-center">
+          <h1 className="text-xl font-bold">Admin Dashboard</h1>
+          <Button variant="outline" className="text-white border-white hover:bg-blue-700" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
         </div>
-      </nav>
+      </div>
 
-      {/* Main Content - Added margin for gap */}
-      <main className="pt-20 pb-20 px-4">
-        <Card className="rounded-lg overflow-hidden shadow-md mt-4 mx-4">
-          <Outlet />
+      {/* Main Content */}
+      <div className="container mx-auto py-4 px-4">
+        <Card className="mt-2 mb-20 rounded-xl overflow-hidden">
+          <main className="p-6">
+            <Outlet />
+          </main>
         </Card>
-      </main>
+      </div>
 
-      {/* Bottom Navigation - Updated with blue color and added Feedback tab */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-[#1EAEDB] text-white border-t z-50">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-around items-center h-16">
-            <Link
-              to="/admin-dashboard"
-              className={`flex flex-col items-center ${
-                location.pathname === '/admin-dashboard' ? 'text-white font-bold' : 'text-gray-100'
-              }`}
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-blue-600 p-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+        <div className="container mx-auto flex justify-around">
+          <Link to="/admin-dashboard">
+            <Button 
+              variant={location.pathname === "/admin-dashboard" ? "secondary" : "ghost"} 
+              className="flex flex-col items-center text-white hover:bg-blue-700"
             >
-              <Home className="h-5 w-5" />
-              <span className="text-xs mt-1">Home</span>
-            </Link>
-            <Link
-              to="/admin-dashboard/teachers"
-              className={`flex flex-col items-center ${
-                location.pathname === '/admin-dashboard/teachers' ? 'text-white font-bold' : 'text-gray-100'
-              }`}
+              <BarChart3 className="h-5 w-5" />
+              <span className="text-xs mt-1">Dashboard</span>
+            </Button>
+          </Link>
+          <Link to="/admin-dashboard/teachers">
+            <Button 
+              variant={location.pathname === "/admin-dashboard/teachers" ? "secondary" : "ghost"}
+              className="flex flex-col items-center text-white hover:bg-blue-700"
             >
               <Users className="h-5 w-5" />
               <span className="text-xs mt-1">Teachers</span>
-            </Link>
-            <Link
-              to="/admin-dashboard/feedback"
-              className={`flex flex-col items-center ${
-                location.pathname === '/admin-dashboard/feedback' ? 'text-white font-bold' : 'text-gray-100'
-              }`}
+            </Button>
+          </Link>
+          <Link to="/admin-dashboard/feedback">
+            <Button 
+              variant={location.pathname === "/admin-dashboard/feedback" ? "secondary" : "ghost"}
+              className="flex flex-col items-center text-white hover:bg-blue-700"
             >
               <MessageSquare className="h-5 w-5" />
               <span className="text-xs mt-1">Feedback</span>
-            </Link>
-            <Link
-              to="/admin-dashboard/settings"
-              className={`flex flex-col items-center ${
-                location.pathname === '/admin-dashboard/settings' ? 'text-white font-bold' : 'text-gray-100'
-              }`}
+            </Button>
+          </Link>
+          <Link to="/admin-dashboard/settings">
+            <Button 
+              variant={location.pathname === "/admin-dashboard/settings" ? "secondary" : "ghost"}
+              className="flex flex-col items-center text-white hover:bg-blue-700"
             >
-              <Settings className="h-5 w-5" />
+              <Cog className="h-5 w-5" />
               <span className="text-xs mt-1">Settings</span>
-            </Link>
-          </div>
+            </Button>
+          </Link>
         </div>
-      </nav>
+      </div>
     </div>
   );
 };

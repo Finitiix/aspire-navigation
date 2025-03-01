@@ -1,393 +1,443 @@
+
 import { useEffect, useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Trash, ExternalLink } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { CheckCircle, XCircle, Clock } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { format } from "date-fns";
 import { toast } from "sonner";
 
-// Helper to ensure the URL includes a protocol and has no extra whitespace
-const ensureValidUrl = (url: string) => {
-  const trimmed = url.trim();
-  if (!/^https?:\/\//i.test(trimmed)) {
-    return `https://${trimmed}`;
-  }
-  return trimmed;
+type AchievementWithTeacher = {
+  id: string;
+  title: string;
+  achievement_type: string;
+  date_achieved: string;
+  status: string;
+  teacher_name: string;
+  teacher_eid: string;
+  teacher_designation: string;
+  teacher_department: string;
+  [key: string]: any;
 };
 
 const AdminDashboard = () => {
-  const [feedback, setFeedback] = useState<any[]>([]);
-  const [pendingAchievements, setPendingAchievements] = useState<any[]>([]);
-  const [stats, setStats] = useState({
-    totalTeachers: 0,
-    pendingAchievements: 0,
-    totalFeedback: 0,
-  });
-
-  const [importantMessages, setImportantMessages] = useState<any[]>([]);
-  const [importantDetails, setImportantDetails] = useState<any[]>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [newDetail, setNewDetail] = useState("");
+  const [pendingAchievements, setPendingAchievements] = useState<AchievementWithTeacher[]>([]);
+  const [approvedCount, setApprovedCount] = useState(0);
+  const [rejectedCount, setRejectedCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [recentActivity, setRecentActivity] = useState<AchievementWithTeacher[]>([]);
 
   useEffect(() => {
-    fetchData();
     fetchPendingAchievements();
-    fetchImportantMessages();
-    fetchImportantDetails();
+    fetchCounts();
+    fetchRecentActivity();
   }, []);
 
-  const fetchData = async () => {
-    try {
-      const { data: feedbackData } = await supabase
-        .from("feedback")
-        .select("name, message, created_at")
-        .order("created_at", { ascending: false });
-
-      const { count: teacherCount } = await supabase
-        .from("teacher_details")
-        .select("*", { count: "exact" });
-
-      const { count: pendingCount } = await supabase
-        .from("achievements")
-        .select("*", { count: "exact" })
-        .eq("status", "Pending Approval");
-
-      const { count: feedbackCount } = await supabase
-        .from("feedback")
-        .select("*", { count: "exact" });
-
-      setFeedback(feedbackData || []);
-      setStats({
-        totalTeachers: teacherCount || 0,
-        pendingAchievements: pendingCount || 0,
-        totalFeedback: feedbackCount || 0,
-      });
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      toast.error("Error loading dashboard data");
-    }
-  };
-
-  // Fetch achievements with joined teacher details
   const fetchPendingAchievements = async () => {
     try {
       const { data, error } = await supabase
-        .from("achievements")
-        .select(`
-          id,
-          achievement_type,
-          title,
-          issuing_organization,
-          link_url,
-          teacher_details (
-            full_name,
-            eid,
-            designation
-          )
-        `)
-        .eq("status", "Pending Approval")
-        .order("created_at", { ascending: false });
-      if (error) {
-        console.error("Error fetching achievements:", error);
-        toast.error("Error fetching pending achievements");
-      } else {
-        setPendingAchievements(data || []);
-      }
+        .from('achievements')
+        .select('*')
+        .eq('status', 'Pending Approval')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setPendingAchievements(data || []);
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error fetching achievements:", error);
       toast.error("Error fetching pending achievements");
     }
   };
 
-  const handleApproval = async (id: string, status: "Approved" | "Rejected") => {
+  const fetchCounts = async () => {
+    try {
+      const { data: approvedData, error: approvedError } = await supabase
+        .from('achievements')
+        .select('id', { count: 'exact' })
+        .eq('status', 'Approved');
+      
+      if (approvedError) throw approvedError;
+      setApprovedCount(approvedData?.length || 0);
+
+      const { data: rejectedData, error: rejectedError } = await supabase
+        .from('achievements')
+        .select('id', { count: 'exact' })
+        .eq('status', 'Rejected');
+      
+      if (rejectedError) throw rejectedError;
+      setRejectedCount(rejectedData?.length || 0);
+
+      const { data: pendingData, error: pendingError } = await supabase
+        .from('achievements')
+        .select('id', { count: 'exact' })
+        .eq('status', 'Pending Approval');
+      
+      if (pendingError) throw pendingError;
+      setPendingCount(pendingData?.length || 0);
+    } catch (error) {
+      console.error("Error fetching counts:", error);
+      toast.error("Error fetching achievement statistics");
+    }
+  };
+
+  const fetchRecentActivity = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('achievements')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      setRecentActivity(data || []);
+    } catch (error) {
+      console.error("Error fetching recent activity:", error);
+      toast.error("Error fetching recent activity");
+    }
+  };
+
+  const updateAchievementStatus = async (id: string, status: 'Approved' | 'Rejected') => {
     try {
       const { error } = await supabase
-        .from("achievements")
+        .from('achievements')
         .update({ status })
-        .eq("id", id);
-      if (error) {
-        toast.error("Error updating achievement status");
-      } else {
-        toast.success(`Achievement ${status}`);
-        // Refresh the achievements list and stats
-        fetchPendingAchievements();
-        fetchData();
-      }
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      fetchPendingAchievements();
+      fetchCounts();
+      fetchRecentActivity();
+      
+      toast.success(`Achievement ${status.toLowerCase()} successfully`);
     } catch (error) {
-      toast.error("Error processing request");
+      console.error("Error updating achievement:", error);
+      toast.error("Error updating achievement status");
     }
   };
 
-  const fetchImportantMessages = async () => {
-    const { data } = await supabase.from("important_messages").select("*");
-    setImportantMessages(data ? data.map((msg) => ({ id: msg.id, text: msg.message })) : []);
-  };
+  const renderAchievementContent = (achievement: AchievementWithTeacher) => {
+    return (
+      <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div>
+            <p className="text-sm font-medium">Teacher:</p>
+            <p className="text-sm">{achievement.teacher_name}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium">EID:</p>
+            <p className="text-sm">{achievement.teacher_eid}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium">Department:</p>
+            <p className="text-sm">{achievement.teacher_department}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium">Designation:</p>
+            <p className="text-sm">{achievement.teacher_designation}</p>
+          </div>
+        </div>
 
-  const fetchImportantDetails = async () => {
-    const { data } = await supabase.from("important_details").select("*");
-    setImportantDetails(data ? data.map((detail) => ({ id: detail.id, text: detail.detail })) : []);
-  };
+        {achievement.achievement_type === 'Research & Publications' && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div>
+                <p className="text-sm font-medium">SCI Papers:</p>
+                <p className="text-sm">{achievement.sci_papers || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Scopus Papers:</p>
+                <p className="text-sm">{achievement.scopus_papers || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">UGC Papers:</p>
+                <p className="text-sm">{achievement.ugc_papers || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Q1/Q2 Papers:</p>
+                <p className="text-sm">{achievement.q_papers || 'N/A'}</p>
+              </div>
+            </div>
+            
+            <div>
+              <p className="text-sm font-medium">Google Scholar Link:</p>
+              {achievement.google_scholar_link ? (
+                <a 
+                  href={achievement.google_scholar_link} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-blue-600 hover:underline text-sm"
+                >
+                  {achievement.google_scholar_link}
+                </a>
+              ) : (
+                <p className="text-sm">N/A</p>
+              )}
+            </div>
+            
+            <div>
+              <p className="text-sm font-medium">Scopus ID Link:</p>
+              {achievement.scopus_id_link ? (
+                <a 
+                  href={achievement.scopus_id_link} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-blue-600 hover:underline text-sm"
+                >
+                  {achievement.scopus_id_link}
+                </a>
+              ) : (
+                <p className="text-sm">N/A</p>
+              )}
+            </div>
+          </div>
+        )}
 
-  const addMessage = async () => {
-    if (!newMessage.trim()) return;
-    const { data, error } = await supabase.from("important_messages").insert([{ message: newMessage }]).select();
-    if (error) {
-      toast.error("Error adding message");
-    } else if (data && data.length > 0) {
-      setImportantMessages([...importantMessages, { id: data[0].id, text: newMessage }]);
-      setNewMessage("");
-    }
-  };
+        {achievement.achievement_type === 'Book Published' && (
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium">Book Details:</p>
+              <p className="text-sm">{achievement.book_details || 'N/A'}</p>
+            </div>
+            
+            <div>
+              <p className="text-sm font-medium">Book Chapters:</p>
+              <p className="text-sm">{achievement.book_chapters || 'N/A'}</p>
+            </div>
+            
+            <div>
+              <p className="text-sm font-medium">Book Drive Link:</p>
+              {achievement.book_drive_link ? (
+                <a 
+                  href={achievement.book_drive_link} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-blue-600 hover:underline text-sm"
+                >
+                  {achievement.book_drive_link}
+                </a>
+              ) : (
+                <p className="text-sm">N/A</p>
+              )}
+            </div>
+          </div>
+        )}
 
-  const addDetail = async () => {
-    if (!newDetail.trim()) return;
-    const { data, error } = await supabase.from("important_details").insert([{ detail: newDetail }]).select();
-    if (error) {
-      toast.error("Error adding detail");
-    } else if (data && data.length > 0) {
-      setImportantDetails([...importantDetails, { id: data[0].id, text: newDetail }]);
-      setNewDetail("");
-    }
-  };
+        {achievement.achievement_type === 'Patents & Grants' && (
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium">Patents Count:</p>
+              <p className="text-sm">{achievement.patents_count || 'N/A'}</p>
+            </div>
+            
+            <div>
+              <p className="text-sm font-medium">Patents Remarks:</p>
+              <p className="text-sm">{achievement.patents_remarks || 'N/A'}</p>
+            </div>
+            
+            <div>
+              <p className="text-sm font-medium">Patent Link:</p>
+              {achievement.patent_link ? (
+                <a 
+                  href={achievement.patent_link} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-blue-600 hover:underline text-sm"
+                >
+                  {achievement.patent_link}
+                </a>
+              ) : (
+                <p className="text-sm">N/A</p>
+              )}
+            </div>
+            
+            <div>
+              <p className="text-sm font-medium">Funded Projects:</p>
+              <p className="text-sm">{achievement.funded_projects || 'N/A'}</p>
+            </div>
+          </div>
+        )}
 
-  const deleteMessage = async (id: string) => {
-    await supabase.from("important_messages").delete().eq("id", id);
-    setImportantMessages(importantMessages.filter((msg) => msg.id !== id));
-  };
+        <div className="mt-4">
+          <p className="text-sm font-medium">Additional Information:</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+            <div>
+              <p className="text-sm font-medium">Research Areas:</p>
+              <p className="text-sm">{achievement.research_area || 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium">Research Collaboration:</p>
+              <p className="text-sm">{achievement.research_collaboration || 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium">Awards/Recognitions:</p>
+              <p className="text-sm">{achievement.awards_recognitions || 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium">Consultancy Services:</p>
+              <p className="text-sm">{achievement.consultancy_services || 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium">Startups/Centers:</p>
+              <p className="text-sm">{achievement.startup_details || 'N/A'}</p>
+            </div>
+          </div>
+          
+          <div className="mt-2">
+            <p className="text-sm font-medium">General Remarks:</p>
+            <p className="text-sm">{achievement.general_remarks || 'N/A'}</p>
+          </div>
+        </div>
 
-  const deleteDetail = async (id: string) => {
-    await supabase.from("important_details").delete().eq("id", id);
-    setImportantDetails(importantDetails.filter((detail) => detail.id !== id));
-  };
-
-  const ensureValidUrl = (url: string) => {
-    if (!url) return '';
-    const trimmed = url.trim();
-    if (!/^https?:\/\//i.test(trimmed)) {
-      return `https://${trimmed}`;
-    }
-    return trimmed;
+        <div className="flex justify-end space-x-2 mt-4">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="bg-green-50 text-green-600 hover:bg-green-100"
+            onClick={() => updateAchievementStatus(achievement.id, 'Approved')}
+          >
+            <CheckCircle className="h-4 w-4 mr-1" /> Approve
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="bg-red-50 text-red-600 hover:bg-red-100"
+            onClick={() => updateAchievementStatus(achievement.id, 'Rejected')}
+          >
+            <XCircle className="h-4 w-4 mr-1" /> Reject
+          </Button>
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className="p-6">
-      {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="p-6">
-          <h3 className="text-lg font-medium mb-2">Total Teachers</h3>
-          <p className="text-3xl font-bold text-primary">{stats.totalTeachers}</p>
+    <div className="container mx-auto px-4 py-8">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
+        <Card className="bg-blue-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-2xl font-bold text-blue-700">
+              {approvedCount}
+            </CardTitle>
+            <CardDescription className="text-blue-600">Approved Achievements</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              <CheckCircle className="h-5 w-5 text-blue-600 mr-2" />
+              <span className="text-sm text-blue-700">Total approved submissions</span>
+            </div>
+          </CardContent>
         </Card>
-        <Card className="p-6">
-          <h3 className="text-lg font-medium mb-2">Pending Approvals</h3>
-          <p className="text-3xl font-bold text-primary">{stats.pendingAchievements}</p>
+
+        <Card className="bg-red-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-2xl font-bold text-red-700">
+              {rejectedCount}
+            </CardTitle>
+            <CardDescription className="text-red-600">Rejected Achievements</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              <XCircle className="h-5 w-5 text-red-600 mr-2" />
+              <span className="text-sm text-red-700">Total rejected submissions</span>
+            </div>
+          </CardContent>
         </Card>
-        <Card className="p-6">
-          <h3 className="text-lg font-medium mb-2">Total Feedback</h3>
-          <p className="text-3xl font-bold text-primary">{stats.totalFeedback}</p>
+
+        <Card className="bg-yellow-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-2xl font-bold text-yellow-700">
+              {pendingCount}
+            </CardTitle>
+            <CardDescription className="text-yellow-600">Pending Approvals</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              <Clock className="h-5 w-5 text-yellow-600 mr-2" />
+              <span className="text-sm text-yellow-700">Pending review</span>
+            </div>
+          </CardContent>
         </Card>
       </div>
 
-      {/* Approval Requests for Achievements Section - Improved with details and clickable links */}
-      <Card className="p-6 mb-8">
-        <h2 className="text-xl font-bold mb-4">Approval Requests for Achievements</h2>
-        <div className="space-y-4">
-          {pendingAchievements.length > 0 ? (
-            pendingAchievements.map((achievement) => {
-              const teacher = achievement.teacher_details;
-              return (
-                <div key={achievement.id} className="relative bg-white shadow rounded p-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-bold text-lg">
-                        {teacher?.full_name || "Unknown Teacher"}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        EID: {teacher?.eid} | {teacher?.designation}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end space-y-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="bg-green-500 hover:bg-green-600 text-white"
-                        onClick={() => handleApproval(achievement.id, "Approved")}
-                      >
-                        Approve
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleApproval(achievement.id, "Rejected")}
-                      >
-                        Reject
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <p className="text-md font-medium">
-                      {achievement.achievement_type} - {achievement.title}
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Issuing Organization: {achievement.issuing_organization || 'Not specified'}
-                    </p>
-                    
-                    {/* Detailed achievement information */}
-                    <div className="mt-2 text-sm">
-                      {achievement.achievement_type === 'Research & Publications' && (
-                        <div className="mt-2 space-y-1">
-                          {achievement.sci_papers && <p>SCI Papers: {achievement.sci_papers}</p>}
-                          {achievement.scopus_papers && <p>Scopus Papers: {achievement.scopus_papers}</p>}
-                          {achievement.ugc_papers && <p>UGC Papers: {achievement.ugc_papers}</p>}
-                          {achievement.research_area && <p>Research Areas: {achievement.research_area}</p>}
-                        </div>
-                      )}
-                      
-                      {achievement.achievement_type === 'Patents & Grants' && (
-                        <div className="mt-2 space-y-1">
-                          {achievement.patents_count && <p>Patents: {achievement.patents_count}</p>}
-                          {achievement.funded_projects && <p>Funded Projects: {achievement.funded_projects}</p>}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Display clickable links */}
-                    <div className="mt-3 space-y-1">
-                      {achievement.link_url && (
-                        <a
-                          href={ensureValidUrl(achievement.link_url)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-500 hover:underline flex items-center"
-                        >
-                          View Uploaded Link <ExternalLink className="w-3 h-3 ml-1" />
-                        </a>
-                      )}
-                      
-                      {achievement.scopus_id_link && (
-                        <a
-                          href={ensureValidUrl(achievement.scopus_id_link)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-500 hover:underline flex items-center"
-                        >
-                          Scopus ID <ExternalLink className="w-3 h-3 ml-1" />
-                        </a>
-                      )}
-                      
-                      {achievement.google_scholar_link && (
-                        <a
-                          href={ensureValidUrl(achievement.google_scholar_link)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-500 hover:underline flex items-center"
-                        >
-                          Google Scholar <ExternalLink className="w-3 h-3 ml-1" />
-                        </a>
-                      )}
-                      
-                      {achievement.patent_link && (
-                        <a
-                          href={ensureValidUrl(achievement.patent_link)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-500 hover:underline flex items-center"
-                        >
-                          Patent Link <ExternalLink className="w-3 h-3 ml-1" />
-                        </a>
-                      )}
-                      
-                      {achievement.book_drive_link && (
-                        <a
-                          href={ensureValidUrl(achievement.book_drive_link)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-500 hover:underline flex items-center"
-                        >
-                          Book Drive Link <ExternalLink className="w-3 h-3 ml-1" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <p className="text-gray-500">No pending achievements.</p>
-          )}
-        </div>
-      </Card>
-
-      {/* Important Messages & Details Side by Side */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <Card className="p-6">
-          <h2 className="text-xl font-bold mb-4">Important Messages</h2>
-          <div className="space-y-4 max-h-60 overflow-y-auto">
-            {importantMessages.map((msg) => (
-              <div key={msg.id} className="flex justify-between items-center bg-gray-100 p-2 rounded">
-                <p>{msg.text}</p>
-                <Button size="sm" variant="ghost" onClick={() => deleteMessage(msg.id)}>
-                  <Trash className="w-4 h-4 text-red-500" />
-                </Button>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex">
-            <input
-              type="text"
-              className="border p-2 w-full rounded"
-              placeholder="Add a message..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-            />
-            <Button onClick={addMessage} className="ml-2">
-              Add
-            </Button>
-          </div>
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending Approvals</CardTitle>
+            <CardDescription>Achievements awaiting your review</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {pendingAchievements.length > 0 ? (
+              <Accordion type="single" collapsible className="w-full">
+                {pendingAchievements.map((achievement) => (
+                  <AccordionItem key={achievement.id} value={achievement.id}>
+                    <AccordionTrigger className="hover:no-underline">
+                      <div className="flex flex-col items-start text-left">
+                        <span className="font-medium">{achievement.title}</span>
+                        <span className="text-sm text-gray-500">
+                          {achievement.achievement_type} | {format(new Date(achievement.date_achieved), 'PP')}
+                        </span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      {renderAchievementContent(achievement)}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            ) : (
+              <p className="text-center py-4 text-gray-500">No pending achievements to review</p>
+            )}
+          </CardContent>
         </Card>
 
-        <Card className="p-6">
-          <h2 className="text-xl font-bold mb-4">Important Details</h2>
-          <div className="space-y-4 max-h-60 overflow-y-auto">
-            {importantDetails.map((detail) => (
-              <div key={detail.id} className="flex justify-between items-center bg-gray-100 p-2 rounded">
-                <p>{detail.text}</p>
-                <Button size="sm" variant="ghost" onClick={() => deleteDetail(detail.id)}>
-                  <Trash className="w-4 h-4 text-red-500" />
-                </Button>
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>Latest achievement submissions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recentActivity.length > 0 ? (
+              <div className="space-y-4">
+                {recentActivity.map((achievement) => (
+                  <div key={achievement.id} className="p-3 rounded-md border">
+                    <div className="flex justify-between">
+                      <div>
+                        <p className="font-medium">{achievement.title}</p>
+                        <p className="text-sm text-gray-600">
+                          {achievement.teacher_name} ({achievement.teacher_eid})
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {achievement.achievement_type} | {format(new Date(achievement.date_achieved), 'PP')}
+                        </p>
+                      </div>
+                      <div>
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          achievement.status === 'Approved' 
+                            ? 'bg-green-100 text-green-800' 
+                            : achievement.status === 'Rejected' 
+                              ? 'bg-red-100 text-red-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {achievement.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <div className="mt-4 flex">
-            <input
-              type="text"
-              className="border p-2 w-full rounded"
-              placeholder="Add a detail..."
-              value={newDetail}
-              onChange={(e) => setNewDetail(e.target.value)}
-            />
-            <Button onClick={addDetail} className="ml-2">
-              Add
-            </Button>
-          </div>
+            ) : (
+              <p className="text-center py-4 text-gray-500">No recent activity</p>
+            )}
+          </CardContent>
         </Card>
       </div>
-
-      {/* Recent Feedback Section */}
-      <Card className="p-6 mb-8">
-        <h2 className="text-xl font-bold mb-4">Recent Feedback</h2>
-        <div className="space-y-4 max-h-60 overflow-y-auto">
-          {feedback.length > 0 ? (
-            feedback.map((item, index) => (
-              <div key={index} className="bg-gray-100 p-3 rounded">
-                <p className="font-semibold">{item.name}</p>
-                <p className="text-gray-700">{item.message}</p>
-                <p className="text-xs text-gray-500">{new Date(item.created_at).toLocaleString()}</p>
-              </div>
-            ))
-          ) : (
-            <p className="text-gray-500">No feedback available.</p>
-          )}
-        </div>
-      </Card>
     </div>
   );
 };

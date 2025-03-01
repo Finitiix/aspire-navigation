@@ -1,23 +1,37 @@
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Trash } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { format } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
 
-type FeedbackItem = {
+type Feedback = {
   id: string;
   name: string;
   identifier: string;
   subject: string;
   message: string;
   created_at: string;
-}
+};
 
 const AdminFeedback = () => {
-  const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
+  const [feedbackToDelete, setFeedbackToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchFeedback();
@@ -32,80 +46,123 @@ const AdminFeedback = () => {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      if (data) setFeedback(data as FeedbackItem[]);
-    } catch (error) {
-      console.error('Error fetching feedback:', error);
-      toast.error('Failed to load feedback');
+      setFeedbacks(data || []);
+    } catch (error: any) {
+      console.error("Error fetching feedback:", error);
+      toast.error("Failed to load feedback data");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const deleteFeedback = async () => {
+    if (!feedbackToDelete) return;
+    
+    setIsDeleting(true);
     try {
       const { error } = await supabase
         .from('feedback')
         .delete()
-        .eq('id', id);
+        .eq('id', feedbackToDelete);
       
       if (error) throw error;
       
-      // Update the local state to remove the deleted item
-      setFeedback(feedback.filter(item => item.id !== id));
-      toast.success('Feedback deleted successfully');
-    } catch (error) {
-      console.error('Error deleting feedback:', error);
-      toast.error('Failed to delete feedback');
+      setFeedbacks(feedbacks.filter(feedback => feedback.id !== feedbackToDelete));
+      toast.success("Feedback deleted successfully");
+    } catch (error: any) {
+      console.error("Error deleting feedback:", error);
+      toast.error("Failed to delete feedback");
+    } finally {
+      setFeedbackToDelete(null);
+      setIsDeleting(false);
     }
   };
 
   return (
-    <div className="p-6">
+    <div className="container mx-auto px-4 py-8">
       <Card>
         <CardHeader>
-          <CardTitle>Feedback Messages</CardTitle>
+          <CardTitle>Feedback</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex justify-center p-8">
-              <p>Loading feedback...</p>
-            </div>
-          ) : (
             <div className="space-y-4">
-              {feedback.length > 0 ? (
-                feedback.map((item) => (
-                  <Card key={item.id} className="p-4">
-                    <div className="space-y-2">
+              {[1, 2, 3].map((n) => (
+                <Card key={n}>
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
                       <div className="flex justify-between">
-                        <h3 className="font-medium">{item.subject}</h3>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-600">
-                            {new Date(item.created_at).toLocaleDateString()} {new Date(item.created_at).toLocaleTimeString()}
-                          </span>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleDelete(item.id)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
+                        <Skeleton className="h-6 w-1/3" />
+                        <Skeleton className="h-6 w-24" />
+                      </div>
+                      <Skeleton className="h-4 w-1/4" />
+                      <Skeleton className="h-20 w-full" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : feedbacks.length > 0 ? (
+            <div className="space-y-4">
+              {feedbacks.map((feedback) => (
+                <Card key={feedback.id}>
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium text-lg">{feedback.subject}</h3>
+                        <div className="flex gap-4 text-sm text-gray-600 mt-1">
+                          <p><span className="font-medium">From:</span> {feedback.name}</p>
+                          <p><span className="font-medium">ID:</span> {feedback.identifier}</p>
+                          <p><span className="font-medium">Date:</span> {format(new Date(feedback.created_at), "PP")}</p>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-600">From: {item.name} ({item.identifier})</p>
-                      <p className="mt-2 text-gray-800">{item.message}</p>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="text-red-600 hover:bg-red-50"
+                        onClick={() => setFeedbackToDelete(feedback.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </Card>
-                ))
-              ) : (
-                <div className="text-center p-8 text-gray-500">
-                  No feedback messages found
-                </div>
-              )}
+                    <div className="mt-4 p-3 bg-gray-50 rounded-md">
+                      <p className="whitespace-pre-wrap">{feedback.message}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No feedback submissions found</p>
             </div>
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!feedbackToDelete} onOpenChange={(open) => !open && setFeedbackToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Feedback</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this feedback? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              disabled={isDeleting}
+              onClick={(e) => {
+                e.preventDefault();
+                deleteFeedback();
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
