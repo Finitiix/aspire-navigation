@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -16,9 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Pencil, X, Check, ExternalLink, Download, Search, Filter } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { format as dateFormat } from 'date-fns';
+import { Search } from "lucide-react";
+import { format as dateFormat } from "date-fns";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -26,6 +19,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { jsPDF } from "jspdf";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 type Achievement = {
   id: string;
@@ -33,6 +28,28 @@ type Achievement = {
   title: string;
   date_achieved: string;
   status: string;
+  sci_papers?: string;
+  scopus_papers?: string;
+  ugc_papers?: string;
+  patents_count?: string;
+  research_area?: string;
+  links?: string;
+  issuing_organization?: string;
+  google_scholar_link?: string;
+  scopus_id_link?: string;
+  book_drive_link?: string;
+  book_details?: string;
+  book_chapters?: string;
+  patent_link?: string;
+  patents_remarks?: string;
+  funded_projects?: string;
+  research_collaboration?: string;
+  awards_recognitions?: string;
+  consultancy_services?: string;
+  startup_details?: string;
+  general_remarks?: string;
+  q_papers?: string;
+  research_remarks?: string;
   [key: string]: any; // For dynamic fields
 };
 
@@ -43,6 +60,11 @@ type Teacher = {
   eid: string;
   designation: string;
   profile_pic_url: string | null;
+  email_id?: string;
+  mobile_number?: string;
+  highest_qualification?: string;
+  date_of_joining?: string;
+  address?: string;
   achievements: Achievement[];
   [key: string]: any; // For additional fields
 };
@@ -60,40 +82,93 @@ const AdminTeachers = () => {
     teachers: [],
     loading: false,
     error: null,
-    searchQuery: '',
-    departmentFilter: 'all'
+    searchQuery: "",
+    departmentFilter: "all",
   });
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
 
+  // Fetch teacher details along with achievements
   const fetchTeachers = async () => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
+    setState((prev) => ({ ...prev, loading: true, error: null }));
     try {
-      const { data: teachers, error } = await supabase
-        .from('teacher_details')
+      const { data: teachers, error: teacherError } = await supabase
+        .from("teacher_details")
         .select(`
-          *,
-          achievements (
-            id,
-            achievement_type,
-            title,
-            date_achieved,
-            status,
-            sci_papers,
-            scopus_papers,
-            ugc_papers,
-            patents_count,
-            research_area,
-            links
-          )
-        `);
+          id,
+          full_name,
+          eid,
+          department,
+          designation,
+          email_id,
+          mobile_number,
+          highest_qualification,
+          date_of_joining,
+          address,
+          profile_pic_url
+        `)
+        .order("full_name");
 
-      if (error) throw error;
-      setState(prev => ({ ...prev, teachers: teachers || [], loading: false }));
-    } catch (error) {
-      setState(prev => ({ 
-        ...prev, 
-        error: 'Error fetching teachers data', 
-        loading: false 
+      if (teacherError) throw teacherError;
+
+      // For each teacher, fetch their achievements
+      const teachersWithAchievements = await Promise.all(
+        (teachers || []).map(async (teacher) => {
+          const { data: achievements, error: achievementError } = await supabase
+            .from("achievements")
+            .select(`
+              id,
+              achievement_type,
+              title,
+              date_achieved,
+              status,
+              sci_papers,
+              scopus_papers,
+              ugc_papers,
+              patents_count,
+              research_area,
+              links,
+              issuing_organization,
+              google_scholar_link,
+              scopus_id_link,
+              book_drive_link,
+              book_details,
+              book_chapters,
+              patent_link,
+              patents_remarks,
+              funded_projects,
+              research_collaboration,
+              awards_recognitions,
+              consultancy_services,
+              startup_details,
+              general_remarks,
+              q_papers,
+              research_remarks
+            `)
+            .eq("teacher_id", teacher.id)
+            .order("date_achieved", { ascending: false });
+
+          if (achievementError) {
+            console.error("Error fetching achievements for teacher:", teacher.eid, achievementError);
+            return { ...teacher, achievements: [] };
+          }
+          return { ...teacher, achievements: achievements || [] };
+        })
+      );
+
+      setState((prev) => ({
+        ...prev,
+        teachers: teachersWithAchievements,
+        loading: false,
       }));
+      console.log("Successfully fetched teachers:", teachersWithAchievements.length);
+    } catch (error: any) {
+      console.error("Error fetching teachers:", error);
+      setState((prev) => ({
+        ...prev,
+        error: `Error fetching teachers data: ${error.message}. Please try again.`,
+        loading: false,
+      }));
+      toast.error(`Failed to load teachers data: ${error.message}`);
     }
   };
 
@@ -101,592 +176,458 @@ const AdminTeachers = () => {
     fetchTeachers();
   }, []);
 
-  const handleEdit = async (teacherId: string, updatedData: Partial<Teacher>) => {
-    try {
-      const { error } = await supabase
-        .from('teacher_details')
-        .update(updatedData)
-        .eq('id', teacherId);
-      
-      if (error) throw error;
-      fetchTeachers();
-    } catch (error) {
-      console.error('Error updating teacher:', error);
-    }
-  };
+  const filteredTeachers = state.teachers.filter((teacher) => {
+    const matchesSearch =
+      teacher.full_name.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
+      teacher.eid.toLowerCase().includes(state.searchQuery.toLowerCase());
+    const matchesDepartment =
+      state.departmentFilter === "all" || teacher.department === state.departmentFilter;
+    return matchesSearch && matchesDepartment;
+  });
 
-  const handleDelete = async (teacherId: string) => {
-    try {
-      const { error } = await supabase
-        .from('teacher_details')
-        .delete()
-        .eq('id', teacherId);
-      
-      if (error) throw error;
-      fetchTeachers();
-    } catch (error) {
-      console.error('Error deleting teacher:', error);
-    }
-  };
-
+  // Export teacher achievements in CSV, PDF, or DOCS
   const exportTeacherData = (teacher: Teacher, format: string) => {
-    if (format === 'csv') {
-      const achievementsData = teacher.achievements?.map(a => {
-        return {
-          'Type': a.achievement_type,
-          'Title': a.title,
-          'Date': a.date_achieved ? dateFormat(new Date(a.date_achieved), 'yyyy-MM-dd') : '',
-          'Status': a.status,
-          'SCI Papers': a.sci_papers || '',
-          'Scopus Papers': a.scopus_papers || '',
-          'UGC Papers': a.ugc_papers || '',
-          'Patent Count': a.patents_count || '',
-          'Research Area': a.research_area || '',
-        };
-      }) || [];
-      
-      const headers = Object.keys(achievementsData[0] || {}).join(',');
-      const rows = achievementsData.map(obj => Object.values(obj).join(',')).join('\n');
+    if (format === "csv") {
+      const achievementsData =
+        teacher.achievements?.map((a) => ({
+          Type: a.achievement_type,
+          Title: a.title,
+          Date: a.date_achieved ? dateFormat(new Date(a.date_achieved), "yyyy-MM-dd") : "",
+          Status: a.status,
+          "SCI Papers": a.sci_papers || "",
+          "Scopus Papers": a.scopus_papers || "",
+          "UGC Papers": a.ugc_papers || "",
+          "Patent Count": a.patents_count || "",
+          "Research Area": a.research_area || "",
+        })) || [];
+
+      const headers = Object.keys(achievementsData[0] || {}).join(",");
+      const rows = achievementsData.map((obj) => Object.values(obj).join(",")).join("\n");
       const csv = `${headers}\n${rows}`;
-      
-      const blob = new Blob([csv], { type: 'text/csv' });
+      const blob = new Blob([csv], { type: "text/csv" });
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = `${teacher.eid}_achievements.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } else if (format === "pdf") {
+      const doc = new jsPDF();
+      doc.text(`Teacher: ${teacher.full_name}`, 10, 10);
+      let y = 20;
+      teacher.achievements.forEach((a, index) => {
+        doc.text(
+          `${index + 1}. ${a.title} - ${a.achievement_type} - ${a.date_achieved}`,
+          10,
+          y
+        );
+        y += 10;
+      });
+      doc.save(`${teacher.eid}_achievements.pdf`);
+    } else if (format === "docs") {
+      const content = `Teacher: ${teacher.full_name}\n` +
+                      teacher.achievements.map((a, index) => 
+                        `${index + 1}. ${a.title} - ${a.achievement_type} - ${a.date_achieved}`
+                      ).join("\n");
+      const blob = new Blob([content], { type: "application/msword" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${teacher.eid}_achievements.doc`;
       a.click();
       window.URL.revokeObjectURL(url);
     }
   };
 
-  const filteredTeachers = state.teachers.filter(teacher => {
-    const matchesSearch = teacher.full_name.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-                         teacher.eid.toLowerCase().includes(state.searchQuery.toLowerCase());
-    const matchesDepartment = state.departmentFilter === 'all' || teacher.department === state.departmentFilter;
-    return matchesSearch && matchesDepartment;
-  });
+  // Update teacher details in teacher_details table
+  const handleTeacherUpdate = async () => {
+    if (!selectedTeacher) return;
+    try {
+      const { error } = await supabase
+        .from("teacher_details")
+        .update({
+          full_name: selectedTeacher.full_name,
+          department: selectedTeacher.department,
+          eid: selectedTeacher.eid,
+          designation: selectedTeacher.designation,
+          email_id: selectedTeacher.email_id,
+          mobile_number: selectedTeacher.mobile_number,
+          highest_qualification: selectedTeacher.highest_qualification,
+          date_of_joining: selectedTeacher.date_of_joining,
+          address: selectedTeacher.address,
+          profile_pic_url: selectedTeacher.profile_pic_url,
+        })
+        .eq("id", selectedTeacher.id);
+      if (error) {
+        toast.error("Error updating teacher details: " + error.message);
+      } else {
+        toast.success("Teacher details updated");
+        fetchTeachers();
+        setSelectedTeacher(null);
+      }
+    } catch (error: any) {
+      toast.error("Error processing request: " + error.message);
+    }
+  };
+
+  // Update individual achievement in achievements table
+  const handleAchievementUpdate = async (achievement: Achievement) => {
+    try {
+      const { error } = await supabase
+        .from("achievements")
+        .update({
+          achievement_type: achievement.achievement_type,
+          title: achievement.title,
+          date_achieved: achievement.date_achieved,
+          status: achievement.status,
+          sci_papers: achievement.sci_papers,
+          scopus_papers: achievement.scopus_papers,
+          ugc_papers: achievement.ugc_papers,
+          patents_count: achievement.patents_count,
+          research_area: achievement.research_area,
+          links: achievement.links,
+          issuing_organization: achievement.issuing_organization,
+          google_scholar_link: achievement.google_scholar_link,
+          scopus_id_link: achievement.scopus_id_link,
+          book_drive_link: achievement.book_drive_link,
+          book_details: achievement.book_details,
+          book_chapters: achievement.book_chapters,
+          patent_link: achievement.patent_link,
+          patents_remarks: achievement.patents_remarks,
+          funded_projects: achievement.funded_projects,
+          research_collaboration: achievement.research_collaboration,
+          awards_recognitions: achievement.awards_recognitions,
+          consultancy_services: achievement.consultancy_services,
+          startup_details: achievement.startup_details,
+          general_remarks: achievement.general_remarks,
+          q_papers: achievement.q_papers,
+          research_remarks: achievement.research_remarks,
+        })
+        .eq("id", achievement.id);
+      if (error) {
+        toast.error("Error updating achievement: " + error.message);
+      } else {
+        toast.success("Achievement updated");
+        fetchTeachers();
+      }
+    } catch (error: any) {
+      toast.error("Error processing request: " + error.message);
+    }
+  };
+
+  if (state.loading) {
+    return (
+      <div className="flex justify-center items-center min-h-[50vh]">
+        <div className="text-lg">Loading teachers data...</div>
+      </div>
+    );
+  }
+
+  if (state.error) {
+    return (
+      <div className="flex justify-center items-center min-h-[50vh]">
+        <div className="text-red-500">{state.error}</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Teachers</CardTitle>
-          
-          {/* Search and Filter Bar */}
-          <div className="flex flex-col md:flex-row gap-4 mt-4">
-            <div className="relative flex-grow">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <Input 
-                className="pl-10" 
-                placeholder="Search by name or EID..." 
-                value={state.searchQuery}
-                onChange={(e) => setState(prev => ({ ...prev, searchQuery: e.target.value }))}
-              />
-            </div>
-            
-            <div className="flex gap-2 items-center">
-              <Filter className="h-4 w-4 text-gray-500" />
-              <Select
-                value={state.departmentFilter}
-                onValueChange={(value) => setState(prev => ({ ...prev, departmentFilter: value }))}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
-                  {Array.from(new Set(state.teachers.map(teacher => teacher.department))).map((dept) => (
-                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {state.loading ? (
-            <div className="flex justify-center items-center py-8">
-              <p>Loading teachers data...</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredTeachers.length > 0 ? (
-                filteredTeachers.map((teacher) => (
-                  <Accordion key={teacher.id} type="single" collapsible>
-                    <AccordionItem value="details">
-                      <AccordionTrigger className="px-4">
-                        <div className="flex items-center gap-4">
-                          {teacher.profile_pic_url ? (
-                            <img
-                              src={teacher.profile_pic_url}
-                              alt={teacher.full_name}
-                              className="w-12 h-12 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
-                              <span className="text-xl font-bold text-gray-500">
-                                {teacher.full_name.charAt(0)}
-                              </span>
+    <div className="p-6">
+      <div className="mb-6 flex items-center gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <Input
+            placeholder="Search teachers..."
+            className="pl-10"
+            value={state.searchQuery}
+            onChange={(e) =>
+              setState((prev) => ({ ...prev, searchQuery: e.target.value }))
+            }
+          />
+        </div>
+        <Select
+          value={state.departmentFilter}
+          onValueChange={(value) =>
+            setState((prev) => ({ ...prev, departmentFilter: value }))
+          }
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Filter by department" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Departments</SelectItem>
+            {Array.from(new Set(state.teachers.map((t) => t.department))).map(
+              (dept) => (
+                <SelectItem key={dept} value={dept}>
+                  {dept}
+                </SelectItem>
+              )
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {filteredTeachers.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          No teachers found matching your criteria
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredTeachers.map((teacher) => (
+            <Card key={teacher.id} className="overflow-hidden">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>{teacher.full_name}</CardTitle>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost">Export</Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onClick={() => exportTeacherData(teacher, "csv")}>
+                        Export as CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => exportTeacherData(teacher, "pdf")}>
+                        Export as PDF
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => exportTeacherData(teacher, "docs")}>
+                        Export as DOCS
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <p className="font-semibold">EID: {teacher.eid}</p>
+                    <p>Department: {teacher.department}</p>
+                    <p>Designation: {teacher.designation}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-2">Achievements</h4>
+                    {teacher.achievements?.length === 0 ? (
+                      <p className="text-gray-500">No achievements yet</p>
+                    ) : (
+                      teacher.achievements.map((achievement) => (
+                        <div key={achievement.id} className="mb-4 p-3 bg-gray-50 rounded-lg">
+                          <p className="font-medium">{achievement.title}</p>
+                          <p className="text-sm text-gray-600">
+                            Type: {achievement.achievement_type}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Date:{" "}
+                            {achievement.date_achieved
+                              ? dateFormat(new Date(achievement.date_achieved), "PP")
+                              : "N/A"}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Status: {achievement.status}
+                          </p>
+                          {achievement.links && (
+                            <div className="mt-2">
+                              <a
+                                href={achievement.links}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline text-sm"
+                              >
+                                View Details
+                              </a>
                             </div>
                           )}
-                          <div className="text-left">
-                            <h3 className="font-medium">{teacher.full_name}</h3>
-                            <p className="text-sm text-gray-600">{teacher.department} | EID: {teacher.eid}</p>
-                          </div>
                         </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-4">
-                        <div className="grid grid-cols-1 gap-4 py-4">
-                          <div>
-                            <div className="flex justify-between mb-4">
-                              <h4 className="font-medium">Profile Details</h4>
-                              <div className="flex gap-2">
-                                <Button variant="outline" size="sm" onClick={() => exportTeacherData(teacher, 'csv')}>
-                                  <Download className="h-4 w-4 mr-1" /> Export CSV
-                                </Button>
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm mb-6">
-                              <div>
-                                <p className="font-medium">EID:</p>
-                                <p>{teacher.eid}</p>
-                              </div>
-                              <div>
-                                <p className="font-medium">Designation:</p>
-                                <p>{teacher.designation}</p>
-                              </div>
-                              <div>
-                                <p className="font-medium">Department:</p>
-                                <p>{teacher.department}</p>
-                              </div>
-                              <div>
-                                <p className="font-medium">Email:</p>
-                                <p>{teacher.email_id}</p>
-                              </div>
-                              <div>
-                                <p className="font-medium">Mobile:</p>
-                                <p>{teacher.mobile_number}</p>
-                              </div>
-                              <div>
-                                <p className="font-medium">Qualification:</p>
-                                <p>{teacher.highest_qualification}</p>
-                              </div>
-                              <div>
-                                <p className="font-medium">Joined:</p>
-                                <p>{teacher.date_of_joining ? new Date(teacher.date_of_joining).toLocaleDateString() : 'N/A'}</p>
-                              </div>
-                              {teacher.address && (
-                                <div>
-                                  <p className="font-medium">Address:</p>
-                                  <p>{teacher.address}</p>
-                                </div>
-                              )}
-                            </div>
-                            
-                            <h4 className="font-medium mb-4">Achievements</h4>
-                            <div className="space-y-4">
-                              {teacher.achievements && teacher.achievements.length > 0 ? (
-                                teacher.achievements.map((achievement) => (
-                                  <Card key={achievement.id} className="p-4">
-                                    <div className="flex justify-between items-start mb-2">
-                                      <div>
-                                        <p className="font-medium">{achievement.title}</p>
-                                        <p className="text-sm text-gray-600">
-                                          {achievement.achievement_type} | {achievement.date_achieved ? new Date(achievement.date_achieved).toLocaleDateString() : 'N/A'}
-                                        </p>
-                                      </div>
-                                      <div className="flex items-center space-x-2">
-                                        <span className={`px-2 py-1 text-xs rounded-full ${getBadgeClass(achievement.status)}`}>
-                                          {achievement.status}
-                                        </span>
-                                        <Button 
-                                          variant="ghost" 
-                                          size="sm"
-                                          onClick={() => handleEditClick(achievement)}
-                                        >
-                                          <Pencil className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                    
-                                    <Accordion type="single" collapsible className="w-full">
-                                      <AccordionItem value="achievement-details">
-                                        <AccordionTrigger className="text-sm py-1">View Details</AccordionTrigger>
-                                        <AccordionContent>
-                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 mt-2">
-                                            {achievement.achievement_type === 'Research & Publications' && (
-                                              <>
-                                                <div>
-                                                  <p className="text-sm font-medium">SCI Papers:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.sci_papers)}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm font-medium">Scopus Papers:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.scopus_papers)}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm font-medium">Scopus ID:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.scopus_id_link, true)}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm font-medium">UGC Papers:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.ugc_papers)}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm font-medium">Google Scholar:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.google_scholar_link, true)}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm font-medium">Q1/Q2 Papers:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.q_papers)}</p>
-                                                </div>
-                                                <div className="col-span-2">
-                                                  <p className="text-sm font-medium">Research Remarks:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.research_remarks)}</p>
-                                                </div>
-                                              </>
-                                            )}
-                                            
-                                            {achievement.achievement_type === 'Book Published' && (
-                                              <>
-                                                <div className="col-span-2">
-                                                  <p className="text-sm font-medium">Book Drive Link:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.book_drive_link, true)}</p>
-                                                </div>
-                                                <div className="col-span-2">
-                                                  <p className="text-sm font-medium">Book Details:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.book_details)}</p>
-                                                </div>
-                                                <div className="col-span-2">
-                                                  <p className="text-sm font-medium">Book Chapters:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.book_chapters)}</p>
-                                                </div>
-                                              </>
-                                            )}
-                                            
-                                            {achievement.achievement_type === 'Patents & Grants' && (
-                                              <>
-                                                <div>
-                                                  <p className="text-sm font-medium">Patents Count:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.patents_count)}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm font-medium">Patent Link:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.patent_link, true)}</p>
-                                                </div>
-                                                <div className="col-span-2">
-                                                  <p className="text-sm font-medium">Patents Remarks:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.patents_remarks)}</p>
-                                                </div>
-                                                <div className="col-span-2">
-                                                  <p className="text-sm font-medium">Funded Projects:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.funded_projects)}</p>
-                                                </div>
-                                              </>
-                                            )}
-                                            
-                                            {/* Common fields for all types */}
-                                            <div className="col-span-2 mt-2">
-                                              <p className="text-sm font-medium">Additional Information:</p>
-                                            </div>
-                                            <div className="col-span-2">
-                                              <p className="text-sm font-medium">Research Collaboration:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.research_collaboration)}</p>
-                                            </div>
-                                            <div className="col-span-2">
-                                              <p className="text-sm font-medium">Awards/Recognitions:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.awards_recognitions)}</p>
-                                            </div>
-                                            <div className="col-span-2">
-                                              <p className="text-sm font-medium">Consultancy Services:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.consultancy_services)}</p>
-                                            </div>
-                                            <div className="col-span-2">
-                                              <p className="text-sm font-medium">Startups/Excellence Centers:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.startup_details)}</p>
-                                            </div>
-                                            <div className="col-span-2">
-                                              <p className="text-sm font-medium">Research Areas:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.research_area)}</p>
-                                            </div>
-                                            <div className="col-span-2">
-                                              <p className="text-sm font-medium">General Remarks:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.general_remarks)}</p>
-                                            </div>
-                                          </div>
-                                          
-                                          {/* Admin Action Buttons */}
-                                          <div className="flex justify-end mt-4 space-x-2">
-                                            {achievement.status !== 'Approved' && (
-                                              <Button 
-                                                size="sm" 
-                                                variant="outline" 
-                                                className="bg-green-50 text-green-600 hover:bg-green-100"
-                                                onClick={() => updateAchievementStatus(achievement.id, 'Approved')}
-                                              >
-                                                <Check className="h-4 w-4 mr-1" /> Approve
-                                              </Button>
-                                            )}
-                                            
-                                            {achievement.status !== 'Rejected' && (
-                                              <Button 
-                                                size="sm" 
-                                                variant="outline"
-                                                className="bg-red-50 text-red-600 hover:bg-red-100"
-                                                onClick={() => updateAchievementStatus(achievement.id, 'Rejected')}
-                                              >
-                                                <X className="h-4 w-4 mr-1" /> Reject
-                                              </Button>
-                                            )}
-                                            
-                                            {achievement.status !== 'Pending Approval' && (
-                                              <Button 
-                                                size="sm" 
-                                                variant="outline"
-                                                onClick={() => updateAchievementStatus(achievement.id, 'Pending Approval')}
-                                              >
-                                                Reset to Pending
-                                              </Button>
-                                            )}
-                                          </div>
-                                        </AccordionContent>
-                                      </AccordionItem>
-                                    </Accordion>
-                                  </Card>
-                                ))
-                              ) : (
-                                <p className="text-gray-600">No achievements recorded</p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                ))
-              ) : (
-                <p className="text-center text-gray-600 py-8">No teachers found matching your search criteria</p>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                      ))
+                    )}
+                  </div>
+                  <Button onClick={() => setSelectedTeacher(teacher)} variant="outline">
+                    View Details
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-      {/* Edit Achievement Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Achievement</DialogTitle>
-          </DialogHeader>
-          
-          {editingAchievement && (
-            <form onSubmit={(e) => { e.preventDefault(); handleEditAchievement(); }} className="space-y-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Title</label>
-                  <Input
-                    value={editingAchievement.title}
-                    onChange={(e) => setEditingAchievement({...editingAchievement, title: e.target.value})}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Status</label>
-                  <Select
-                    value={editingAchievement.status}
-                    onValueChange={(value) => setEditingAchievement({...editingAchievement, status: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pending Approval">Pending Approval</SelectItem>
-                      <SelectItem value="Approved">Approved</SelectItem>
-                      <SelectItem value="Rejected">Rejected</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Dynamic fields based on achievement type */}
-                {editingAchievement.achievement_type === 'Research & Publications' && (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">SCI Papers</label>
-                        <Input
-                          value={editingAchievement.sci_papers || ''}
-                          onChange={(e) => setEditingAchievement({...editingAchievement, sci_papers: e.target.value})}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Scopus Papers</label>
-                        <Input
-                          value={editingAchievement.scopus_papers || ''}
-                          onChange={(e) => setEditingAchievement({...editingAchievement, scopus_papers: e.target.value})}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Scopus ID Link</label>
-                      <Input
-                        value={editingAchievement.scopus_id_link || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, scopus_id_link: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">UGC Papers</label>
-                      <Input
-                        value={editingAchievement.ugc_papers || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, ugc_papers: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Google Scholar Link</label>
-                      <Input
-                        value={editingAchievement.google_scholar_link || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, google_scholar_link: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Q1/Q2 Papers</label>
-                      <Input
-                        value={editingAchievement.q_papers || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, q_papers: e.target.value})}
-                      />
-                    </div>
-                  </>
-                )}
-                
-                {editingAchievement.achievement_type === 'Book Published' && (
-                  <>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Book Drive Link</label>
-                      <Input
-                        value={editingAchievement.book_drive_link || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, book_drive_link: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Book Details</label>
-                      <Input
-                        value={editingAchievement.book_details || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, book_details: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Book Chapters</label>
-                      <Input
-                        value={editingAchievement.book_chapters || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, book_chapters: e.target.value})}
-                      />
-                    </div>
-                  </>
-                )}
-                
-                {editingAchievement.achievement_type === 'Patents & Grants' && (
-                  <>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Patents Count</label>
-                      <Input
-                        value={editingAchievement.patents_count || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, patents_count: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Patent Link</label>
-                      <Input
-                        value={editingAchievement.patent_link || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, patent_link: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Patent Remarks</label>
-                      <Input
-                        value={editingAchievement.patents_remarks || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, patents_remarks: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Funded Projects</label>
-                      <Input
-                        value={editingAchievement.funded_projects || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, funded_projects: e.target.value})}
-                      />
-                    </div>
-                  </>
-                )}
-                
-                {/* Common fields for all types */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Research Collaboration</label>
-                  <Input
-                    value={editingAchievement.research_collaboration || ''}
-                    onChange={(e) => setEditingAchievement({...editingAchievement, research_collaboration: e.target.value})}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Awards/Recognitions</label>
-                  <Input
-                    value={editingAchievement.awards_recognitions || ''}
-                    onChange={(e) => setEditingAchievement({...editingAchievement, awards_recognitions: e.target.value})}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Consultancy Services</label>
-                  <Input
-                    value={editingAchievement.consultancy_services || ''}
-                    onChange={(e) => setEditingAchievement({...editingAchievement, consultancy_services: e.target.value})}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Startups/Excellence Centers</label>
-                  <Input
-                    value={editingAchievement.startup_details || ''}
-                    onChange={(e) => setEditingAchievement({...editingAchievement, startup_details: e.target.value})}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Research Areas</label>
-                  <Input
-                    value={editingAchievement.research_area || ''}
-                    onChange={(e) => setEditingAchievement({...editingAchievement, research_area: e.target.value})}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">General Remarks</label>
-                  <Input
-                    value={editingAchievement.general_remarks || ''}
-                    onChange={(e) => setEditingAchievement({...editingAchievement, general_remarks: e.target.value})}
-                  />
-                </div>
+      {/* Editable Teacher Details Modal (with scrollable content) */}
+      {selectedTeacher && (
+        <Dialog open={!!selectedTeacher} onOpenChange={() => setSelectedTeacher(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Teacher Details</DialogTitle>
+            </DialogHeader>
+            {/* Wrap content in a scrollable container */}
+            <div className="max-h-[80vh] overflow-y-auto space-y-4">
+              {/* Teacher Info */}
+              <div>
+                <label className="block font-medium">Full Name</label>
+                <Input
+                  value={selectedTeacher.full_name}
+                  onChange={(e) =>
+                    setSelectedTeacher({ ...selectedTeacher, full_name: e.target.value })
+                  }
+                />
               </div>
-              
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" type="button" onClick={() => setIsEditDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  Save Changes
-                </Button>
+              <div>
+                <label className="block font-medium">EID</label>
+                <Input
+                  value={selectedTeacher.eid}
+                  onChange={(e) =>
+                    setSelectedTeacher({ ...selectedTeacher, eid: e.target.value })
+                  }
+                />
               </div>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
+              <div>
+                <label className="block font-medium">Department</label>
+                <Input
+                  value={selectedTeacher.department}
+                  onChange={(e) =>
+                    setSelectedTeacher({ ...selectedTeacher, department: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="block font-medium">Designation</label>
+                <Input
+                  value={selectedTeacher.designation}
+                  onChange={(e) =>
+                    setSelectedTeacher({ ...selectedTeacher, designation: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="block font-medium">Email</label>
+                <Input
+                  value={selectedTeacher.email_id || ""}
+                  onChange={(e) =>
+                    setSelectedTeacher({ ...selectedTeacher, email_id: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="block font-medium">Mobile Number</label>
+                <Input
+                  value={selectedTeacher.mobile_number || ""}
+                  onChange={(e) =>
+                    setSelectedTeacher({ ...selectedTeacher, mobile_number: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="block font-medium">Highest Qualification</label>
+                <Input
+                  value={selectedTeacher.highest_qualification || ""}
+                  onChange={(e) =>
+                    setSelectedTeacher({ ...selectedTeacher, highest_qualification: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="block font-medium">Date of Joining</label>
+                <Input
+                  type="date"
+                  value={
+                    selectedTeacher.date_of_joining
+                      ? new Date(selectedTeacher.date_of_joining).toISOString().slice(0, 10)
+                      : ""
+                  }
+                  onChange={(e) =>
+                    setSelectedTeacher({ ...selectedTeacher, date_of_joining: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="block font-medium">Address</label>
+                <Input
+                  value={selectedTeacher.address || ""}
+                  onChange={(e) =>
+                    setSelectedTeacher({ ...selectedTeacher, address: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="block font-medium">Profile Pic URL</label>
+                <Input
+                  value={selectedTeacher.profile_pic_url || ""}
+                  onChange={(e) =>
+                    setSelectedTeacher({ ...selectedTeacher, profile_pic_url: e.target.value })
+                  }
+                />
+              </div>
+
+              {/* Achievements Section */}
+              <div className="mt-6">
+                <h3 className="text-lg font-bold mb-2">Achievements</h3>
+                {selectedTeacher.achievements.map((achievement, idx) => (
+                  <div key={achievement.id} className="border p-3 rounded mb-4">
+                    <div className="mb-2">
+                      <label className="block font-medium">Title</label>
+                      <Input
+                        value={achievement.title}
+                        onChange={(e) => {
+                          const newAchievements = [...selectedTeacher.achievements];
+                          newAchievements[idx].title = e.target.value;
+                          setSelectedTeacher({ ...selectedTeacher, achievements: newAchievements });
+                        }}
+                      />
+                    </div>
+                    <div className="mb-2">
+                      <label className="block font-medium">Type</label>
+                      <Input
+                        value={achievement.achievement_type}
+                        onChange={(e) => {
+                          const newAchievements = [...selectedTeacher.achievements];
+                          newAchievements[idx].achievement_type = e.target.value;
+                          setSelectedTeacher({ ...selectedTeacher, achievements: newAchievements });
+                        }}
+                      />
+                    </div>
+                    <div className="mb-2">
+                      <label className="block font-medium">Date Achieved</label>
+                      <Input
+                        type="date"
+                        value={
+                          achievement.date_achieved
+                            ? new Date(achievement.date_achieved).toISOString().slice(0, 10)
+                            : ""
+                        }
+                        onChange={(e) => {
+                          const newAchievements = [...selectedTeacher.achievements];
+                          newAchievements[idx].date_achieved = e.target.value;
+                          setSelectedTeacher({ ...selectedTeacher, achievements: newAchievements });
+                        }}
+                      />
+                    </div>
+                    <div className="mb-2">
+                      <label className="block font-medium">Status</label>
+                      <Input
+                        value={achievement.status}
+                        onChange={(e) => {
+                          const newAchievements = [...selectedTeacher.achievements];
+                          newAchievements[idx].status = e.target.value;
+                          setSelectedTeacher({ ...selectedTeacher, achievements: newAchievements });
+                        }}
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleAchievementUpdate(achievement)}
+                    >
+                      Save Achievement
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <DialogFooter className="mt-4 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setSelectedTeacher(null)}>
+                Close
+              </Button>
+              <Button onClick={handleTeacherUpdate}>Save Teacher</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
