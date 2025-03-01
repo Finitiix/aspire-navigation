@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Pencil, X, Check, ExternalLink, Download, Search, Filter } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { format } from "date-fns";
+import { format as dateFormat } from "date-fns"; // Rename to avoid conflicts
 import { toast } from "sonner";
 
 type Achievement = {
@@ -186,7 +186,7 @@ const AdminTeachers = () => {
         return {
           'Type': a.achievement_type,
           'Title': a.title,
-          'Date': format(new Date(a.date_achieved), 'yyyy-MM-dd'),
+          'Date': dateFormat(new Date(a.date_achieved), 'yyyy-MM-dd'), // Use the renamed import
           'Status': a.status,
           'SCI Papers': a.sci_papers || '',
           'Scopus Papers': a.scopus_papers || '',
