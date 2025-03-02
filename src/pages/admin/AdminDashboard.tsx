@@ -27,6 +27,7 @@ type DetailedAchievement = {
     eid: string;
     designation: string;
   };
+  // Any additional fields (such as teacher_proof) can be included
   [key: string]: any;
 };
 
@@ -97,6 +98,7 @@ const AdminDashboard = () => {
           book_drive_link,
           patent_link,
           website_link,
+          teacher_proof,
           teacher_details (
             full_name,
             eid,
@@ -179,15 +181,6 @@ const AdminDashboard = () => {
     setImportantDetails(importantDetails.filter((detail) => detail.id !== id));
   };
 
-  const ensureValidUrl = (url: string) => {
-    if (!url) return '';
-    const trimmed = url.trim();
-    if (!/^https?:\/\//i.test(trimmed)) {
-      return `https://${trimmed}`;
-    }
-    return trimmed;
-  };
-
   return (
     <div className="p-6">
       {/* Stats Section */}
@@ -206,7 +199,7 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Approval Requests for Achievements Section - Improved with details and clickable links */}
+      {/* Approval Requests for Achievements Section */}
       <Card className="p-6 mb-8">
         <h2 className="text-xl font-bold mb-4">Approval Requests for Achievements</h2>
         <div className="space-y-4">
@@ -333,6 +326,23 @@ const AdminDashboard = () => {
                           className="text-blue-500 hover:underline flex items-center"
                         >
                           Book Drive Link <ExternalLink className="w-3 h-3 ml-1" />
+                        </a>
+                      )}
+                      
+                      {achievement.teacher_proof && (
+                        <a
+                          href={
+                            supabase
+                              .storage
+                              .from("teacher_proofs")
+                              .getPublicUrl(achievement.teacher_proof)
+                              .data.publicUrl
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:underline flex items-center"
+                        >
+                          Uploaded Document <ExternalLink className="w-3 h-3 ml-1" />
                         </a>
                       )}
                     </div>
