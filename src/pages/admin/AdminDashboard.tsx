@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -84,7 +83,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Fetch achievements with joined teacher details
   const fetchPendingAchievements = async () => {
     try {
       const { data, error } = await supabase
@@ -98,8 +96,7 @@ const AdminDashboard = () => {
           journal_link,
           book_drive_link,
           patent_link,
-          google_scholar_link,
-          scopus_id_link,
+          website_link,
           teacher_details (
             full_name,
             eid,
