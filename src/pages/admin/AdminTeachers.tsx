@@ -24,7 +24,7 @@ import { toast } from "sonner";
 
 type Achievement = {
   id: string;
-  achievement_type: string;
+  category: string;
   title: string;
   date_achieved: string;
   status: string;
@@ -61,28 +61,49 @@ const AdminTeachers = () => {
       setLoading(true);
       console.log("Fetching teachers data...");
       
-      const { data, error } = await supabase
+      // First get all teachers
+      const { data: teachersData, error: teachersError } = await supabase
         .from('teacher_details')
-        .select(`
-          *,
-          achievements (*)
-        `);
+        .select('*');
       
-      if (error) {
-        console.error("Error fetching teachers:", error);
+      if (teachersError) {
+        console.error("Error fetching teachers:", teachersError);
         toast.error("Failed to load teachers data");
         setLoading(false);
         return;
       }
       
-      console.log("Teachers data fetched:", data);
+      // For each teacher, get their achievements
+      const teachersWithAchievements = await Promise.all(
+        teachersData.map(async (teacher) => {
+          const { data: achievements, error: achievementsError } = await supabase
+            .from('detailed_achievements')
+            .select('*')
+            .eq('teacher_id', teacher.id);
+            
+          if (achievementsError) {
+            console.error(`Error fetching achievements for teacher ${teacher.id}:`, achievementsError);
+            return {
+              ...teacher,
+              achievements: []
+            };
+          }
+          
+          return {
+            ...teacher,
+            achievements: achievements || []
+          };
+        })
+      );
       
-      if (data) {
-        setTeachers(data);
-        setFilteredTeachers(data);
+      console.log("Teachers data fetched:", teachersWithAchievements);
+      
+      if (teachersWithAchievements) {
+        setTeachers(teachersWithAchievements);
+        setFilteredTeachers(teachersWithAchievements);
         
         // Extract unique departments for filtering
-        const uniqueDepartments = Array.from(new Set(data.map(teacher => teacher.department)));
+        const uniqueDepartments = Array.from(new Set(teachersWithAchievements.map(teacher => teacher.department)));
         setDepartments(uniqueDepartments);
       }
       setLoading(false);
@@ -124,7 +145,7 @@ const AdminTeachers = () => {
   const updateAchievementStatus = async (achievementId: string, status: 'Approved' | 'Rejected' | 'Pending Approval') => {
     try {
       const { error } = await supabase
-        .from('achievements')
+        .from('detailed_achievements')
         .update({ status })
         .eq('id', achievementId);
       
@@ -159,7 +180,7 @@ const AdminTeachers = () => {
     
     try {
       const { error } = await supabase
-        .from('achievements')
+        .from('detailed_achievements')
         .update(editingAchievement)
         .eq('id', editingAchievement.id);
       
@@ -202,14 +223,13 @@ const AdminTeachers = () => {
     if (format === 'csv') {
       const achievementsData = teacher.achievements?.map(a => {
         return {
-          'Type': a.achievement_type,
+          'Type': a.category,
           'Title': a.title,
           'Date': a.date_achieved ? format(new Date(a.date_achieved), 'yyyy-MM-dd') : '',
           'Status': a.status,
-          'SCI Papers': a.sci_papers || '',
-          'Scopus Papers': a.scopus_papers || '',
-          'UGC Papers': a.ugc_papers || '',
-          'Patent Count': a.patents_count || '',
+          'Journal Name': a.journal_name || '',
+          'Book Title': a.book_title || '',
+          'Patent Link': a.patent_link || '',
           'Research Area': a.research_area || '',
           // Add more fields as needed
         };
@@ -389,7 +409,7 @@ const AdminTeachers = () => {
                                       <div>
                                         <p className="font-medium">{achievement.title}</p>
                                         <p className="text-sm text-gray-600">
-                                          {achievement.achievement_type} | {achievement.date_achieved ? new Date(achievement.date_achieved).toLocaleDateString() : 'N/A'}
+                                          {achievement.category} | {achievement.date_achieved ? new Date(achievement.date_achieved).toLocaleDateString() : 'N/A'}
                                         </p>
                                       </div>
                                       <div className="flex items-center space-x-2">
@@ -411,23 +431,11 @@ const AdminTeachers = () => {
                                         <AccordionTrigger className="text-sm py-1">View Details</AccordionTrigger>
                                         <AccordionContent>
                                           <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 mt-2">
-                                            {achievement.achievement_type === 'Research & Publications' && (
+                                            {achievement.category === 'Journal Articles' && (
                                               <>
-                                                <div>
-                                                  <p className="text-sm font-medium">SCI Papers:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.sci_papers)}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm font-medium">Scopus Papers:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.scopus_papers)}</p>
-                                                </div>
                                                 <div>
                                                   <p className="text-sm font-medium">Scopus ID:</p>
                                                   <p className="text-sm">{renderFieldValue(achievement.scopus_id_link, true)}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm font-medium">UGC Papers:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.ugc_papers)}</p>
                                                 </div>
                                                 <div>
                                                   <p className="text-sm font-medium">Google Scholar:</p>
@@ -435,16 +443,12 @@ const AdminTeachers = () => {
                                                 </div>
                                                 <div>
                                                   <p className="text-sm font-medium">Q1/Q2 Papers:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.q_papers)}</p>
-                                                </div>
-                                                <div className="col-span-2">
-                                                  <p className="text-sm font-medium">Research Remarks:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.research_remarks)}</p>
+                                                  <p className="text-sm">{renderFieldValue(achievement.q_ranking)}</p>
                                                 </div>
                                               </>
                                             )}
                                             
-                                            {achievement.achievement_type === 'Book Published' && (
+                                            {(achievement.category === 'Books & Book Chapters') && (
                                               <>
                                                 <div className="col-span-2">
                                                   <p className="text-sm font-medium">Book Drive Link:</p>
@@ -456,16 +460,16 @@ const AdminTeachers = () => {
                                                 </div>
                                                 <div className="col-span-2">
                                                   <p className="text-sm font-medium">Book Chapters:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.book_chapters)}</p>
+                                                  <p className="text-sm">{renderFieldValue(achievement.chapter_title)}</p>
                                                 </div>
                                               </>
                                             )}
                                             
-                                            {achievement.achievement_type === 'Patents & Grants' && (
+                                            {achievement.category === 'Patents' && (
                                               <>
                                                 <div>
-                                                  <p className="text-sm font-medium">Patents Count:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.patents_count)}</p>
+                                                  <p className="text-sm font-medium">Patents Status:</p>
+                                                  <p className="text-sm">{renderFieldValue(achievement.patent_status)}</p>
                                                 </div>
                                                 <div>
                                                   <p className="text-sm font-medium">Patent Link:</p>
@@ -508,7 +512,7 @@ const AdminTeachers = () => {
                                             </div>
                                             <div className="col-span-2">
                                               <p className="text-sm font-medium">General Remarks:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.general_remarks)}</p>
+                                              <p className="text-sm">{renderFieldValue(achievement.remarks)}</p>
                                             </div>
                                           </div>
                                           
@@ -604,61 +608,37 @@ const AdminTeachers = () => {
                   </Select>
                 </div>
                 
-                {/* Dynamic fields based on achievement type */}
-                {editingAchievement.achievement_type === 'Research & Publications' && (
+                {/* Dynamic fields based on achievement category */}
+                {editingAchievement.category === 'Journal Articles' && (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">SCI Papers</label>
+                        <label className="text-sm font-medium">Scopus ID Link</label>
                         <Input
-                          value={editingAchievement.sci_papers || ''}
-                          onChange={(e) => setEditingAchievement({...editingAchievement, sci_papers: e.target.value})}
+                          value={editingAchievement.scopus_id_link || ''}
+                          onChange={(e) => setEditingAchievement({...editingAchievement, scopus_id_link: e.target.value})}
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Scopus Papers</label>
+                        <label className="text-sm font-medium">Google Scholar Link</label>
                         <Input
-                          value={editingAchievement.scopus_papers || ''}
-                          onChange={(e) => setEditingAchievement({...editingAchievement, scopus_papers: e.target.value})}
+                          value={editingAchievement.google_scholar_link || ''}
+                          onChange={(e) => setEditingAchievement({...editingAchievement, google_scholar_link: e.target.value})}
                         />
                       </div>
                     </div>
                     
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Scopus ID Link</label>
+                      <label className="text-sm font-medium">Q1/Q2 Rankings</label>
                       <Input
-                        value={editingAchievement.scopus_id_link || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, scopus_id_link: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">UGC Papers</label>
-                      <Input
-                        value={editingAchievement.ugc_papers || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, ugc_papers: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Google Scholar Link</label>
-                      <Input
-                        value={editingAchievement.google_scholar_link || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, google_scholar_link: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Q1/Q2 Papers</label>
-                      <Input
-                        value={editingAchievement.q_papers || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, q_papers: e.target.value})}
+                        value={editingAchievement.q_ranking || ''}
+                        onChange={(e) => setEditingAchievement({...editingAchievement, q_ranking: e.target.value})}
                       />
                     </div>
                   </>
                 )}
                 
-                {editingAchievement.achievement_type === 'Book Published' && (
+                {editingAchievement.category === 'Books & Book Chapters' && (
                   <>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Book Drive Link</label>
@@ -679,20 +659,20 @@ const AdminTeachers = () => {
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Book Chapters</label>
                       <Input
-                        value={editingAchievement.book_chapters || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, book_chapters: e.target.value})}
+                        value={editingAchievement.chapter_title || ''}
+                        onChange={(e) => setEditingAchievement({...editingAchievement, chapter_title: e.target.value})}
                       />
                     </div>
                   </>
                 )}
                 
-                {editingAchievement.achievement_type === 'Patents & Grants' && (
+                {editingAchievement.category === 'Patents' && (
                   <>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Patents Count</label>
+                      <label className="text-sm font-medium">Patent Status</label>
                       <Input
-                        value={editingAchievement.patents_count || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, patents_count: e.target.value})}
+                        value={editingAchievement.patent_status || ''}
+                        onChange={(e) => setEditingAchievement({...editingAchievement, patent_status: e.target.value})}
                       />
                     </div>
                     
@@ -766,8 +746,8 @@ const AdminTeachers = () => {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">General Remarks</label>
                   <Input
-                    value={editingAchievement.general_remarks || ''}
-                    onChange={(e) => setEditingAchievement({...editingAchievement, general_remarks: e.target.value})}
+                    value={editingAchievement.remarks || ''}
+                    onChange={(e) => setEditingAchievement({...editingAchievement, remarks: e.target.value})}
                   />
                 </div>
               </div>

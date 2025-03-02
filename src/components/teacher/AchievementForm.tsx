@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import type { Database } from "@/integrations/supabase/types";
 
 type AchievementType = 
   | "Research & Publications"
@@ -26,6 +28,8 @@ type AchievementType =
   | "Projects & Workshops"
   | "Others";
 
+type AchievementCategory = Database["public"]["Enums"]["achievement_category"];
+
 const achievementTypes: AchievementType[] = [
   'Research & Publications',
   'Book Published',
@@ -35,6 +39,17 @@ const achievementTypes: AchievementType[] = [
   'Projects & Workshops',
   'Others'
 ];
+
+// Map achievement types to categories
+const typeToCategory: Record<AchievementType, AchievementCategory> = {
+  'Research & Publications': 'Journal Articles',
+  'Book Published': 'Books & Book Chapters',
+  'Patents & Grants': 'Patents',
+  'Certifications & Courses': 'Others',
+  'Awards & Recognitions': 'Awards & Recognitions',
+  'Projects & Workshops': 'Consultancy & Funded Projects',
+  'Others': 'Others'
+};
 
 type FormData = {
   achievement_type: AchievementType | '';
@@ -124,9 +139,12 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
 
     setLoading(true);
     try {
+      // Convert achievement_type to category
+      const category = typeToCategory[formData.achievement_type as AchievementType];
+      
       const achievementData = {
         teacher_id: teacherDetails.id,
-        achievement_type: formData.achievement_type,
+        category,
         title: formData.title,
         date_achieved: format(date, 'yyyy-MM-dd'),
         teacher_name: teacherDetails.full_name,
@@ -134,37 +152,40 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
         teacher_designation: teacherDetails.designation,
         teacher_mobile: teacherDetails.mobile_number,
         teacher_department: teacherDetails.department,
-        sci_papers: formData.sci_papers || null,
-        scopus_papers: formData.scopus_papers || null,
+        remarks: formData.general_remarks || null,
+        
+        // Research & Publications fields
+        journal_name: formData.achievement_type === 'Research & Publications' ? "Journal" : null,
         scopus_id_link: formData.scopus_id_link || null,
-        ugc_papers: formData.ugc_papers || null,
         google_scholar_link: formData.google_scholar_link || null,
-        research_remarks: formData.research_remarks || null,
+        q_ranking: formData.q_papers || null,
+        
+        // Book fields
         book_drive_link: formData.book_drive_link || null,
         book_details: formData.book_details || null,
-        book_chapters: formData.book_chapters || null,
-        q_papers: formData.q_papers || null,
-        patents_count: formData.patents_count || null,
+        book_title: formData.achievement_type === 'Book Published' ? formData.title : null,
+        chapter_title: formData.book_chapters || null,
+        
+        // Patent fields
         patent_link: formData.patent_link || null,
+        patent_status: formData.patents_count || null,
         patents_remarks: formData.patents_remarks || null,
+        
+        // Common fields that may apply to multiple types
+        research_area: formData.research_area || null,
         research_collaboration: formData.research_collaboration || null,
         awards_recognitions: formData.awards_recognitions || null,
-        consultancy_services: formData.consultancy_services || null,
         funded_projects: formData.funded_projects || null,
+        consultancy_services: formData.consultancy_services || null,
         startup_details: formData.startup_details || null,
-        research_area: formData.research_area || null,
-        general_remarks: formData.general_remarks || null,
-        status: 'Pending Approval',
+        status: isEditing && initialData?.status ? initialData.status : 'Pending Approval',
       };
 
       if (isEditing && initialData?.id) {
         // Update existing achievement
         const { error } = await supabase
-          .from('achievements')
-          .update({
-            ...achievementData,
-            status: initialData.status // Preserve the current status
-          })
+          .from('detailed_achievements')
+          .update(achievementData)
           .eq('id', initialData.id);
 
         if (error) throw error;
@@ -172,7 +193,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
       } else {
         // Insert new achievement
         const { error } = await supabase
-          .from('achievements')
+          .from('detailed_achievements')
           .insert(achievementData);
 
         if (error) throw error;

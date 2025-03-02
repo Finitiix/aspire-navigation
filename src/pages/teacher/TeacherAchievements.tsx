@@ -11,7 +11,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 
 type Achievement = {
   id: string;
-  achievement_type: string;
+  category: string;
   title: string;
   date_achieved: string;
   status: string;
@@ -31,19 +31,42 @@ const TeacherAchievements = () => {
   const fetchAchievements = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      const { data } = await supabase
-        .from('achievements')
+      const { data, error } = await supabase
+        .from('detailed_achievements')
         .select('*')
         .eq('teacher_id', user.id)
         .order('created_at', { ascending: false });
       
       if (data) setAchievements(data);
+      if (error) console.error("Error fetching achievements:", error);
     }
   };
 
   const handleEditClick = (achievement: Achievement) => {
-    setEditingAchievement(achievement);
+    // Map category back to achievement_type for form compatibility
+    const achievementData = {
+      ...achievement,
+      achievement_type: getCategoryType(achievement.category)
+    };
+    
+    setEditingAchievement(achievementData);
     setIsEditDialogOpen(true);
+  };
+
+  // Helper function to map category to achievement_type
+  const getCategoryType = (category: string) => {
+    const categoryMap: Record<string, string> = {
+      'Journal Articles': 'Research & Publications',
+      'Conference Papers': 'Research & Publications',
+      'Books & Book Chapters': 'Book Published',
+      'Patents': 'Patents & Grants',
+      'Awards & Recognitions': 'Awards & Recognitions',
+      'Consultancy & Funded Projects': 'Projects & Workshops',
+      'Startups & Centers of Excellence': 'Others',
+      'Others': 'Others'
+    };
+    
+    return categoryMap[category] || 'Others';
   };
 
   const handleEditSuccess = () => {
@@ -113,7 +136,7 @@ const TeacherAchievements = () => {
                       <div className="flex justify-between items-start">
                         <div>
                           <h3 className="font-medium">{achievement.title}</h3>
-                          <p className="text-sm text-gray-600">{achievement.achievement_type}</p>
+                          <p className="text-sm text-gray-600">{achievement.category}</p>
                           <p className="text-sm text-gray-600">Date: {format(new Date(achievement.date_achieved), 'PPP')}</p>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -135,23 +158,11 @@ const TeacherAchievements = () => {
                           <AccordionTrigger className="text-sm">View Details</AccordionTrigger>
                           <AccordionContent>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 mt-2">
-                              {achievement.achievement_type === 'Research & Publications' && (
+                              {achievement.category === 'Journal Articles' && (
                                 <>
-                                  <div>
-                                    <p className="text-sm font-medium">SCI Papers:</p>
-                                    <p className="text-sm">{renderFieldValue(achievement.sci_papers)}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium">Scopus Papers:</p>
-                                    <p className="text-sm">{renderFieldValue(achievement.scopus_papers)}</p>
-                                  </div>
                                   <div>
                                     <p className="text-sm font-medium">Scopus ID:</p>
                                     <p className="text-sm">{renderFieldValue(achievement.scopus_id_link, true)}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium">UGC Papers:</p>
-                                    <p className="text-sm">{renderFieldValue(achievement.ugc_papers)}</p>
                                   </div>
                                   <div>
                                     <p className="text-sm font-medium">Google Scholar:</p>
@@ -159,16 +170,12 @@ const TeacherAchievements = () => {
                                   </div>
                                   <div>
                                     <p className="text-sm font-medium">Q1/Q2 Papers:</p>
-                                    <p className="text-sm">{renderFieldValue(achievement.q_papers)}</p>
-                                  </div>
-                                  <div className="col-span-2">
-                                    <p className="text-sm font-medium">Research Remarks:</p>
-                                    <p className="text-sm">{renderFieldValue(achievement.research_remarks)}</p>
+                                    <p className="text-sm">{renderFieldValue(achievement.q_ranking)}</p>
                                   </div>
                                 </>
                               )}
                               
-                              {achievement.achievement_type === 'Book Published' && (
+                              {(achievement.category === 'Books & Book Chapters') && (
                                 <>
                                   <div className="col-span-2">
                                     <p className="text-sm font-medium">Book Drive Link:</p>
@@ -180,16 +187,16 @@ const TeacherAchievements = () => {
                                   </div>
                                   <div className="col-span-2">
                                     <p className="text-sm font-medium">Book Chapters:</p>
-                                    <p className="text-sm">{renderFieldValue(achievement.book_chapters)}</p>
+                                    <p className="text-sm">{renderFieldValue(achievement.chapter_title)}</p>
                                   </div>
                                 </>
                               )}
                               
-                              {achievement.achievement_type === 'Patents & Grants' && (
+                              {achievement.category === 'Patents' && (
                                 <>
                                   <div>
-                                    <p className="text-sm font-medium">Patents Count:</p>
-                                    <p className="text-sm">{renderFieldValue(achievement.patents_count)}</p>
+                                    <p className="text-sm font-medium">Patents Status:</p>
+                                    <p className="text-sm">{renderFieldValue(achievement.patent_status)}</p>
                                   </div>
                                   <div>
                                     <p className="text-sm font-medium">Patent Link:</p>
@@ -232,7 +239,7 @@ const TeacherAchievements = () => {
                               </div>
                               <div className="col-span-2">
                                 <p className="text-sm font-medium">General Remarks:</p>
-                                <p className="text-sm">{renderFieldValue(achievement.general_remarks)}</p>
+                                <p className="text-sm">{renderFieldValue(achievement.remarks)}</p>
                               </div>
                             </div>
                           </AccordionContent>
