@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,9 +15,24 @@ const ensureValidUrl = (url: string) => {
   return trimmed;
 };
 
+type DetailedAchievement = {
+  id: string;
+  title: string;
+  category: string;
+  date_achieved: string;
+  status: string;
+  link_url?: string;
+  teacher_details?: {
+    full_name: string;
+    eid: string;
+    designation: string;
+  };
+  [key: string]: any;
+};
+
 const AdminDashboard = () => {
   const [feedback, setFeedback] = useState<any[]>([]);
-  const [pendingAchievements, setPendingAchievements] = useState<any[]>([]);
+  const [pendingAchievements, setPendingAchievements] = useState<DetailedAchievement[]>([]);
   const [stats, setStats] = useState({
     totalTeachers: 0,
     pendingAchievements: 0,
@@ -47,7 +63,7 @@ const AdminDashboard = () => {
         .select("*", { count: "exact" });
 
       const { count: pendingCount } = await supabase
-        .from("achievements")
+        .from("detailed_achievements")
         .select("*", { count: "exact" })
         .eq("status", "Pending Approval");
 
@@ -71,13 +87,19 @@ const AdminDashboard = () => {
   const fetchPendingAchievements = async () => {
     try {
       const { data, error } = await supabase
-        .from("achievements")
+        .from("detailed_achievements")
         .select(`
           id,
-          achievement_type,
+          category,
           title,
           issuing_organization,
-          link_url,
+          date_achieved,
+          status,
+          journal_link,
+          book_drive_link,
+          patent_link,
+          google_scholar_link,
+          scopus_id_link,
           teacher_details (
             full_name,
             eid,
@@ -101,7 +123,7 @@ const AdminDashboard = () => {
   const handleApproval = async (id: string, status: "Approved" | "Rejected") => {
     try {
       const { error } = await supabase
-        .from("achievements")
+        .from("detailed_achievements")
         .update({ status })
         .eq("id", id);
       if (error) {
@@ -224,41 +246,51 @@ const AdminDashboard = () => {
                   </div>
                   <div className="mt-4">
                     <p className="text-md font-medium">
-                      {achievement.achievement_type} - {achievement.title}
+                      {achievement.category} - {achievement.title}
                     </p>
                     <p className="text-sm text-gray-600 mt-1">
-                      Issuing Organization: {achievement.issuing_organization || 'Not specified'}
+                      Date: {new Date(achievement.date_achieved).toLocaleDateString()}
                     </p>
                     
-                    {/* Detailed achievement information */}
+                    {/* Detailed achievement information based on category */}
                     <div className="mt-2 text-sm">
-                      {achievement.achievement_type === 'Research & Publications' && (
+                      {achievement.category === 'Journal Articles' && (
                         <div className="mt-2 space-y-1">
                           {achievement.sci_papers && <p>SCI Papers: {achievement.sci_papers}</p>}
                           {achievement.scopus_papers && <p>Scopus Papers: {achievement.scopus_papers}</p>}
                           {achievement.ugc_papers && <p>UGC Papers: {achievement.ugc_papers}</p>}
                           {achievement.research_area && <p>Research Areas: {achievement.research_area}</p>}
+                          {achievement.q_ranking && <p>Q Ranking: {achievement.q_ranking}</p>}
                         </div>
                       )}
                       
-                      {achievement.achievement_type === 'Patents & Grants' && (
+                      {achievement.category === 'Books & Book Chapters' && (
                         <div className="mt-2 space-y-1">
-                          {achievement.patents_count && <p>Patents: {achievement.patents_count}</p>}
-                          {achievement.funded_projects && <p>Funded Projects: {achievement.funded_projects}</p>}
+                          {achievement.book_title && <p>Book Title: {achievement.book_title}</p>}
+                          {achievement.publisher && <p>Publisher: {achievement.publisher}</p>}
+                          {achievement.chapter_title && <p>Chapter Title: {achievement.chapter_title}</p>}
+                        </div>
+                      )}
+                      
+                      {achievement.category === 'Patents' && (
+                        <div className="mt-2 space-y-1">
+                          {achievement.patent_status && <p>Patent Status: {achievement.patent_status}</p>}
+                          {achievement.patent_number && <p>Patent Number: {achievement.patent_number}</p>}
+                          {achievement.patent_office && <p>Patent Office: {achievement.patent_office}</p>}
                         </div>
                       )}
                     </div>
                     
                     {/* Display clickable links */}
                     <div className="mt-3 space-y-1">
-                      {achievement.link_url && (
+                      {achievement.journal_link && (
                         <a
-                          href={ensureValidUrl(achievement.link_url)}
+                          href={ensureValidUrl(achievement.journal_link)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-blue-500 hover:underline flex items-center"
                         >
-                          View Uploaded Link <ExternalLink className="w-3 h-3 ml-1" />
+                          Journal Link <ExternalLink className="w-3 h-3 ml-1" />
                         </a>
                       )}
                       

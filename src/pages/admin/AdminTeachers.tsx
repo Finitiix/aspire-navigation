@@ -1,278 +1,192 @@
 
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Pencil, X, Check, ExternalLink, Download, Search, Filter } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { format } from "date-fns"; // Fixed import to avoid naming conflict
 import { toast } from "sonner";
+import { Search, Download, Check, X, Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format } from "date-fns";
 
-type Achievement = {
+// Define types
+type Teacher = {
+  id: string;
+  full_name: string;
+  email_id: string;
+  department: string;
+  designation: string;
+  mobile_number: string;
+  eid: string;
+  achievements?: DetailedAchievement[];
+  [key: string]: any;
+};
+
+type DetailedAchievement = {
   id: string;
   category: string;
   title: string;
   date_achieved: string;
   status: string;
-  [key: string]: any; // For dynamic fields
-};
-
-type Teacher = {
-  id: string;
-  full_name: string;
-  department: string;
-  eid: string;
-  designation: string;
-  profile_pic_url: string | null;
-  achievements: Achievement[];
-  [key: string]: any; // For additional fields
+  [key: string]: any;
 };
 
 const AdminTeachers = () => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [filteredTeachers, setFilteredTeachers] = useState<Teacher[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("");
-  const [departments, setDepartments] = useState<string[]>([]);
-  const [editingAchievement, setEditingAchievement] = useState<Achievement | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     fetchTeachers();
   }, []);
 
+  useEffect(() => {
+    if (searchQuery) {
+      const filtered = teachers.filter(
+        (teacher) =>
+          teacher.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          teacher.email_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          teacher.eid.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          teacher.department.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredTeachers(filtered);
+    } else {
+      setFilteredTeachers(teachers);
+    }
+  }, [searchQuery, teachers]);
+
   const fetchTeachers = async () => {
     try {
-      setLoading(true);
-      console.log("Fetching teachers data...");
-      
-      // First get all teachers
-      const { data: teachersData, error: teachersError } = await supabase
-        .from('teacher_details')
-        .select('*');
-      
-      if (teachersError) {
-        console.error("Error fetching teachers:", teachersError);
-        toast.error("Failed to load teachers data");
-        setLoading(false);
-        return;
-      }
-      
-      // For each teacher, get their achievements
-      const teachersWithAchievements = await Promise.all(
-        teachersData.map(async (teacher) => {
-          const { data: achievements, error: achievementsError } = await supabase
-            .from('detailed_achievements')
-            .select('*')
-            .eq('teacher_id', teacher.id);
-            
-          if (achievementsError) {
-            console.error(`Error fetching achievements for teacher ${teacher.id}:`, achievementsError);
-            return {
-              ...teacher,
-              achievements: []
-            };
-          }
-          
-          return {
-            ...teacher,
-            achievements: achievements || []
-          };
-        })
-      );
-      
-      console.log("Teachers data fetched:", teachersWithAchievements);
-      
-      if (teachersWithAchievements) {
+      const { data: teachersData, error } = await supabase
+        .from("teacher_details")
+        .select("*")
+        .order("full_name");
+
+      if (error) throw error;
+
+      if (teachersData) {
+        // Get achievements for each teacher
+        const teachersWithAchievements = await Promise.all(
+          teachersData.map(async (teacher) => {
+            const { data: achievements } = await supabase
+              .from("detailed_achievements")
+              .select("*")
+              .eq("teacher_id", teacher.id);
+            return { ...teacher, achievements: achievements || [] };
+          })
+        );
+
         setTeachers(teachersWithAchievements);
         setFilteredTeachers(teachersWithAchievements);
-        
-        // Extract unique departments for filtering
-        const uniqueDepartments = Array.from(new Set(teachersWithAchievements.map(teacher => teacher.department)));
-        setDepartments(uniqueDepartments);
       }
-      setLoading(false);
     } catch (error) {
-      console.error("Exception when fetching teachers:", error);
-      toast.error("An unexpected error occurred");
-      setLoading(false);
+      console.error("Error fetching teachers:", error);
+      toast.error("Failed to fetch teachers data");
     }
   };
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    applyFilters(query, departmentFilter);
+  const handleViewDetails = (teacher: Teacher) => {
+    setSelectedTeacher(teacher);
+    setIsDetailsOpen(true);
   };
 
-  const handleDepartmentFilter = (department: string) => {
-    setDepartmentFilter(department);
-    applyFilters(searchQuery, department);
-  };
+  const handleExportToCSV = async () => {
+    setIsExporting(true);
+    try {
+      // Get all teachers with their achievements
+      const { data: teachersData, error } = await supabase
+        .from("teacher_details")
+        .select("*")
+        .order("full_name");
 
-  const applyFilters = (query: string, department: string) => {
-    let filtered = [...teachers];
-    
-    if (query) {
-      const lowerQuery = query.toLowerCase();
-      filtered = filtered.filter(teacher => 
-        teacher.full_name.toLowerCase().includes(lowerQuery) ||
-        teacher.eid.toLowerCase().includes(lowerQuery)
+      if (error) throw error;
+
+      const teachersWithAchievements = await Promise.all(
+        teachersData.map(async (teacher) => {
+          const { data: achievements } = await supabase
+            .from("detailed_achievements")
+            .select("*")
+            .eq("teacher_id", teacher.id);
+          return { ...teacher, achievements: achievements || [] };
+        })
       );
-    }
-    
-    if (department) {
-      filtered = filtered.filter(teacher => teacher.department === department);
-    }
-    
-    setFilteredTeachers(filtered);
-  };
 
-  const updateAchievementStatus = async (achievementId: string, status: 'Approved' | 'Rejected' | 'Pending Approval') => {
-    try {
-      const { error } = await supabase
-        .from('detailed_achievements')
-        .update({ status })
-        .eq('id', achievementId);
-      
-      if (error) throw error;
-      
-      // Update local state
-      const updatedTeachers = teachers.map(teacher => {
-        if (teacher.achievements && teacher.achievements.some(a => a.id === achievementId)) {
-          return {
-            ...teacher,
-            achievements: teacher.achievements.map(achievement => 
-              achievement.id === achievementId 
-                ? { ...achievement, status } 
-                : achievement
-            )
-          };
-        }
-        return teacher;
+      // Create CSV content
+      let csvContent = "Name,EID,Email,Department,Designation,Mobile,Achievement Count,Approved Achievements\n";
+
+      teachersWithAchievements.forEach((teacher) => {
+        const achievementCount = teacher.achievements?.length || 0;
+        const approvedCount = teacher.achievements?.filter((a: DetailedAchievement) => a.status === "Approved").length || 0;
+        
+        csvContent += `"${teacher.full_name}","${teacher.eid}","${teacher.email_id}","${teacher.department}","${teacher.designation}","${teacher.mobile_number}","${achievementCount}","${approvedCount}"\n`;
       });
-      
-      setTeachers(updatedTeachers);
-      setFilteredTeachers(updatedTeachers);
-      toast.success(`Achievement ${status.toLowerCase()}`);
-    } catch (error) {
-      toast.error("Failed to update achievement status");
-      console.error(error);
-    }
-  };
 
-  const handleEditAchievement = async () => {
-    if (!editingAchievement) return;
-    
-    try {
-      const { error } = await supabase
-        .from('detailed_achievements')
-        .update(editingAchievement)
-        .eq('id', editingAchievement.id);
-      
-      if (error) throw error;
-      
-      // Update local state
-      const updatedTeachers = teachers.map(teacher => {
-        if (teacher.achievements && teacher.achievements.some(a => a.id === editingAchievement.id)) {
-          return {
-            ...teacher,
-            achievements: teacher.achievements.map(achievement => 
-              achievement.id === editingAchievement.id 
-                ? editingAchievement 
-                : achievement
-            )
-          };
-        }
-        return teacher;
-      });
-      
-      setTeachers(updatedTeachers);
-      setFilteredTeachers(updatedTeachers);
-      setIsEditDialogOpen(false);
-      setEditingAchievement(null);
-      toast.success("Achievement updated successfully");
-    } catch (error) {
-      toast.error("Failed to update achievement");
-      console.error(error);
-    }
-  };
-
-  const handleEditClick = (achievement: Achievement) => {
-    setEditingAchievement({ ...achievement });
-    setIsEditDialogOpen(true);
-  };
-
-  const exportTeacherData = (teacher: Teacher, format: string) => {
-    // This is a simplified example for CSV export
-    // For PDF and other formats, you would use libraries like jsPDF or docx
-    if (format === 'csv') {
-      const achievementsData = teacher.achievements?.map(a => {
-        return {
-          'Type': a.category,
-          'Title': a.title,
-          'Date': a.date_achieved ? format(new Date(a.date_achieved), 'yyyy-MM-dd') : '',
-          'Status': a.status,
-          'Journal Name': a.journal_name || '',
-          'Book Title': a.book_title || '',
-          'Patent Link': a.patent_link || '',
-          'Research Area': a.research_area || '',
-          // Add more fields as needed
-        };
-      }) || [];
-      
-      // Convert to CSV
-      const headers = Object.keys(achievementsData[0] || {}).join(',');
-      const rows = achievementsData.map(obj => Object.values(obj).join(',')).join('\n');
-      const csv = `${headers}\n${rows}`;
-      
-      // Create download link
-      const blob = new Blob([csv], { type: 'text/csv' });
+      // Create and download the CSV file
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.setAttribute('hidden', '');
-      a.setAttribute('href', url);
-      a.setAttribute('download', `${teacher.eid}_achievements.csv`);
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      toast.success(`Exported ${teacher.full_name}'s data as CSV`);
-    } else {
-      toast.info(`Export as ${format.toUpperCase()} is not implemented yet`);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `teachers_report_${format(new Date(), "yyyy-MM-dd")}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success("CSV exported successfully");
+    } catch (error) {
+      console.error("Error exporting CSV:", error);
+      toast.error("Failed to export CSV");
+    } finally {
+      setIsExporting(false);
     }
   };
 
-  const renderFieldValue = (value: any, isLink = false) => {
-    if (!value) return <span className="text-gray-400">Not provided</span>;
-    
-    if (isLink && typeof value === 'string' && value.startsWith('http')) {
-      return (
-        <a 
-          href={value} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-blue-600 hover:underline flex items-center"
-        >
-          {value.substring(0, 30)}... <ExternalLink className="h-3 w-3 ml-1" />
-        </a>
-      );
+  const handleUpdateAchievementStatus = async (achievementId: string, newStatus: "Approved" | "Rejected") => {
+    try {
+      const { error } = await supabase
+        .from("detailed_achievements")
+        .update({ status: newStatus })
+        .eq("id", achievementId);
+
+      if (error) throw error;
+
+      // Update the local state
+      if (selectedTeacher) {
+        const updatedAchievements = selectedTeacher.achievements?.map((a) =>
+          a.id === achievementId ? { ...a, status: newStatus } : a
+        );
+        
+        setSelectedTeacher({
+          ...selectedTeacher,
+          achievements: updatedAchievements,
+        });
+
+        // Also update in the teachers array
+        const updatedTeachers = teachers.map((t) =>
+          t.id === selectedTeacher.id
+            ? { ...t, achievements: updatedAchievements }
+            : t
+        );
+        
+        setTeachers(updatedTeachers);
+        setFilteredTeachers(
+          filteredTeachers.map((t) =>
+            t.id === selectedTeacher.id
+              ? { ...t, achievements: updatedAchievements }
+              : t
+          )
+        );
+      }
+
+      toast.success(`Achievement marked as ${newStatus}`);
+    } catch (error) {
+      console.error("Error updating achievement status:", error);
+      toast.error("Failed to update achievement status");
     }
-    
-    return value;
   };
 
   const getStatusBadgeClass = (status: string) => {
@@ -287,480 +201,255 @@ const AdminTeachers = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Card>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Teacher Management</h1>
+        <Button
+          onClick={handleExportToCSV}
+          disabled={isExporting}
+          className="bg-green-600 hover:bg-green-700"
+        >
+          {isExporting ? "Exporting..." : "Export to CSV"}
+          <Download className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+
+      <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Teachers</CardTitle>
-          
-          {/* Search and Filter Bar */}
-          <div className="flex flex-col md:flex-row gap-4 mt-4">
-            <div className="relative flex-grow">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input 
-                className="pl-10" 
-                placeholder="Search by name or EID..." 
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-              />
-            </div>
-            
-            <div className="flex gap-2 items-center">
-              <Filter className="h-4 w-4 text-gray-500" />
-              <Select value={departmentFilter} onValueChange={handleDepartmentFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Departments</SelectItem>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          <CardTitle>Search Teachers</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="flex justify-center items-center py-8">
-              <p>Loading teachers data...</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredTeachers.length > 0 ? (
-                filteredTeachers.map((teacher) => (
-                  <Accordion key={teacher.id} type="single" collapsible>
-                    <AccordionItem value="details">
-                      <AccordionTrigger className="px-4">
-                        <div className="flex items-center gap-4">
-                          {teacher.profile_pic_url ? (
-                            <img
-                              src={teacher.profile_pic_url}
-                              alt={teacher.full_name}
-                              className="w-12 h-12 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
-                              <span className="text-xl font-bold text-gray-500">
-                                {teacher.full_name.charAt(0)}
-                              </span>
-                            </div>
-                          )}
-                          <div className="text-left">
-                            <h3 className="font-medium">{teacher.full_name}</h3>
-                            <p className="text-sm text-gray-600">{teacher.department} | EID: {teacher.eid}</p>
-                          </div>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-4">
-                        <div className="grid grid-cols-1 gap-4 py-4">
-                          <div>
-                            <div className="flex justify-between mb-4">
-                              <h4 className="font-medium">Profile Details</h4>
-                              <div className="flex gap-2">
-                                <Button variant="outline" size="sm" onClick={() => exportTeacherData(teacher, 'csv')}>
-                                  <Download className="h-4 w-4 mr-1" /> Export CSV
-                                </Button>
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm mb-6">
-                              <div>
-                                <p className="font-medium">EID:</p>
-                                <p>{teacher.eid}</p>
-                              </div>
-                              <div>
-                                <p className="font-medium">Designation:</p>
-                                <p>{teacher.designation}</p>
-                              </div>
-                              <div>
-                                <p className="font-medium">Department:</p>
-                                <p>{teacher.department}</p>
-                              </div>
-                              <div>
-                                <p className="font-medium">Email:</p>
-                                <p>{teacher.email_id}</p>
-                              </div>
-                              <div>
-                                <p className="font-medium">Mobile:</p>
-                                <p>{teacher.mobile_number}</p>
-                              </div>
-                              <div>
-                                <p className="font-medium">Qualification:</p>
-                                <p>{teacher.highest_qualification}</p>
-                              </div>
-                              <div>
-                                <p className="font-medium">Joined:</p>
-                                <p>{teacher.date_of_joining ? new Date(teacher.date_of_joining).toLocaleDateString() : 'N/A'}</p>
-                              </div>
-                              {teacher.address && (
-                                <div>
-                                  <p className="font-medium">Address:</p>
-                                  <p>{teacher.address}</p>
-                                </div>
-                              )}
-                            </div>
-                            
-                            <h4 className="font-medium mb-4">Achievements</h4>
-                            <div className="space-y-4">
-                              {teacher.achievements && teacher.achievements.length > 0 ? (
-                                teacher.achievements.map((achievement) => (
-                                  <Card key={achievement.id} className="p-4">
-                                    <div className="flex justify-between items-start mb-2">
-                                      <div>
-                                        <p className="font-medium">{achievement.title}</p>
-                                        <p className="text-sm text-gray-600">
-                                          {achievement.category} | {achievement.date_achieved ? new Date(achievement.date_achieved).toLocaleDateString() : 'N/A'}
-                                        </p>
-                                      </div>
-                                      <div className="flex items-center space-x-2">
-                                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadgeClass(achievement.status)}`}>
-                                          {achievement.status}
-                                        </span>
-                                        <Button 
-                                          variant="ghost" 
-                                          size="sm"
-                                          onClick={() => handleEditClick(achievement)}
-                                        >
-                                          <Pencil className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                    
-                                    <Accordion type="single" collapsible className="w-full">
-                                      <AccordionItem value="achievement-details">
-                                        <AccordionTrigger className="text-sm py-1">View Details</AccordionTrigger>
-                                        <AccordionContent>
-                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 mt-2">
-                                            {achievement.category === 'Journal Articles' && (
-                                              <>
-                                                <div>
-                                                  <p className="text-sm font-medium">Scopus ID:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.scopus_id_link, true)}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm font-medium">Google Scholar:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.google_scholar_link, true)}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm font-medium">Q1/Q2 Papers:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.q_ranking)}</p>
-                                                </div>
-                                              </>
-                                            )}
-                                            
-                                            {(achievement.category === 'Books & Book Chapters') && (
-                                              <>
-                                                <div className="col-span-2">
-                                                  <p className="text-sm font-medium">Book Drive Link:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.book_drive_link, true)}</p>
-                                                </div>
-                                                <div className="col-span-2">
-                                                  <p className="text-sm font-medium">Book Details:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.book_details)}</p>
-                                                </div>
-                                                <div className="col-span-2">
-                                                  <p className="text-sm font-medium">Book Chapters:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.chapter_title)}</p>
-                                                </div>
-                                              </>
-                                            )}
-                                            
-                                            {achievement.category === 'Patents' && (
-                                              <>
-                                                <div>
-                                                  <p className="text-sm font-medium">Patents Status:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.patent_status)}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm font-medium">Patent Link:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.patent_link, true)}</p>
-                                                </div>
-                                                <div className="col-span-2">
-                                                  <p className="text-sm font-medium">Patents Remarks:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.patents_remarks)}</p>
-                                                </div>
-                                                <div className="col-span-2">
-                                                  <p className="text-sm font-medium">Funded Projects:</p>
-                                                  <p className="text-sm">{renderFieldValue(achievement.funded_projects)}</p>
-                                                </div>
-                                              </>
-                                            )}
-                                            
-                                            {/* Common fields for all types */}
-                                            <div className="col-span-2 mt-2">
-                                              <p className="text-sm font-medium">Additional Information:</p>
-                                            </div>
-                                            <div className="col-span-2">
-                                              <p className="text-sm font-medium">Research Collaboration:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.research_collaboration)}</p>
-                                            </div>
-                                            <div className="col-span-2">
-                                              <p className="text-sm font-medium">Awards/Recognitions:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.awards_recognitions)}</p>
-                                            </div>
-                                            <div className="col-span-2">
-                                              <p className="text-sm font-medium">Consultancy Services:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.consultancy_services)}</p>
-                                            </div>
-                                            <div className="col-span-2">
-                                              <p className="text-sm font-medium">Startups/Excellence Centers:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.startup_details)}</p>
-                                            </div>
-                                            <div className="col-span-2">
-                                              <p className="text-sm font-medium">Research Areas:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.research_area)}</p>
-                                            </div>
-                                            <div className="col-span-2">
-                                              <p className="text-sm font-medium">General Remarks:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.remarks)}</p>
-                                            </div>
-                                          </div>
-                                          
-                                          {/* Admin Action Buttons */}
-                                          <div className="flex justify-end mt-4 space-x-2">
-                                            {achievement.status !== 'Approved' && (
-                                              <Button 
-                                                size="sm" 
-                                                variant="outline" 
-                                                className="bg-green-50 text-green-600 hover:bg-green-100"
-                                                onClick={() => updateAchievementStatus(achievement.id, 'Approved')}
-                                              >
-                                                <Check className="h-4 w-4 mr-1" /> Approve
-                                              </Button>
-                                            )}
-                                            
-                                            {achievement.status !== 'Rejected' && (
-                                              <Button 
-                                                size="sm" 
-                                                variant="outline"
-                                                className="bg-red-50 text-red-600 hover:bg-red-100"
-                                                onClick={() => updateAchievementStatus(achievement.id, 'Rejected')}
-                                              >
-                                                <X className="h-4 w-4 mr-1" /> Reject
-                                              </Button>
-                                            )}
-                                            
-                                            {achievement.status !== 'Pending Approval' && (
-                                              <Button 
-                                                size="sm" 
-                                                variant="outline"
-                                                onClick={() => updateAchievementStatus(achievement.id, 'Pending Approval')}
-                                              >
-                                                Reset to Pending
-                                              </Button>
-                                            )}
-                                          </div>
-                                        </AccordionContent>
-                                      </AccordionItem>
-                                    </Accordion>
-                                  </Card>
-                                ))
-                              ) : (
-                                <p className="text-gray-600">No achievements recorded</p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                ))
-              ) : (
-                <p className="text-center text-gray-600 py-8">No teachers found matching your search criteria</p>
-              )}
-            </div>
-          )}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Input
+              placeholder="Search by name, email, EID, or department..."
+              className="pl-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </CardContent>
       </Card>
 
-      {/* Edit Achievement Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <Card>
+        <CardHeader>
+          <CardTitle>Teachers List ({filteredTeachers.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="p-3 text-left">Name</th>
+                  <th className="p-3 text-left">EID</th>
+                  <th className="p-3 text-left">Department</th>
+                  <th className="p-3 text-left">Designation</th>
+                  <th className="p-3 text-left">Achievements</th>
+                  <th className="p-3 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTeachers.length > 0 ? (
+                  filteredTeachers.map((teacher) => (
+                    <tr key={teacher.id} className="border-t">
+                      <td className="p-3">{teacher.full_name}</td>
+                      <td className="p-3">{teacher.eid}</td>
+                      <td className="p-3">{teacher.department}</td>
+                      <td className="p-3">{teacher.designation}</td>
+                      <td className="p-3">
+                        <div className="flex items-center space-x-2">
+                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                            Total: {teacher.achievements?.length || 0}
+                          </span>
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                            Approved: {teacher.achievements?.filter(a => a.status === "Approved").length || 0}
+                          </span>
+                          <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">
+                            Pending: {teacher.achievements?.filter(a => a.status === "Pending Approval").length || 0}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="p-3 text-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDetails(teacher)}
+                        >
+                          <Eye className="h-4 w-4 mr-1" /> View
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="p-3 text-center text-gray-500">
+                      No teachers found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Teacher Details Dialog */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Achievement</DialogTitle>
+            <DialogTitle>Teacher Details</DialogTitle>
           </DialogHeader>
-          
-          {editingAchievement && (
-            <form onSubmit={(e) => { e.preventDefault(); handleEditAchievement(); }} className="space-y-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Title</label>
-                  <Input
-                    value={editingAchievement.title}
-                    onChange={(e) => setEditingAchievement({...editingAchievement, title: e.target.value})}
-                  />
+
+          {selectedTeacher && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h3 className="font-medium">Name</h3>
+                  <p>{selectedTeacher.full_name}</p>
                 </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Status</label>
-                  <Select
-                    value={editingAchievement.status}
-                    onValueChange={(value) => setEditingAchievement({...editingAchievement, status: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pending Approval">Pending Approval</SelectItem>
-                      <SelectItem value="Approved">Approved</SelectItem>
-                      <SelectItem value="Rejected">Rejected</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div>
+                  <h3 className="font-medium">EID</h3>
+                  <p>{selectedTeacher.eid}</p>
                 </div>
-                
-                {/* Dynamic fields based on achievement category */}
-                {editingAchievement.category === 'Journal Articles' && (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Scopus ID Link</label>
-                        <Input
-                          value={editingAchievement.scopus_id_link || ''}
-                          onChange={(e) => setEditingAchievement({...editingAchievement, scopus_id_link: e.target.value})}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Google Scholar Link</label>
-                        <Input
-                          value={editingAchievement.google_scholar_link || ''}
-                          onChange={(e) => setEditingAchievement({...editingAchievement, google_scholar_link: e.target.value})}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Q1/Q2 Rankings</label>
-                      <Input
-                        value={editingAchievement.q_ranking || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, q_ranking: e.target.value})}
-                      />
-                    </div>
-                  </>
-                )}
-                
-                {editingAchievement.category === 'Books & Book Chapters' && (
-                  <>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Book Drive Link</label>
-                      <Input
-                        value={editingAchievement.book_drive_link || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, book_drive_link: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Book Details</label>
-                      <Input
-                        value={editingAchievement.book_details || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, book_details: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Book Chapters</label>
-                      <Input
-                        value={editingAchievement.chapter_title || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, chapter_title: e.target.value})}
-                      />
-                    </div>
-                  </>
-                )}
-                
-                {editingAchievement.category === 'Patents' && (
-                  <>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Patent Status</label>
-                      <Input
-                        value={editingAchievement.patent_status || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, patent_status: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Patent Link</label>
-                      <Input
-                        value={editingAchievement.patent_link || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, patent_link: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Patent Remarks</label>
-                      <Input
-                        value={editingAchievement.patents_remarks || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, patents_remarks: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Funded Projects</label>
-                      <Input
-                        value={editingAchievement.funded_projects || ''}
-                        onChange={(e) => setEditingAchievement({...editingAchievement, funded_projects: e.target.value})}
-                      />
-                    </div>
-                  </>
-                )}
-                
-                {/* Common fields for all types */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Research Collaboration</label>
-                  <Input
-                    value={editingAchievement.research_collaboration || ''}
-                    onChange={(e) => setEditingAchievement({...editingAchievement, research_collaboration: e.target.value})}
-                  />
+                <div>
+                  <h3 className="font-medium">Email</h3>
+                  <p>{selectedTeacher.email_id}</p>
                 </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Awards/Recognitions</label>
-                  <Input
-                    value={editingAchievement.awards_recognitions || ''}
-                    onChange={(e) => setEditingAchievement({...editingAchievement, awards_recognitions: e.target.value})}
-                  />
+                <div>
+                  <h3 className="font-medium">Mobile</h3>
+                  <p>{selectedTeacher.mobile_number}</p>
                 </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Consultancy Services</label>
-                  <Input
-                    value={editingAchievement.consultancy_services || ''}
-                    onChange={(e) => setEditingAchievement({...editingAchievement, consultancy_services: e.target.value})}
-                  />
+                <div>
+                  <h3 className="font-medium">Department</h3>
+                  <p>{selectedTeacher.department}</p>
                 </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Startups/Excellence Centers</label>
-                  <Input
-                    value={editingAchievement.startup_details || ''}
-                    onChange={(e) => setEditingAchievement({...editingAchievement, startup_details: e.target.value})}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Research Areas</label>
-                  <Input
-                    value={editingAchievement.research_area || ''}
-                    onChange={(e) => setEditingAchievement({...editingAchievement, research_area: e.target.value})}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">General Remarks</label>
-                  <Input
-                    value={editingAchievement.remarks || ''}
-                    onChange={(e) => setEditingAchievement({...editingAchievement, remarks: e.target.value})}
-                  />
+                <div>
+                  <h3 className="font-medium">Designation</h3>
+                  <p>{selectedTeacher.designation}</p>
                 </div>
               </div>
-              
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" type="button" onClick={() => setIsEditDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  Save Changes
-                </Button>
-              </div>
-            </form>
+
+              <Tabs defaultValue="all" className="mt-6">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="all">All Achievements</TabsTrigger>
+                  <TabsTrigger value="pending">Pending</TabsTrigger>
+                  <TabsTrigger value="approved">Approved</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="all" className="mt-4">
+                  {selectedTeacher.achievements && selectedTeacher.achievements.length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedTeacher.achievements.map((achievement) => (
+                        <div key={achievement.id} className="border rounded p-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="font-medium">{achievement.title}</div>
+                              <div className="text-sm text-gray-600">
+                                {achievement.category} | {new Date(achievement.date_achieved).toLocaleDateString()}
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadgeClass(achievement.status)}`}>
+                                {achievement.status}
+                              </span>
+                              {achievement.status === "Pending Approval" && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="bg-green-500 hover:bg-green-600 text-white"
+                                    onClick={() => handleUpdateAchievementStatus(achievement.id, "Approved")}
+                                  >
+                                    <Check className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="bg-red-500 hover:bg-red-600 text-white"
+                                    onClick={() => handleUpdateAchievementStatus(achievement.id, "Rejected")}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">No achievements found</div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="pending" className="mt-4">
+                  {selectedTeacher.achievements && selectedTeacher.achievements.filter(a => a.status === "Pending Approval").length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedTeacher.achievements
+                        .filter(a => a.status === "Pending Approval")
+                        .map((achievement) => (
+                          <div key={achievement.id} className="border rounded p-3">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <div className="font-medium">{achievement.title}</div>
+                                <div className="text-sm text-gray-600">
+                                  {achievement.category} | {new Date(achievement.date_achieved).toLocaleDateString()}
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="bg-green-500 hover:bg-green-600 text-white"
+                                  onClick={() => handleUpdateAchievementStatus(achievement.id, "Approved")}
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="bg-red-500 hover:bg-red-600 text-white"
+                                  onClick={() => handleUpdateAchievementStatus(achievement.id, "Rejected")}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">No pending achievements</div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="approved" className="mt-4">
+                  {selectedTeacher.achievements && selectedTeacher.achievements.filter(a => a.status === "Approved").length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedTeacher.achievements
+                        .filter(a => a.status === "Approved")
+                        .map((achievement) => (
+                          <div key={achievement.id} className="border rounded p-3">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <div className="font-medium">{achievement.title}</div>
+                                <div className="text-sm text-gray-600">
+                                  {achievement.category} | {new Date(achievement.date_achieved).toLocaleDateString()}
+                                </div>
+                              </div>
+                              <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                Approved
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">No approved achievements</div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
           )}
         </DialogContent>
       </Dialog>
