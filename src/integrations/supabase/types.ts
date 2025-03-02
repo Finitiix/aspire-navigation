@@ -218,6 +218,30 @@ export type Database = {
           },
         ]
       }
+      email_notifications: {
+        Row: {
+          created_at: string | null
+          email_on_approval: boolean | null
+          email_on_rejection: boolean | null
+          id: string
+          teacher_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email_on_approval?: boolean | null
+          email_on_rejection?: boolean | null
+          id?: string
+          teacher_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email_on_approval?: boolean | null
+          email_on_rejection?: boolean | null
+          id?: string
+          teacher_id?: string
+        }
+        Relationships: []
+      }
       feedback: {
         Row: {
           created_at: string | null
