@@ -21,13 +21,15 @@ type DetailedAchievement = {
   category: string;
   date_achieved: string;
   status: string;
-  link_url?: string;
+  journal_link?: string;
+  book_drive_link?: string;
+  patent_link?: string;
+  website_link?: string;
   teacher_details?: {
     full_name: string;
     eid: string;
     designation: string;
   };
-  // Any additional fields (such as teacher_proof) can be included
   [key: string]: any;
 };
 
@@ -86,6 +88,7 @@ const AdminDashboard = () => {
 
   const fetchPendingAchievements = async () => {
     try {
+      // Note: teacher_proof is not selected here since it's not part of the table schema.
       const { data, error } = await supabase
         .from("detailed_achievements")
         .select(`
@@ -98,7 +101,6 @@ const AdminDashboard = () => {
           book_drive_link,
           patent_link,
           website_link,
-          teacher_proof,
           teacher_details (
             full_name,
             eid,
@@ -206,6 +208,12 @@ const AdminDashboard = () => {
           {pendingAchievements.length > 0 ? (
             pendingAchievements.map((achievement) => {
               const teacher = achievement.teacher_details;
+              // Assume the teacher proof file (if uploaded) is stored with the achievement ID as its filename and a .pdf extension.
+              const teacherProofUrl = supabase
+                .storage
+                .from("teacher_proofs")
+                .getPublicUrl(`${achievement.id}.pdf`)
+                .data.publicUrl;
               return (
                 <div key={achievement.id} className="relative bg-white shadow rounded p-4">
                   <div className="flex justify-between items-start">
@@ -329,22 +337,15 @@ const AdminDashboard = () => {
                         </a>
                       )}
                       
-                      {achievement.teacher_proof && (
-                        <a
-                          href={
-                            supabase
-                              .storage
-                              .from("teacher_proofs")
-                              .getPublicUrl(achievement.teacher_proof)
-                              .data.publicUrl
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-500 hover:underline flex items-center"
-                        >
-                          Uploaded Document <ExternalLink className="w-3 h-3 ml-1" />
-                        </a>
-                      )}
+                      {/* Display the uploaded teacher proof document */}
+                      <a
+                        href={teacherProofUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline flex items-center"
+                      >
+                        Uploaded Document <ExternalLink className="w-3 h-3 ml-1" />
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -433,3 +434,4 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
