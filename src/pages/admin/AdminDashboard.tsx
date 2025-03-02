@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 // Helper to ensure the URL includes a protocol and has no extra whitespace
 const ensureValidUrl = (url: string) => {
+  if (!url) return '';
   const trimmed = url.trim();
   if (!/^https?:\/\//i.test(trimmed)) {
     return `https://${trimmed}`;
@@ -92,7 +93,6 @@ const AdminDashboard = () => {
           id,
           category,
           title,
-          issuing_organization,
           date_achieved,
           status,
           journal_link,
@@ -108,6 +108,7 @@ const AdminDashboard = () => {
         `)
         .eq("status", "Pending Approval")
         .order("created_at", { ascending: false });
+      
       if (error) {
         console.error("Error fetching achievements:", error);
         toast.error("Error fetching pending achievements");
