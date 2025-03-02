@@ -21,10 +21,7 @@ type DetailedAchievement = {
   category: string;
   date_achieved: string;
   status: string;
-  journal_link?: string;
-  book_drive_link?: string;
-  patent_link?: string;
-  website_link?: string;
+  link_url?: string;
   teacher_details?: {
     full_name: string;
     eid: string;
@@ -88,7 +85,6 @@ const AdminDashboard = () => {
 
   const fetchPendingAchievements = async () => {
     try {
-      // Note: teacher_proof is not selected here since it's not part of the table schema.
       const { data, error } = await supabase
         .from("detailed_achievements")
         .select(`
@@ -183,6 +179,15 @@ const AdminDashboard = () => {
     setImportantDetails(importantDetails.filter((detail) => detail.id !== id));
   };
 
+  const ensureValidUrl = (url: string) => {
+    if (!url) return '';
+    const trimmed = url.trim();
+    if (!/^https?:\/\//i.test(trimmed)) {
+      return `https://${trimmed}`;
+    }
+    return trimmed;
+  };
+
   return (
     <div className="p-6">
       {/* Stats Section */}
@@ -201,19 +206,13 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Approval Requests for Achievements Section */}
+      {/* Approval Requests for Achievements Section - Improved with details and clickable links */}
       <Card className="p-6 mb-8">
         <h2 className="text-xl font-bold mb-4">Approval Requests for Achievements</h2>
         <div className="space-y-4">
           {pendingAchievements.length > 0 ? (
             pendingAchievements.map((achievement) => {
               const teacher = achievement.teacher_details;
-              // Assume the teacher proof file (if uploaded) is stored with the achievement ID as its filename and a .pdf extension.
-              const teacherProofUrl = supabase
-                .storage
-                .from("teacher_proofs")
-                .getPublicUrl(`${achievement.id}.pdf`)
-                .data.publicUrl;
               return (
                 <div key={achievement.id} className="relative bg-white shadow rounded p-4">
                   <div className="flex justify-between items-start">
@@ -336,16 +335,6 @@ const AdminDashboard = () => {
                           Book Drive Link <ExternalLink className="w-3 h-3 ml-1" />
                         </a>
                       )}
-                      
-                      {/* Display the uploaded teacher proof document */}
-                      <a
-                        href={teacherProofUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline flex items-center"
-                      >
-                        Uploaded Document <ExternalLink className="w-3 h-3 ml-1" />
-                      </a>
                     </div>
                   </div>
                 </div>
@@ -434,4 +423,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-
