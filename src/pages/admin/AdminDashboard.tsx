@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash, ExternalLink } from "lucide-react";
+import { Trash, ExternalLink, FileText, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -21,7 +21,11 @@ type DetailedAchievement = {
   category: string;
   date_achieved: string;
   status: string;
-  link_url?: string;
+  journal_link?: string;
+  book_drive_link?: string;
+  patent_link?: string;
+  website_link?: string;
+  document_url?: string; // Expected field for the uploaded proof document URL
   teacher_details?: {
     full_name: string;
     eid: string;
@@ -43,6 +47,9 @@ const AdminDashboard = () => {
   const [importantDetails, setImportantDetails] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [newDetail, setNewDetail] = useState("");
+  
+  // New state to handle viewing the document modal
+  const [viewDocumentUrl, setViewDocumentUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -97,6 +104,7 @@ const AdminDashboard = () => {
           book_drive_link,
           patent_link,
           website_link,
+          document_url,
           teacher_details (
             full_name,
             eid,
@@ -179,13 +187,9 @@ const AdminDashboard = () => {
     setImportantDetails(importantDetails.filter((detail) => detail.id !== id));
   };
 
-  const ensureValidUrl = (url: string) => {
-    if (!url) return '';
-    const trimmed = url.trim();
-    if (!/^https?:\/\//i.test(trimmed)) {
-      return `https://${trimmed}`;
-    }
-    return trimmed;
+  // Handler for viewing the document proof modal
+  const handleViewDocument = (url: string) => {
+    setViewDocumentUrl(url);
   };
 
   return (
@@ -335,6 +339,21 @@ const AdminDashboard = () => {
                           Book Drive Link <ExternalLink className="w-3 h-3 ml-1" />
                         </a>
                       )}
+                      
+                      {/* Document proof link button */}
+                      {achievement.document_url && (
+                        <div className="mt-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="flex items-center gap-1 text-blue-600"
+                            onClick={() => handleViewDocument(achievement.document_url!)}
+                          >
+                            <FileText className="h-4 w-4" />
+                            View Uploaded Proof
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -418,6 +437,46 @@ const AdminDashboard = () => {
           )}
         </div>
       </Card>
+
+      {/* Document Viewer Modal */}
+      {viewDocumentUrl && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="relative bg-white p-4 rounded-lg max-w-6xl max-h-[90vh] w-full overflow-auto">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-2 z-10"
+              onClick={() => setViewDocumentUrl(null)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            
+            <div className="flex flex-col items-center">
+              <h3 className="text-lg font-medium mb-4">Achievement Proof Document</h3>
+              
+              <div className="w-full h-[70vh] border border-gray-300 rounded">
+                <iframe 
+                  src={viewDocumentUrl} 
+                  title="Document Preview"
+                  className="w-full h-full"
+                />
+              </div>
+              
+              <div className="mt-4">
+                <a 
+                  href={viewDocumentUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-blue-600 hover:underline"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Open in New Tab
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
