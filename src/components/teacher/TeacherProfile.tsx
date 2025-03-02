@@ -1,10 +1,18 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Edit, X } from "lucide-react";
+import { Edit, X, Upload, Image } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 type TeacherProfileData = {
   full_name: string;
@@ -28,6 +36,11 @@ export const TeacherProfile = () => {
   const [teacherDetails, setTeacherDetails] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [uploadingProfilePic, setUploadingProfilePic] = useState(false);
+  const [uploadingTimetable, setUploadingTimetable] = useState(false);
+  const profilePicRef = useRef<HTMLInputElement>(null);
+  const timetableRef = useRef<HTMLInputElement>(null);
+  
   const [formData, setFormData] = useState<TeacherProfileData>({
     full_name: "",
     designation: "",
@@ -108,6 +121,54 @@ export const TeacherProfile = () => {
       [e.target.name]: e.target.value
     }));
   };
+  
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleFileUpload = async (fileInput: HTMLInputElement, field: 'profile_pic_url' | 'timetable_url') => {
+    const files = fileInput.files;
+    if (!files || files.length === 0) {
+      return;
+    }
+    
+    const file = files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${formData.eid}_${field === 'profile_pic_url' ? 'profile' : 'timetable'}_${Date.now()}.${fileExt}`;
+    
+    try {
+      field === 'profile_pic_url' ? setUploadingProfilePic(true) : setUploadingTimetable(true);
+      
+      const { data, error } = await supabase.storage
+        .from('teacher_information')
+        .upload(`teacher_profiles/${fileName}`, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+      
+      if (error) throw error;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('teacher_information')
+        .getPublicUrl(`teacher_profiles/${fileName}`);
+      
+      setFormData(prev => ({
+        ...prev,
+        [field]: publicUrl
+      }));
+      
+      toast.success(`${field === 'profile_pic_url' ? 'Profile picture' : 'Timetable'} uploaded successfully!`);
+      
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      field === 'profile_pic_url' ? setUploadingProfilePic(false) : setUploadingTimetable(false);
+      fileInput.value = '';
+    }
+  };
 
   if (!teacherDetails) return null;
 
@@ -126,7 +187,71 @@ export const TeacherProfile = () => {
         <CardContent>
           {isEditing ? (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Hidden file inputs */}
+              <input 
+                type="file" 
+                ref={profilePicRef} 
+                className="hidden" 
+                accept="image/*"
+                onChange={() => handleFileUpload(profilePicRef.current!, 'profile_pic_url')}
+              />
+              <input 
+                type="file" 
+                ref={timetableRef} 
+                className="hidden" 
+                accept="image/*"
+                onChange={() => handleFileUpload(timetableRef.current!, 'timetable_url')}
+              />
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 col-span-2 md:col-span-1">
+                  <label className="text-sm font-medium">Profile Picture *</label>
+                  <div className="flex flex-col items-center gap-2">
+                    {formData.profile_pic_url && (
+                      <img 
+                        src={formData.profile_pic_url} 
+                        alt="Profile" 
+                        className="w-32 h-32 rounded-full object-cover"
+                      />
+                    )}
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => profilePicRef.current?.click()}
+                      disabled={uploadingProfilePic}
+                    >
+                      {uploadingProfilePic ? "Uploading..." : "Upload Profile Picture"}
+                      <Upload className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="space-y-2 col-span-2 md:col-span-1">
+                  <label className="text-sm font-medium">Timetable Image (Optional)</label>
+                  <div className="flex flex-col items-center gap-2">
+                    {formData.timetable_url && (
+                      <div className="relative w-full h-32 bg-gray-100 rounded-md overflow-hidden">
+                        <img 
+                          src={formData.timetable_url} 
+                          alt="Timetable" 
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    )}
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => timetableRef.current?.click()}
+                      disabled={uploadingTimetable}
+                    >
+                      {uploadingTimetable ? "Uploading..." : "Upload Timetable"}
+                      <Image className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
+                </div>
+                
                 <div className="space-y-2">
                   <label className="text-sm font-medium">EID *</label>
                   <Input
@@ -138,16 +263,7 @@ export const TeacherProfile = () => {
                     pattern="^E\d{5}$"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Profile Picture URL *</label>
-                  <Input
-                    required
-                    name="profile_pic_url"
-                    value={formData.profile_pic_url}
-                    onChange={handleChange}
-                    type="url"
-                  />
-                </div>
+                
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Full Name *</label>
                   <Input
@@ -197,18 +313,21 @@ export const TeacherProfile = () => {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Gender *</label>
-                  <select
+                  <Select
                     required
                     name="gender"
                     value={formData.gender}
-                    onChange={handleChange}
-                    className="w-full h-10 px-3 border rounded-md"
+                    onValueChange={(value) => handleSelectChange('gender', value)}
                   >
-                    <option value="">Select Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Date of Joining *</label>
@@ -255,16 +374,6 @@ export const TeacherProfile = () => {
                     placeholder="Optional"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Timetable URL</label>
-                  <Input
-                    type="url"
-                    name="timetable_url"
-                    value={formData.timetable_url}
-                    onChange={handleChange}
-                    placeholder="Optional - Link to your timetable"
-                  />
-                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Address</label>
@@ -283,7 +392,7 @@ export const TeacherProfile = () => {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={loading}>
+                <Button type="submit" disabled={loading || uploadingProfilePic || uploadingTimetable}>
                   {loading ? "Saving..." : "Save Changes"}
                 </Button>
               </div>
@@ -295,7 +404,7 @@ export const TeacherProfile = () => {
                   <img
                     src={teacherDetails.profile_pic_url}
                     alt="Profile"
-                    className="w-32 h-32 rounded-full mx-auto"
+                    className="w-32 h-32 rounded-full mx-auto object-cover"
                   />
                 </div>
                 <div className="space-y-2">

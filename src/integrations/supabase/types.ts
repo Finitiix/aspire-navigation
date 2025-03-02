@@ -27,6 +27,197 @@ export type Database = {
         }
         Relationships: []
       }
+      detailed_achievements: {
+        Row: {
+          award_name: string | null
+          award_type: string | null
+          awarding_body: string | null
+          book_drive_link: string | null
+          book_title: string | null
+          category: Database["public"]["Enums"]["achievement_category"]
+          certificate_link: string | null
+          chapter_title: string | null
+          client_organization: string | null
+          collaboration_details: string | null
+          conference_date: string | null
+          conference_name: string | null
+          created_at: string | null
+          date_achieved: string
+          description: string | null
+          document_url: string | null
+          doi: string | null
+          domain: string | null
+          filing_date: string | null
+          funding_agency: string | null
+          funding_amount: number | null
+          funding_details: string | null
+          grant_date: string | null
+          id: string
+          indexed_in: string[] | null
+          isbn: string | null
+          issn: string | null
+          journal_link: string | null
+          journal_name: string | null
+          organization: string | null
+          paper_link: string | null
+          partner_institutions: string | null
+          patent_link: string | null
+          patent_number: string | null
+          patent_office: string | null
+          patent_status: string | null
+          proceedings_publisher: string | null
+          project_details_link: string | null
+          project_duration_end: string | null
+          project_duration_start: string | null
+          project_status: string | null
+          project_title: string | null
+          proof_link: string | null
+          publisher: string | null
+          q_ranking: string | null
+          remarks: string | null
+          research_area: string | null
+          startup_center_name: string | null
+          status: string | null
+          teacher_department: string
+          teacher_designation: string
+          teacher_eid: string
+          teacher_id: string
+          teacher_mobile: string
+          teacher_name: string
+          title: string
+          website_link: string | null
+          year_of_publication: string | null
+        }
+        Insert: {
+          award_name?: string | null
+          award_type?: string | null
+          awarding_body?: string | null
+          book_drive_link?: string | null
+          book_title?: string | null
+          category: Database["public"]["Enums"]["achievement_category"]
+          certificate_link?: string | null
+          chapter_title?: string | null
+          client_organization?: string | null
+          collaboration_details?: string | null
+          conference_date?: string | null
+          conference_name?: string | null
+          created_at?: string | null
+          date_achieved: string
+          description?: string | null
+          document_url?: string | null
+          doi?: string | null
+          domain?: string | null
+          filing_date?: string | null
+          funding_agency?: string | null
+          funding_amount?: number | null
+          funding_details?: string | null
+          grant_date?: string | null
+          id?: string
+          indexed_in?: string[] | null
+          isbn?: string | null
+          issn?: string | null
+          journal_link?: string | null
+          journal_name?: string | null
+          organization?: string | null
+          paper_link?: string | null
+          partner_institutions?: string | null
+          patent_link?: string | null
+          patent_number?: string | null
+          patent_office?: string | null
+          patent_status?: string | null
+          proceedings_publisher?: string | null
+          project_details_link?: string | null
+          project_duration_end?: string | null
+          project_duration_start?: string | null
+          project_status?: string | null
+          project_title?: string | null
+          proof_link?: string | null
+          publisher?: string | null
+          q_ranking?: string | null
+          remarks?: string | null
+          research_area?: string | null
+          startup_center_name?: string | null
+          status?: string | null
+          teacher_department: string
+          teacher_designation: string
+          teacher_eid: string
+          teacher_id: string
+          teacher_mobile: string
+          teacher_name: string
+          title: string
+          website_link?: string | null
+          year_of_publication?: string | null
+        }
+        Update: {
+          award_name?: string | null
+          award_type?: string | null
+          awarding_body?: string | null
+          book_drive_link?: string | null
+          book_title?: string | null
+          category?: Database["public"]["Enums"]["achievement_category"]
+          certificate_link?: string | null
+          chapter_title?: string | null
+          client_organization?: string | null
+          collaboration_details?: string | null
+          conference_date?: string | null
+          conference_name?: string | null
+          created_at?: string | null
+          date_achieved?: string
+          description?: string | null
+          document_url?: string | null
+          doi?: string | null
+          domain?: string | null
+          filing_date?: string | null
+          funding_agency?: string | null
+          funding_amount?: number | null
+          funding_details?: string | null
+          grant_date?: string | null
+          id?: string
+          indexed_in?: string[] | null
+          isbn?: string | null
+          issn?: string | null
+          journal_link?: string | null
+          journal_name?: string | null
+          organization?: string | null
+          paper_link?: string | null
+          partner_institutions?: string | null
+          patent_link?: string | null
+          patent_number?: string | null
+          patent_office?: string | null
+          patent_status?: string | null
+          proceedings_publisher?: string | null
+          project_details_link?: string | null
+          project_duration_end?: string | null
+          project_duration_start?: string | null
+          project_status?: string | null
+          project_title?: string | null
+          proof_link?: string | null
+          publisher?: string | null
+          q_ranking?: string | null
+          remarks?: string | null
+          research_area?: string | null
+          startup_center_name?: string | null
+          status?: string | null
+          teacher_department?: string
+          teacher_designation?: string
+          teacher_eid?: string
+          teacher_id?: string
+          teacher_mobile?: string
+          teacher_name?: string
+          title?: string
+          website_link?: string | null
+          year_of_publication?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "detailed_achievements_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_details"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feedback: {
         Row: {
           created_at: string | null
@@ -185,6 +376,16 @@ export type Database = {
       }
     }
     Enums: {
+      achievement_category:
+        | "Journal Articles"
+        | "Conference Papers"
+        | "Books & Book Chapters"
+        | "Patents"
+        | "Research Collaborations"
+        | "Awards & Recognitions"
+        | "Consultancy & Funded Projects"
+        | "Startups & Centers of Excellence"
+        | "Others"
       achievement_status: "Pending Approval" | "Approved" | "Rejected"
       achievement_type:
         | "Research & Publications"
