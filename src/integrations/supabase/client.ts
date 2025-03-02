@@ -7,10 +7,10 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Initialize storage bucket for teacher information if needed
+// Initialize storage buckets
 const initializeStorage = async () => {
   try {
-    // Check if the bucket exists
+    // Check if the buckets exist
     const { data: buckets, error } = await supabase.storage.listBuckets();
     
     if (error) {
@@ -18,7 +18,7 @@ const initializeStorage = async () => {
       return;
     }
     
-    // If the "Teacher Information" bucket doesn't exist, create it
+    // Check for "Teacher Information" bucket
     if (!buckets.find(bucket => bucket.name === "Teacher Information")) {
       const { error: createError } = await supabase.storage.createBucket(
         "Teacher Information", 
@@ -26,9 +26,23 @@ const initializeStorage = async () => {
       );
       
       if (createError) {
-        console.error("Error creating bucket:", createError);
+        console.error("Error creating Teacher Information bucket:", createError);
       } else {
         console.log("Created Teacher Information bucket");
+      }
+    }
+    
+    // Check for "Teacher Proofs" bucket
+    if (!buckets.find(bucket => bucket.name === "teacher_proofs")) {
+      const { error: createError } = await supabase.storage.createBucket(
+        "teacher_proofs", 
+        { public: true }
+      );
+      
+      if (createError) {
+        console.error("Error creating Teacher Proofs bucket:", createError);
+      } else {
+        console.log("Created Teacher Proofs bucket");
       }
     }
   } catch (error) {

@@ -207,23 +207,32 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
     try {
       // Create safe folder name from teacher's name
       const folderName = teacherDetails.full_name.replace(/[^a-zA-Z0-9]/g, "_");
-      const filePath = `${folderName}/${Date.now()}_${file.name}`;
       
+      // Sanitize filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const timestamp = Date.now();
+      const filePath = `${folderName}/${timestamp}_${fileName}`;
+      
+      // Upload to the new "teacher_proofs" bucket
       const { data, error } = await supabase.storage
-        .from('Teacher Information')
-        .upload(filePath, file);
+        .from('teacher_proofs')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
       
       if (error) throw error;
       
       // Get the public URL
       const { data: urlData } = supabase.storage
-        .from('Teacher Information')
+        .from('teacher_proofs')
         .getPublicUrl(filePath);
       
       handleChange('document_url', urlData.publicUrl);
       toast.success("File uploaded successfully");
-    } catch (error) {
-      toast.error("Error uploading file");
+    } catch (error: any) {
+      toast.error(`Error uploading file: ${error.message || "Unknown error"}`);
       console.error("Upload error:", error);
     } finally {
       setUploadingFile(false);
@@ -246,11 +255,29 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
       return false;
     }
 
-    // Validate required fields based on category
+    // Check if a document has been uploaded
+    if (!achievement.document_url) {
+      toast.error("Please upload a proof document");
+      return false;
+    }
+
+    // Validate required fields based on category with more strict validation
     switch (achievement.category) {
       case 'Journal Articles':
         if (!achievement.journal_name || !achievement.publisher) {
           toast.error("Please fill in all required fields for Journal Articles");
+          return false;
+        }
+        if (!achievement.doi) {
+          toast.error("DOI is required for Journal Articles");
+          return false;
+        }
+        if (!achievement.issn) {
+          toast.error("ISSN is required for Journal Articles");
+          return false;
+        }
+        if (!achievement.journal_link) {
+          toast.error("Journal Link is required for Journal Articles");
           return false;
         }
         break;
@@ -259,10 +286,22 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
           toast.error("Please fill in all required fields for Conference Papers");
           return false;
         }
+        if (!achievement.doi) {
+          toast.error("DOI is required for Conference Papers");
+          return false;
+        }
+        if (!achievement.isbn) {
+          toast.error("ISBN is required for Conference Papers");
+          return false;
+        }
         break;
       case 'Books & Book Chapters':
         if (!achievement.book_title || !yearOfPublication) {
           toast.error("Please fill in all required fields for Books & Book Chapters");
+          return false;
+        }
+        if (!achievement.isbn) {
+          toast.error("ISBN is required for Books & Book Chapters");
           return false;
         }
         break;
@@ -551,7 +590,6 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
     </div>
   );
 
-  // Render form fields based on the selected category
   const renderCategoryFields = () => {
     switch (achievement.category) {
       case 'Journal Articles':
@@ -567,20 +605,22 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">ISSN</label>
+                <label className="text-sm font-medium">ISSN *</label>
                 <Input
                   value={achievement.issn}
                   onChange={(e) => handleChange('issn', e.target.value)}
+                  required
                 />
               </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">DOI</label>
+                <label className="text-sm font-medium">DOI *</label>
                 <Input
                   value={achievement.doi}
                   onChange={(e) => handleChange('doi', e.target.value)}
+                  required
                 />
               </div>
               <div className="space-y-2">
@@ -615,12 +655,13 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium">Journal Link</label>
+              <label className="text-sm font-medium">Journal Link *</label>
               <Input
                 type="url"
                 value={achievement.journal_link}
                 onChange={(e) => handleChange('journal_link', e.target.value)}
                 placeholder="https://"
+                required
               />
             </div>
             
@@ -653,19 +694,21 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">DOI</label>
+                <label className="text-sm font-medium">DOI *</label>
                 <Input
                   value={achievement.doi}
                   onChange={(e) => handleChange('doi', e.target.value)}
+                  required
                 />
               </div>
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium">ISBN</label>
+              <label className="text-sm font-medium">ISBN *</label>
               <Input
                 value={achievement.isbn}
                 onChange={(e) => handleChange('isbn', e.target.value)}
+                required
               />
             </div>
             
@@ -735,10 +778,11 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">ISBN</label>
+                <label className="text-sm font-medium">ISBN *</label>
                 <Input
                   value={achievement.isbn}
                   onChange={(e) => handleChange('isbn', e.target.value)}
+                  required
                 />
               </div>
             </div>

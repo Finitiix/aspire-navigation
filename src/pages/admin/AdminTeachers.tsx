@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Search, Download, Check, X, Eye } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Search, Download, Check, X, Eye, ExternalLink, FileText } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 // Define types
 type Teacher = {
@@ -29,6 +30,7 @@ type DetailedAchievement = {
   title: string;
   date_achieved: string;
   status: string;
+  document_url: string;
   [key: string]: any;
 };
 
@@ -39,6 +41,7 @@ const AdminTeachers = () => {
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [viewDocumentUrl, setViewDocumentUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTeachers();
@@ -92,6 +95,29 @@ const AdminTeachers = () => {
   const handleViewDetails = (teacher: Teacher) => {
     setSelectedTeacher(teacher);
     setIsDetailsOpen(true);
+  };
+
+  const handleViewDocument = (url: string) => {
+    setViewDocumentUrl(url);
+  };
+
+  const renderFieldValue = (value: any, isLink = false) => {
+    if (!value) return <span className="text-gray-400">Not provided</span>;
+    
+    if (isLink && value.startsWith('http')) {
+      return (
+        <a 
+          href={value} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline flex items-center"
+        >
+          {value} <ExternalLink className="h-3 w-3 ml-1" />
+        </a>
+      );
+    }
+    
+    return value;
   };
 
   const handleExportToCSV = async () => {
@@ -340,13 +366,111 @@ const AdminTeachers = () => {
                   {selectedTeacher.achievements && selectedTeacher.achievements.length > 0 ? (
                     <div className="space-y-3">
                       {selectedTeacher.achievements.map((achievement) => (
-                        <div key={achievement.id} className="border rounded p-3">
+                        <Card key={achievement.id} className="p-3">
                           <div className="flex justify-between items-start">
                             <div>
                               <div className="font-medium">{achievement.title}</div>
                               <div className="text-sm text-gray-600">
                                 {achievement.category} | {new Date(achievement.date_achieved).toLocaleDateString()}
                               </div>
+                              
+                              {/* Document proof link */}
+                              {achievement.document_url && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  className="mt-2 flex items-center gap-1 text-blue-600"
+                                  onClick={() => handleViewDocument(achievement.document_url)}
+                                >
+                                  <FileText className="h-4 w-4" />
+                                  View Uploaded Proof
+                                </Button>
+                              )}
+                              
+                              <Accordion type="single" collapsible className="w-full mt-2">
+                                <AccordionItem value="details">
+                                  <AccordionTrigger className="text-sm py-2">View Achievement Details</AccordionTrigger>
+                                  <AccordionContent>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 mt-2">
+                                      {achievement.category === 'Journal Articles' && (
+                                        <>
+                                          <div>
+                                            <p className="text-sm font-medium">Journal Name:</p>
+                                            <p className="text-sm">{renderFieldValue(achievement.journal_name)}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-sm font-medium">ISSN:</p>
+                                            <p className="text-sm">{renderFieldValue(achievement.issn)}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-sm font-medium">DOI:</p>
+                                            <p className="text-sm">{renderFieldValue(achievement.doi)}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-sm font-medium">Publisher:</p>
+                                            <p className="text-sm">{renderFieldValue(achievement.publisher)}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-sm font-medium">Journal Link:</p>
+                                            <p className="text-sm">{renderFieldValue(achievement.journal_link, true)}</p>
+                                          </div>
+                                        </>
+                                      )}
+                                      
+                                      {achievement.category === 'Conference Papers' && (
+                                        <>
+                                          <div>
+                                            <p className="text-sm font-medium">Conference Name:</p>
+                                            <p className="text-sm">{renderFieldValue(achievement.conference_name)}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-sm font-medium">DOI:</p>
+                                            <p className="text-sm">{renderFieldValue(achievement.doi)}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-sm font-medium">ISBN:</p>
+                                            <p className="text-sm">{renderFieldValue(achievement.isbn)}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-sm font-medium">Paper Link:</p>
+                                            <p className="text-sm">{renderFieldValue(achievement.paper_link, true)}</p>
+                                          </div>
+                                        </>
+                                      )}
+                                      
+                                      {achievement.category === 'Books & Book Chapters' && (
+                                        <>
+                                          <div>
+                                            <p className="text-sm font-medium">Book Title:</p>
+                                            <p className="text-sm">{renderFieldValue(achievement.book_title)}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-sm font-medium">ISBN:</p>
+                                            <p className="text-sm">{renderFieldValue(achievement.isbn)}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-sm font-medium">Book Drive Link:</p>
+                                            <p className="text-sm">{renderFieldValue(achievement.book_drive_link, true)}</p>
+                                          </div>
+                                        </>
+                                      )}
+
+                                      {achievement.category === 'Patents' && (
+                                        <>
+                                          <div>
+                                            <p className="text-sm font-medium">Patent Number:</p>
+                                            <p className="text-sm">{renderFieldValue(achievement.patent_number)}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-sm font-medium">Patent Link:</p>
+                                            <p className="text-sm">{renderFieldValue(achievement.patent_link, true)}</p>
+                                          </div>
+                                        </>
+                                      )}
+                                    </div>
+                                  </AccordionContent>
+                                </AccordionItem>
+                              </Accordion>
                             </div>
                             <div className="flex items-center space-x-2">
                               <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadgeClass(achievement.status)}`}>
@@ -374,7 +498,7 @@ const AdminTeachers = () => {
                               )}
                             </div>
                           </div>
-                        </div>
+                        </Card>
                       ))}
                     </div>
                   ) : (
@@ -388,13 +512,57 @@ const AdminTeachers = () => {
                       {selectedTeacher.achievements
                         .filter(a => a.status === "Pending Approval")
                         .map((achievement) => (
-                          <div key={achievement.id} className="border rounded p-3">
+                          <Card key={achievement.id} className="p-3">
                             <div className="flex justify-between items-start">
                               <div>
                                 <div className="font-medium">{achievement.title}</div>
                                 <div className="text-sm text-gray-600">
                                   {achievement.category} | {new Date(achievement.date_achieved).toLocaleDateString()}
                                 </div>
+                                
+                                {/* Document proof link */}
+                                {achievement.document_url && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    className="mt-2 flex items-center gap-1 text-blue-600"
+                                    onClick={() => handleViewDocument(achievement.document_url)}
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                    View Uploaded Proof
+                                  </Button>
+                                )}
+                                
+                                <Accordion type="single" collapsible className="w-full mt-2">
+                                  <AccordionItem value="details">
+                                    <AccordionTrigger className="text-sm py-2">View Achievement Details</AccordionTrigger>
+                                    <AccordionContent>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 mt-2">
+                                        {/* ... similar content as above for specific category details */}
+                                        {achievement.category === 'Journal Articles' && (
+                                          <>
+                                            <div>
+                                              <p className="text-sm font-medium">Journal Name:</p>
+                                              <p className="text-sm">{renderFieldValue(achievement.journal_name)}</p>
+                                            </div>
+                                            <div>
+                                              <p className="text-sm font-medium">ISSN:</p>
+                                              <p className="text-sm">{renderFieldValue(achievement.issn)}</p>
+                                            </div>
+                                            <div>
+                                              <p className="text-sm font-medium">DOI:</p>
+                                              <p className="text-sm">{renderFieldValue(achievement.doi)}</p>
+                                            </div>
+                                            <div>
+                                              <p className="text-sm font-medium">Journal Link:</p>
+                                              <p className="text-sm">{renderFieldValue(achievement.journal_link, true)}</p>
+                                            </div>
+                                          </>
+                                        )}
+                                      </div>
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                </Accordion>
                               </div>
                               <div className="flex items-center space-x-2">
                                 <Button
@@ -415,7 +583,7 @@ const AdminTeachers = () => {
                                 </Button>
                               </div>
                             </div>
-                          </div>
+                          </Card>
                         ))}
                     </div>
                   ) : (
@@ -429,19 +597,63 @@ const AdminTeachers = () => {
                       {selectedTeacher.achievements
                         .filter(a => a.status === "Approved")
                         .map((achievement) => (
-                          <div key={achievement.id} className="border rounded p-3">
+                          <Card key={achievement.id} className="p-3">
                             <div className="flex justify-between items-start">
                               <div>
                                 <div className="font-medium">{achievement.title}</div>
                                 <div className="text-sm text-gray-600">
                                   {achievement.category} | {new Date(achievement.date_achieved).toLocaleDateString()}
                                 </div>
+                                
+                                {/* Document proof link */}
+                                {achievement.document_url && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    className="mt-2 flex items-center gap-1 text-blue-600"
+                                    onClick={() => handleViewDocument(achievement.document_url)}
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                    View Uploaded Proof
+                                  </Button>
+                                )}
+                                
+                                <Accordion type="single" collapsible className="w-full mt-2">
+                                  <AccordionItem value="details">
+                                    <AccordionTrigger className="text-sm py-2">View Achievement Details</AccordionTrigger>
+                                    <AccordionContent>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 mt-2">
+                                        {/* ... similar content as above for specific category details */}
+                                        {achievement.category === 'Journal Articles' && (
+                                          <>
+                                            <div>
+                                              <p className="text-sm font-medium">Journal Name:</p>
+                                              <p className="text-sm">{renderFieldValue(achievement.journal_name)}</p>
+                                            </div>
+                                            <div>
+                                              <p className="text-sm font-medium">ISSN:</p>
+                                              <p className="text-sm">{renderFieldValue(achievement.issn)}</p>
+                                            </div>
+                                            <div>
+                                              <p className="text-sm font-medium">DOI:</p>
+                                              <p className="text-sm">{renderFieldValue(achievement.doi)}</p>
+                                            </div>
+                                            <div>
+                                              <p className="text-sm font-medium">Journal Link:</p>
+                                              <p className="text-sm">{renderFieldValue(achievement.journal_link, true)}</p>
+                                            </div>
+                                          </>
+                                        )}
+                                      </div>
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                </Accordion>
                               </div>
                               <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
                                 Approved
                               </span>
                             </div>
-                          </div>
+                          </Card>
                         ))}
                     </div>
                   ) : (
@@ -453,6 +665,46 @@ const AdminTeachers = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Document Viewer Modal */}
+      {viewDocumentUrl && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="relative bg-white p-4 rounded-lg max-w-6xl max-h-[90vh] w-full overflow-auto">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-2 z-10"
+              onClick={() => setViewDocumentUrl(null)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            
+            <div className="flex flex-col items-center">
+              <h3 className="text-lg font-medium mb-4">Achievement Proof Document</h3>
+              
+              <div className="w-full h-[70vh] border border-gray-300 rounded">
+                <iframe 
+                  src={viewDocumentUrl} 
+                  title="Document Preview"
+                  className="w-full h-full"
+                />
+              </div>
+              
+              <div className="mt-4">
+                <a 
+                  href={viewDocumentUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-blue-600 hover:underline"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Open in New Tab
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

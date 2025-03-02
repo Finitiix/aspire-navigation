@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { X, Pencil, ExternalLink } from "lucide-react";
+import { X, Pencil, ExternalLink, FileText } from "lucide-react";
 import { AchievementForm } from "@/components/teacher/AchievementForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -15,6 +15,7 @@ type Achievement = {
   title: string;
   date_achieved: string;
   status: string;
+  document_url: string;
   [key: string]: any; // For dynamic fields
 };
 
@@ -23,6 +24,7 @@ const TeacherAchievements = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingAchievement, setEditingAchievement] = useState<Achievement | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [viewDocumentUrl, setViewDocumentUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAchievements();
@@ -43,6 +45,11 @@ const TeacherAchievements = () => {
   };
 
   const handleEditClick = (achievement: Achievement) => {
+    // Only allow editing if the achievement is not approved
+    if (achievement.status === "Approved") {
+      return;
+    }
+    
     // Map category back to achievement_type for form compatibility
     const achievementData = {
       ...achievement,
@@ -78,6 +85,10 @@ const TeacherAchievements = () => {
   const handleAddSuccess = () => {
     setShowForm(false);
     fetchAchievements();
+  };
+
+  const handleViewDocument = (url: string) => {
+    setViewDocumentUrl(url);
   };
 
   const getStatusBadgeClass = (status: string) => {
@@ -143,15 +154,32 @@ const TeacherAchievements = () => {
                           <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadgeClass(achievement.status)}`}>
                             {achievement.status}
                           </span>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleEditClick(achievement)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+                          {achievement.status !== "Approved" && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleEditClick(achievement)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
+                      
+                      {/* Document proof link */}
+                      {achievement.document_url && (
+                        <div className="mt-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="flex items-center gap-1 text-blue-600"
+                            onClick={() => handleViewDocument(achievement.document_url)}
+                          >
+                            <FileText className="h-4 w-4" />
+                            View Uploaded Proof
+                          </Button>
+                        </div>
+                      )}
                       
                       <Accordion type="single" collapsible className="w-full">
                         <AccordionItem value="details">
@@ -160,6 +188,22 @@ const TeacherAchievements = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 mt-2">
                               {achievement.category === 'Journal Articles' && (
                                 <>
+                                  <div>
+                                    <p className="text-sm font-medium">Journal Name:</p>
+                                    <p className="text-sm">{renderFieldValue(achievement.journal_name)}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">ISSN:</p>
+                                    <p className="text-sm">{renderFieldValue(achievement.issn)}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">DOI:</p>
+                                    <p className="text-sm">{renderFieldValue(achievement.doi)}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Publisher:</p>
+                                    <p className="text-sm">{renderFieldValue(achievement.publisher)}</p>
+                                  </div>
                                   <div>
                                     <p className="text-sm font-medium">Scopus ID:</p>
                                     <p className="text-sm">{renderFieldValue(achievement.scopus_id_link, true)}</p>
@@ -172,18 +216,59 @@ const TeacherAchievements = () => {
                                     <p className="text-sm font-medium">Q1/Q2 Papers:</p>
                                     <p className="text-sm">{renderFieldValue(achievement.q_ranking)}</p>
                                   </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Journal Link:</p>
+                                    <p className="text-sm">{renderFieldValue(achievement.journal_link, true)}</p>
+                                  </div>
+                                </>
+                              )}
+                              
+                              {achievement.category === 'Conference Papers' && (
+                                <>
+                                  <div>
+                                    <p className="text-sm font-medium">Conference Name:</p>
+                                    <p className="text-sm">{renderFieldValue(achievement.conference_name)}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Conference Date:</p>
+                                    <p className="text-sm">{achievement.conference_date ? format(new Date(achievement.conference_date), 'PPP') : 'Not provided'}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">DOI:</p>
+                                    <p className="text-sm">{renderFieldValue(achievement.doi)}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">ISBN:</p>
+                                    <p className="text-sm">{renderFieldValue(achievement.isbn)}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Paper Link:</p>
+                                    <p className="text-sm">{renderFieldValue(achievement.paper_link, true)}</p>
+                                  </div>
                                 </>
                               )}
                               
                               {(achievement.category === 'Books & Book Chapters') && (
                                 <>
+                                  <div>
+                                    <p className="text-sm font-medium">Book Title:</p>
+                                    <p className="text-sm">{renderFieldValue(achievement.book_title)}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Publisher:</p>
+                                    <p className="text-sm">{renderFieldValue(achievement.publisher)}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">ISBN:</p>
+                                    <p className="text-sm">{renderFieldValue(achievement.isbn)}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Year of Publication:</p>
+                                    <p className="text-sm">{achievement.year_of_publication ? format(new Date(achievement.year_of_publication), 'PPP') : 'Not provided'}</p>
+                                  </div>
                                   <div className="col-span-2">
                                     <p className="text-sm font-medium">Book Drive Link:</p>
                                     <p className="text-sm">{renderFieldValue(achievement.book_drive_link, true)}</p>
-                                  </div>
-                                  <div className="col-span-2">
-                                    <p className="text-sm font-medium">Book Details:</p>
-                                    <p className="text-sm">{renderFieldValue(achievement.book_details)}</p>
                                   </div>
                                   <div className="col-span-2">
                                     <p className="text-sm font-medium">Book Chapters:</p>
@@ -195,20 +280,28 @@ const TeacherAchievements = () => {
                               {achievement.category === 'Patents' && (
                                 <>
                                   <div>
+                                    <p className="text-sm font-medium">Patent Number:</p>
+                                    <p className="text-sm">{renderFieldValue(achievement.patent_number)}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Patent Office:</p>
+                                    <p className="text-sm">{renderFieldValue(achievement.patent_office)}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Filing Date:</p>
+                                    <p className="text-sm">{achievement.filing_date ? format(new Date(achievement.filing_date), 'PPP') : 'Not provided'}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Grant Date:</p>
+                                    <p className="text-sm">{achievement.grant_date ? format(new Date(achievement.grant_date), 'PPP') : 'Not provided'}</p>
+                                  </div>
+                                  <div>
                                     <p className="text-sm font-medium">Patents Status:</p>
                                     <p className="text-sm">{renderFieldValue(achievement.patent_status)}</p>
                                   </div>
                                   <div>
                                     <p className="text-sm font-medium">Patent Link:</p>
                                     <p className="text-sm">{renderFieldValue(achievement.patent_link, true)}</p>
-                                  </div>
-                                  <div className="col-span-2">
-                                    <p className="text-sm font-medium">Patents Remarks:</p>
-                                    <p className="text-sm">{renderFieldValue(achievement.patents_remarks)}</p>
-                                  </div>
-                                  <div className="col-span-2">
-                                    <p className="text-sm font-medium">Funded Projects:</p>
-                                    <p className="text-sm">{renderFieldValue(achievement.funded_projects)}</p>
                                   </div>
                                 </>
                               )}
@@ -292,6 +385,46 @@ const TeacherAchievements = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Document Viewer Modal */}
+      {viewDocumentUrl && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="relative bg-white p-4 rounded-lg max-w-6xl max-h-[90vh] w-full overflow-auto">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-2 z-10"
+              onClick={() => setViewDocumentUrl(null)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            
+            <div className="flex flex-col items-center">
+              <h3 className="text-lg font-medium mb-4">Achievement Proof Document</h3>
+              
+              <div className="w-full h-[70vh] border border-gray-300 rounded">
+                <iframe 
+                  src={viewDocumentUrl} 
+                  title="Document Preview"
+                  className="w-full h-full"
+                />
+              </div>
+              
+              <div className="mt-4">
+                <a 
+                  href={viewDocumentUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-blue-600 hover:underline"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Open in New Tab
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
