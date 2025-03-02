@@ -57,15 +57,19 @@ const Index = () => {
               <div
                 key={section.title}
                 onClick={section.onClick}
-                className="transform transition-all duration-300 hover:-translate-y-2 cursor-pointer"
+                className="group transform transition-all duration-300 hover:-translate-y-2 cursor-pointer"
               >
-                <Card className="h-[300px] shadow-lg hover:shadow-xl transition-shadow">
+                <Card className="h-[300px] shadow-lg hover:shadow-xl transition-shadow transition-colors duration-300 group-hover:bg-red-500">
                   <CardHeader className="text-center pb-2">
-                    <section.icon className="w-16 h-16 mx-auto text-primary mb-4" />
-                    <CardTitle className="text-2xl font-bold">{section.title}</CardTitle>
+                    <section.icon className="w-16 h-16 mx-auto text-primary mb-4 transition-colors duration-300 group-hover:text-white" />
+                    <CardTitle className="text-2xl font-bold transition-colors duration-300 group-hover:text-white">
+                      {section.title}
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-600 text-center text-lg">{section.description}</p>
+                    <p className="text-gray-600 text-center text-lg transition-colors duration-300 group-hover:text-white">
+                      {section.description}
+                    </p>
                   </CardContent>
                 </Card>
               </div>
