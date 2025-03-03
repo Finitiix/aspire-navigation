@@ -35,47 +35,6 @@ const Index = () => {
     }
   ];
 
-  const testimonials = [
-    {
-      quote: "Achievement Hub has transformed how I organize my classroom and track student progress.",
-      author: "Sarah Johnson",
-      role: "Science Teacher"
-    },
-    {
-      quote: "The detailed analytics provided by Achievement Hub have helped me identify areas where my students need additional support.",
-      author: "Michael Chen",
-      role: "Mathematics Instructor"
-    },
-    {
-      quote: "The platform's intuitive interface makes it easy for my students to access their assignments and track their progress.",
-      author: "Priya Patel",
-      role: "English Teacher"
-    }
-  ];
-
-  const stats = [
-    {
-      icon: Users,
-      number: "10,000+",
-      label: "Active Users"
-    },
-    {
-      icon: BookOpen,
-      number: "5,000+",
-      label: "Courses Available"
-    },
-    {
-      icon: Trophy,
-      number: "50,000+",
-      label: "Achievements Awarded"
-    },
-    {
-      icon: Target,
-      number: "98%",
-      label: "Satisfaction Rate"
-    }
-  ];
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
@@ -96,30 +55,12 @@ const Index = () => {
           <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
             Empowering education through technology. Connect, learn, and achieve excellence together.
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Button 
-              size="lg" 
-              className="bg-primary hover:bg-primary/90 text-white font-semibold px-8"
-              onClick={() => navigate("/teacher")}
-            >
-              Get Started
-            </Button>
-            <Button 
-              size="lg" 
-              variant="outline"
-              className="border-primary text-primary hover:bg-primary/10"
-              onClick={() => navigate("/about")}
-            >
-              Learn More
-            </Button>
-          </div>
         </div>
       </section>
 
       {/* Features Section */}
       <section className="py-16 px-6 bg-white">
         <div className="container mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">Choose Your Path</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {sections.map((section) => (
               <div
@@ -141,48 +82,6 @@ const Index = () => {
                   </CardContent>
                 </Card>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-16 px-6 bg-gradient-to-r from-red-500 to-orange-500 text-white">
-        <div className="container mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center p-6 bg-white/10 rounded-lg backdrop-blur-sm">
-                <stat.icon className="w-12 h-12 mx-auto mb-4" />
-                <h3 className="text-4xl font-bold mb-2">{stat.number}</h3>
-                <p className="text-lg">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="py-16 px-6 bg-gray-50">
-        <div className="container mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">What Our Users Say</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <Card key={index} className="border-none shadow-lg">
-                <CardContent className="pt-6">
-                  <div className="mb-4 text-primary">
-                    <Star className="w-8 h-8 inline-block" />
-                    <Star className="w-8 h-8 inline-block" />
-                    <Star className="w-8 h-8 inline-block" />
-                    <Star className="w-8 h-8 inline-block" />
-                    <Star className="w-8 h-8 inline-block" />
-                  </div>
-                  <p className="italic text-gray-600 mb-6">"{testimonial.quote}"</p>
-                  <div>
-                    <p className="font-semibold">{testimonial.author}</p>
-                    <p className="text-sm text-gray-500">{testimonial.role}</p>
-                  </div>
-                </CardContent>
-              </Card>
             ))}
           </div>
         </div>
@@ -220,7 +119,7 @@ const Index = () => {
           <Button 
             size="lg" 
             className="bg-white text-primary hover:bg-gray-100 font-semibold px-8"
-            onClick={() => navigate("/teacher")}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
             Get Started Today
           </Button>
@@ -241,13 +140,6 @@ const Index = () => {
               With our comprehensive suite of features and user-friendly interface, we make it easier than ever to 
               manage educational processes, track progress, and foster collaboration within the academic community.
             </p>
-            <Button 
-              variant="outline"
-              className="border-primary text-primary hover:bg-primary/10"
-              onClick={() => navigate("/about")}
-            >
-              Learn More About Us
-            </Button>
           </div>
         </div>
       </section>
@@ -275,14 +167,6 @@ const Index = () => {
                 <li><Link to="/about" className="hover:text-white transition-colors">About</Link></li>
                 <li><Link to="/contact" className="hover:text-white transition-colors">Contact</Link></li>
                 <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Resources</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Tutorials</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">FAQs</a></li>
               </ul>
             </div>
             <div>
