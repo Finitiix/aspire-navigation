@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -140,18 +141,17 @@ const AdminSettings = () => {
 
       const email = `${teacherPasswordChange.eid.toLowerCase()}@achievementhub.com`;
       
-      const { data: authUsers, error: searchError } = await supabase
-        .from('auth_users_view')
-        .select('id')
-        .eq('email', email)
-        .single();
+      // Find the user ID using a custom RPC function instead of directly querying the view
+      const { data, error: userError } = await supabase.rpc('get_user_id_by_email', {
+        email_address: email
+      });
       
-      if (searchError || !authUsers) {
-        throw new Error(searchError?.message || 'Teacher not found with this ID');
+      if (userError || !data) {
+        throw new Error(userError?.message || 'Teacher not found with this ID');
       }
       
       const { error } = await supabase.auth.admin.updateUserById(
-        authUsers.id,
+        data,
         { password: teacherPasswordChange.newPassword }
       );
 
