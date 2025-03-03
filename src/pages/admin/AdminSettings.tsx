@@ -6,15 +6,24 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 
 const AdminSettings = () => {
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [teacherEmail, setTeacherEmail] = useState("");
   const [teacherPassword, setTeacherPassword] = useState("");
+  const [teacherEid, setTeacherEid] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
+  const [teacherPasswordChange, setTeacherPasswordChange] = useState({
+    eid: "",
+    newPassword: ""
+  });
   const [adminUser, setAdminUser] = useState<any>(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [loadingAction, setLoadingAction] = useState(false);
 
   useEffect(() => {
     fetchAdminDetails();
@@ -36,10 +45,15 @@ const AdminSettings = () => {
 
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoadingAction(true);
     try {
-      // Create admin user
+      // Create admin user with custom email format
+      const adminEmailWithDomain = adminEmail.includes('@') 
+        ? adminEmail 
+        : `${adminEmail}@achievementhub.com`;
+        
       const { data, error } = await supabase.auth.signUp({
-        email: adminEmail,
+        email: adminEmailWithDomain,
         password: adminPassword,
         options: {
           data: {
@@ -53,18 +67,30 @@ const AdminSettings = () => {
       toast.success('Admin user created. Check email for confirmation.');
       setAdminEmail('');
       setAdminPassword('');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating admin:', error);
-      toast.error('Failed to create admin');
+      toast.error(error.message || 'Failed to create admin');
+    } finally {
+      setLoadingAction(false);
     }
   };
 
   const handleCreateTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoadingAction(true);
     try {
+      if (!validateTeacherEid(teacherEid)) {
+        toast.error('Teacher ID must be in format EXXXXX (E followed by 5 digits)');
+        setLoadingAction(false);
+        return;
+      }
+
+      // Create email from teacher ID
+      const email = `${teacherEid.toLowerCase()}@achievementhub.com`;
+      
       // Create teacher user
       const { data, error } = await supabase.auth.signUp({
-        email: teacherEmail,
+        email,
         password: teacherPassword,
         options: {
           data: {
@@ -76,16 +102,19 @@ const AdminSettings = () => {
       if (error) throw error;
 
       toast.success('Teacher user created. Check email for confirmation.');
-      setTeacherEmail('');
+      setTeacherEid('');
       setTeacherPassword('');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating teacher:', error);
-      toast.error('Failed to create teacher');
+      toast.error(error.message || 'Failed to create teacher');
+    } finally {
+      setLoadingAction(false);
     }
   };
 
   const handleChangeAdminPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoadingAction(true);
     try {
       const { error } = await supabase.auth.updateUser({
         password: newAdminPassword
@@ -95,10 +124,55 @@ const AdminSettings = () => {
 
       toast.success('Admin password updated successfully');
       setNewAdminPassword('');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating password:', error);
-      toast.error('Failed to update password');
+      toast.error(error.message || 'Failed to update password');
+    } finally {
+      setLoadingAction(false);
     }
+  };
+
+  const handleChangeTeacherPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoadingAction(true);
+    try {
+      if (!validateTeacherEid(teacherPasswordChange.eid)) {
+        toast.error('Teacher ID must be in format EXXXXX (E followed by 5 digits)');
+        setLoadingAction(false);
+        return;
+      }
+
+      // First, get the teacher's user ID from the EID
+      const email = `${teacherPasswordChange.eid.toLowerCase()}@achievementhub.com`;
+      
+      // Using admin access to update another user's password
+      // This requires the service role key, which should be done via a secure function
+      // For demonstration, we'll use a direct approach (in production, this should be an edge function)
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+      
+      if (userError || !userData?.user) {
+        throw new Error(userError?.message || 'Teacher not found with this ID');
+      }
+      
+      const { error } = await supabase.auth.admin.updateUserById(
+        userData.user.id,
+        { password: teacherPasswordChange.newPassword }
+      );
+
+      if (error) throw error;
+
+      toast.success('Teacher password updated successfully');
+      setTeacherPasswordChange({ eid: '', newPassword: '' });
+    } catch (error: any) {
+      console.error('Error updating teacher password:', error);
+      toast.error(error.message || 'Failed to update teacher password');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  const validateTeacherEid = (value: string): boolean => {
+    return /^E\d{5}$/.test(value);
   };
 
   return (
@@ -158,24 +232,34 @@ const AdminSettings = () => {
               <CardContent>
                 <form onSubmit={handleCreateAdmin} className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Email</label>
+                    <Label htmlFor="admin-email">Username or Email</Label>
                     <Input
-                      type="email"
+                      id="admin-email"
+                      type="text"
                       value={adminEmail}
                       onChange={(e) => setAdminEmail(e.target.value)}
+                      placeholder="admin-username or full email"
                       required
+                      disabled={loadingAction}
                     />
+                    <p className="text-xs text-gray-500">
+                      If no @ is provided, @achievementhub.com will be added automatically
+                    </p>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Password</label>
+                    <Label htmlFor="admin-password">Password</Label>
                     <Input
+                      id="admin-password"
                       type="password"
                       value={adminPassword}
                       onChange={(e) => setAdminPassword(e.target.value)}
                       required
+                      disabled={loadingAction}
                     />
                   </div>
-                  <Button type="submit" className="w-full">Create Admin</Button>
+                  <Button type="submit" className="w-full" disabled={loadingAction}>
+                    Create Admin
+                  </Button>
                 </form>
               </CardContent>
             </Card>
@@ -188,24 +272,43 @@ const AdminSettings = () => {
               <CardContent>
                 <form onSubmit={handleCreateTeacher} className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Email</label>
+                    <Label htmlFor="teacher-eid">Teacher ID (EID)</Label>
                     <Input
-                      type="email"
-                      value={teacherEmail}
-                      onChange={(e) => setTeacherEmail(e.target.value)}
+                      id="teacher-eid"
+                      type="text"
+                      value={teacherEid}
+                      onChange={(e) => setTeacherEid(e.target.value)}
+                      placeholder="EXXXXX"
                       required
+                      disabled={loadingAction}
                     />
+                    {teacherEid && !validateTeacherEid(teacherEid) && (
+                      <p className="text-red-500 text-sm">
+                        Teacher ID must be in format EXXXXX (E followed by 5 digits)
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Password</label>
+                    <Label htmlFor="teacher-password">Password</Label>
                     <Input
+                      id="teacher-password"
                       type="password"
                       value={teacherPassword}
                       onChange={(e) => setTeacherPassword(e.target.value)}
                       required
+                      disabled={loadingAction}
                     />
                   </div>
-                  <Button type="submit" className="w-full">Create Teacher</Button>
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={loadingAction || (teacherEid && !validateTeacherEid(teacherEid))}
+                  >
+                    Create Teacher
+                  </Button>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Email will be automatically created as: {teacherEid.toLowerCase()}@achievementhub.com
+                  </p>
                 </form>
               </CardContent>
             </Card>
@@ -214,25 +317,80 @@ const AdminSettings = () => {
         
         {/* Password Management Tab */}
         <TabsContent value="password-management">
-          <Card>
-            <CardHeader>
-              <CardTitle>Change Admin Password</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleChangeAdminPassword} className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">New Password</label>
-                  <Input
-                    type="password"
-                    value={newAdminPassword}
-                    onChange={(e) => setNewAdminPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit">Update Password</Button>
-              </form>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Admin Password Change */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Change Admin Password</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleChangeAdminPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-admin-password">New Password</Label>
+                    <Input
+                      id="new-admin-password"
+                      type="password"
+                      value={newAdminPassword}
+                      onChange={(e) => setNewAdminPassword(e.target.value)}
+                      required
+                      disabled={loadingAction}
+                    />
+                  </div>
+                  <Button type="submit" disabled={loadingAction}>
+                    Update Admin Password
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Teacher Password Change */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Change Teacher Password</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleChangeTeacherPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="teacher-eid-password">Teacher ID (EID)</Label>
+                    <Input
+                      id="teacher-eid-password"
+                      type="text"
+                      value={teacherPasswordChange.eid}
+                      onChange={(e) => setTeacherPasswordChange({ ...teacherPasswordChange, eid: e.target.value })}
+                      placeholder="EXXXXX"
+                      required
+                      disabled={loadingAction}
+                    />
+                    {teacherPasswordChange.eid && !validateTeacherEid(teacherPasswordChange.eid) && (
+                      <p className="text-red-500 text-sm">
+                        Teacher ID must be in format EXXXXX (E followed by 5 digits)
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-teacher-password">New Password</Label>
+                    <Input
+                      id="new-teacher-password"
+                      type="password"
+                      value={teacherPasswordChange.newPassword}
+                      onChange={(e) => setTeacherPasswordChange({ ...teacherPasswordChange, newPassword: e.target.value })}
+                      required
+                      disabled={loadingAction}
+                    />
+                  </div>
+                  <Button 
+                    type="submit" 
+                    disabled={
+                      loadingAction || 
+                      (teacherPasswordChange.eid && !validateTeacherEid(teacherPasswordChange.eid))
+                    }
+                  >
+                    Update Teacher Password
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
