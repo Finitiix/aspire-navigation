@@ -141,17 +141,19 @@ const AdminSettings = () => {
 
       const email = `${teacherPasswordChange.eid.toLowerCase()}@achievementhub.com`;
       
-      // Find the user ID using a custom RPC function instead of directly querying the view
-      const { data, error: userError } = await supabase.rpc('get_user_id_by_email', {
-        email_address: email
-      });
+      // Use the auth_users_view to find the user ID
+      const { data: userData, error: userError } = await supabase
+        .from('auth_users_view')
+        .select('id')
+        .eq('email', email)
+        .single();
       
-      if (userError || !data) {
+      if (userError || !userData) {
         throw new Error(userError?.message || 'Teacher not found with this ID');
       }
       
       const { error } = await supabase.auth.admin.updateUserById(
-        data,
+        userData.id,
         { password: teacherPasswordChange.newPassword }
       );
 

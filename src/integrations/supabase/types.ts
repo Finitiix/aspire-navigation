@@ -240,7 +240,15 @@ export type Database = {
           id?: string
           teacher_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_notifications_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       feedback: {
         Row: {
@@ -324,7 +332,15 @@ export type Database = {
           role?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       teacher_details: {
         Row: {
@@ -387,11 +403,33 @@ export type Database = {
           timetable_url?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "teacher_details_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
-      [_ in never]: never
+      auth_users_view: {
+        Row: {
+          email: string | null
+          id: string | null
+        }
+        Insert: {
+          email?: string | null
+          id?: string | null
+        }
+        Update: {
+          email?: string | null
+          id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_user_role: {
