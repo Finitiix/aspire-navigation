@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,6 +21,9 @@ import AdminTeachers from "./pages/admin/AdminTeachers";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminFeedback from "./pages/admin/AdminFeedback";
 import { FeedbackForm } from "./components/FeedbackForm";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import Privacy from "./pages/Privacy";
 
 const RouteGuard = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
@@ -53,6 +57,9 @@ function App() {
               <Route path="/teacher" element={<Teacher />} />
               <Route path="admin-auth" element={<AdminAuth />} />
               <Route path="feedback" element={<FeedbackForm />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/privacy" element={<Privacy />} />
               <Route path="/teacher-dashboard" element={<TeacherDashboard />}>
                 <Route index element={<TeacherHome />} />
                 <Route path="profile" element={<TeacherProfile />} />
