@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,7 +46,6 @@ const AdminSettings = () => {
     e.preventDefault();
     setLoadingAction(true);
     try {
-      // Create admin user with custom email format
       const adminEmailWithDomain = adminEmail.includes('@') 
         ? adminEmail 
         : `${adminEmail}@achievementhub.com`;
@@ -85,10 +83,8 @@ const AdminSettings = () => {
         return;
       }
 
-      // Create email from teacher ID
       const email = `${teacherEid.toLowerCase()}@achievementhub.com`;
       
-      // Create teacher user
       const { data, error } = await supabase.auth.signUp({
         email,
         password: teacherPassword,
@@ -142,20 +138,20 @@ const AdminSettings = () => {
         return;
       }
 
-      // First, get the teacher's user ID from the EID
       const email = `${teacherPasswordChange.eid.toLowerCase()}@achievementhub.com`;
       
-      // Using admin access to update another user's password
-      // This requires the service role key, which should be done via a secure function
-      // For demonstration, we'll use a direct approach (in production, this should be an edge function)
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+      const { data: authUsers, error: searchError } = await supabase
+        .from('auth_users_view')
+        .select('id')
+        .eq('email', email)
+        .single();
       
-      if (userError || !userData?.user) {
-        throw new Error(userError?.message || 'Teacher not found with this ID');
+      if (searchError || !authUsers) {
+        throw new Error(searchError?.message || 'Teacher not found with this ID');
       }
       
       const { error } = await supabase.auth.admin.updateUserById(
-        userData.user.id,
+        authUsers.id,
         { password: teacherPasswordChange.newPassword }
       );
 
@@ -184,7 +180,6 @@ const AdminSettings = () => {
           <TabsTrigger value="password-management">Password Management</TabsTrigger>
         </TabsList>
         
-        {/* Admin Details Tab */}
         <TabsContent value="admin-details">
           <Card>
             <CardHeader>
@@ -221,10 +216,8 @@ const AdminSettings = () => {
           </Card>
         </TabsContent>
         
-        {/* User Management Tab */}
         <TabsContent value="user-management">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Create Admin Section */}
             <Card>
               <CardHeader>
                 <CardTitle>Create Admin User</CardTitle>
@@ -264,7 +257,6 @@ const AdminSettings = () => {
               </CardContent>
             </Card>
             
-            {/* Create Teacher Section */}
             <Card>
               <CardHeader>
                 <CardTitle>Create Teacher User</CardTitle>
@@ -315,10 +307,8 @@ const AdminSettings = () => {
           </div>
         </TabsContent>
         
-        {/* Password Management Tab */}
         <TabsContent value="password-management">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Admin Password Change */}
             <Card>
               <CardHeader>
                 <CardTitle>Change Admin Password</CardTitle>
@@ -343,7 +333,6 @@ const AdminSettings = () => {
               </CardContent>
             </Card>
 
-            {/* Teacher Password Change */}
             <Card>
               <CardHeader>
                 <CardTitle>Change Teacher Password</CardTitle>
