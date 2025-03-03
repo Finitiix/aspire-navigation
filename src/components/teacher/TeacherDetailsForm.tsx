@@ -1,18 +1,16 @@
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
-import { Input } from "../ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Input } from "../ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { Upload } from "lucide-react";
 
 export const TeacherDetailsForm = () => {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    eid: "",
-    profile_pic_url: "",
     full_name: "",
     designation: "",
     department: "",
@@ -22,32 +20,134 @@ export const TeacherDetailsForm = () => {
     date_of_joining: "",
     highest_qualification: "",
     skills: "",
-    address: "",
-    cabin_no: "",
+    eid: "",
+    profile_pic_url: "",
   });
+  const [uploadingProfilePic, setUploadingProfilePic] = useState(false);
+  const profilePicRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    const getUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data.user) {
+        setFormData((prev) => ({
+          ...prev,
+          email_id: data.user?.email || "",
+          eid: data.user?.email?.split("@")[0].toUpperCase() || "",
+        }));
+      }
+    };
+    getUser();
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  };
+
+  const handleFileUpload = async (fileInput: HTMLInputElement) => {
+    const files = fileInput.files;
+    if (!files || files.length === 0) {
+      return;
+    }
+    
+    const file = files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${formData.eid}_profile_${Date.now()}.${fileExt}`;
+    
+    try {
+      setUploadingProfilePic(true);
+      
+      const { data, error } = await supabase.storage
+        .from('teacher_information')
+        .upload(`teacher_profiles/${fileName}`, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+      
+      if (error) throw error;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('teacher_information')
+        .getPublicUrl(`teacher_profiles/${fileName}`);
+      
+      setFormData(prev => ({
+        ...prev,
+        profile_pic_url: publicUrl
+      }));
+      
+      toast.success(`Profile picture uploaded successfully!`);
+      
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      setUploadingProfilePic(false);
+      fileInput.value = '';
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      // Validate required fields
+      for (const [key, value] of Object.entries(formData)) {
+        if (key !== "skills" && key !== "profile_pic_url" && !value) {
+          throw new Error(`Please fill in the ${key.replace("_", " ")}`);
+        }
+      }
 
-      const skills = formData.skills.split(',').map(skill => skill.trim());
-      
-      const { error } = await supabase
-        .from('teacher_details')
-        .insert({
-          id: user.id,
-          ...formData,
-          skills,
-        });
+      // Validate EID format
+      if (!/^E\d{5}$/.test(formData.eid)) {
+        throw new Error("EID must be in the format EXXXXX (e.g. E12345)");
+      }
+
+      // Get the user's id
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        throw new Error("User not authenticated");
+      }
+
+      // Prepare skills array
+      const skills = formData.skills
+        ? formData.skills.split(",").map((skill) => skill.trim())
+        : [];
+
+      // Create teacher record
+      const { error } = await supabase.from("teacher_details").insert({
+        id: userData.user.id,
+        full_name: formData.full_name,
+        designation: formData.designation,
+        department: formData.department,
+        mobile_number: formData.mobile_number,
+        email_id: formData.email_id,
+        gender: formData.gender,
+        date_of_joining: formData.date_of_joining,
+        highest_qualification: formData.highest_qualification,
+        skills: skills,
+        eid: formData.eid,
+        profile_pic_url: formData.profile_pic_url,
+      });
 
       if (error) throw error;
 
-      toast.success("Details saved successfully!");
-      navigate("/teacher-dashboard");
+      // Create email notification preferences
+      await supabase.from("email_notifications").insert({
+        teacher_id: userData.user.id,
+      });
+
+      toast.success("Teacher profile created successfully!");
+      window.location.href = "/teacher-dashboard";
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "An error occurred");
     } finally {
@@ -55,152 +155,166 @@ export const TeacherDetailsForm = () => {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
-  };
-
   return (
-    <div className="container max-w-2xl mx-auto py-8">
+    <div className="container max-w-2xl mx-auto py-8 px-4">
       <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">Complete Your Profile</CardTitle>
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold">Complete Your Profile</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Hidden file input */}
+            <input 
+              type="file" 
+              ref={profilePicRef} 
+              className="hidden" 
+              accept="image/*"
+              onChange={() => handleFileUpload(profilePicRef.current!)}
+            />
+            
+            {/* Profile Picture Upload */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Profile Picture</label>
+              <div className="flex flex-col items-center gap-2">
+                {formData.profile_pic_url && (
+                  <img 
+                    src={formData.profile_pic_url} 
+                    alt="Profile" 
+                    className="w-32 h-32 rounded-full object-cover"
+                  />
+                )}
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => profilePicRef.current?.click()}
+                  disabled={uploadingProfilePic}
+                >
+                  {uploadingProfilePic ? "Uploading..." : "Upload Profile Picture"}
+                  <Upload className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Full Name *</label>
+                <Input
+                  name="full_name"
+                  value={formData.full_name}
+                  onChange={handleChange}
+                  placeholder="Enter your full name"
+                  required
+                />
+              </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">EID *</label>
                 <Input
-                  required
                   name="eid"
                   value={formData.eid}
                   onChange={handleChange}
                   placeholder="EXXXXX"
+                  required
                   pattern="^E\d{5}$"
                 />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Profile Picture URL *</label>
-                <Input
-                  required
-                  name="profile_pic_url"
-                  value={formData.profile_pic_url}
-                  onChange={handleChange}
-                  type="url"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Full Name *</label>
-                <Input
-                  required
-                  name="full_name"
-                  value={formData.full_name}
-                  onChange={handleChange}
-                />
+                <p className="text-xs text-gray-500">Format: EXXXXX (E followed by 5 digits)</p>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Designation *</label>
                 <Input
-                  required
                   name="designation"
                   value={formData.designation}
                   onChange={handleChange}
+                  placeholder="e.g. Assistant Professor"
+                  required
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Department *</label>
                 <Input
-                  required
                   name="department"
                   value={formData.department}
                   onChange={handleChange}
+                  placeholder="e.g. Computer Science"
+                  required
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Mobile Number *</label>
                 <Input
-                  required
                   name="mobile_number"
                   value={formData.mobile_number}
                   onChange={handleChange}
+                  placeholder="Enter your mobile number"
+                  required
                   type="tel"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Email ID *</label>
                 <Input
-                  required
                   name="email_id"
                   value={formData.email_id}
                   onChange={handleChange}
+                  placeholder="Enter your email address"
+                  required
                   type="email"
+                  disabled
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Gender *</label>
-                <select
-                  required
+                <Select
                   name="gender"
                   value={formData.gender}
-                  onChange={handleChange}
-                  className="w-full h-10 px-3 border rounded-md"
+                  onValueChange={(value) => handleSelectChange("gender", value)}
+                  required
                 >
-                  <option value="">Select Gender</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Date of Joining *</label>
                 <Input
-                  required
                   name="date_of_joining"
                   value={formData.date_of_joining}
                   onChange={handleChange}
+                  required
                   type="date"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Highest Qualification *</label>
                 <Input
-                  required
                   name="highest_qualification"
                   value={formData.highest_qualification}
                   onChange={handleChange}
+                  placeholder="e.g. Ph.D. in Computer Science"
+                  required
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Skills</label>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-medium">Skills (Optional)</label>
                 <Input
                   name="skills"
                   value={formData.skills}
                   onChange={handleChange}
-                  placeholder="Comma separated skills"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Cabin No</label>
-                <Input
-                  name="cabin_no"
-                  value={formData.cabin_no}
-                  onChange={handleChange}
+                  placeholder="Enter skills separated by commas (e.g. Programming, Teaching, Research)"
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Address</label>
-              <Input
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Saving..." : "Save Details"}
+            <Button
+              type="submit"
+              className="w-full mt-4"
+              disabled={loading || uploadingProfilePic}
+            >
+              {loading ? "Submitting..." : "Submit"}
             </Button>
           </form>
         </CardContent>
