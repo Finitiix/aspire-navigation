@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Search, Download, Check, X, Eye, ExternalLink, FileText, FileDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format } from "date-fns";
+import { format as dateFormat } from "date-fns";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
@@ -151,7 +151,7 @@ const AdminTeachers = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.setAttribute("href", url);
-      link.setAttribute("download", `teachers_report_${format(new Date(), "yyyy-MM-dd")}.csv`);
+      link.setAttribute("download", `teachers_report_${dateFormat(new Date(), "yyyy-MM-dd")}.csv`);
       link.style.visibility = "hidden";
       document.body.appendChild(link);
       link.click();
@@ -212,7 +212,7 @@ const AdminTeachers = () => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", `${fullTeacherData.full_name}_${format(new Date(), "yyyy-MM-dd")}.csv`);
+        link.setAttribute("download", `${fullTeacherData.full_name}_${dateFormat(new Date(), "yyyy-MM-dd")}.csv`);
         link.style.visibility = "hidden";
         document.body.appendChild(link);
         link.click();
