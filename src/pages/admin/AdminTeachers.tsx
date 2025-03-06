@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Search, Download, Check, X, Eye, ExternalLink, FileText } from "lucide-react";
+import { Search, Download, Check, X, Eye, ExternalLink, FileText, FileDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 // Define types
 type Teacher = {
@@ -171,6 +172,86 @@ const AdminTeachers = () => {
     }
   };
 
+  // Function to export individual teacher data
+  const handleExportTeacher = async (teacher: Teacher, format: 'csv' | 'pdf' | 'docx') => {
+    try {
+      // Get full teacher data with achievements
+      const { data: teacherData, error } = await supabase
+        .from("teacher_details")
+        .select("*")
+        .eq("id", teacher.id)
+        .single();
+
+      if (error) throw error;
+
+      const { data: achievements } = await supabase
+        .from("detailed_achievements")
+        .select("*")
+        .eq("teacher_id", teacher.id);
+
+      const fullTeacherData = { ...teacherData, achievements: achievements || [] };
+
+      // For CSV export
+      if (format === 'csv') {
+        let csvContent = "Teacher Information\n";
+        csvContent += `Name,${fullTeacherData.full_name}\n`;
+        csvContent += `EID,${fullTeacherData.eid}\n`;
+        csvContent += `Email,${fullTeacherData.email_id}\n`;
+        csvContent += `Department,${fullTeacherData.department}\n`;
+        csvContent += `Designation,${fullTeacherData.designation}\n`;
+        csvContent += `Mobile,${fullTeacherData.mobile_number}\n`;
+        csvContent += `Date of Joining,${fullTeacherData.date_of_joining}\n`;
+        csvContent += `Gender,${fullTeacherData.gender}\n`;
+        csvContent += `Highest Qualification,${fullTeacherData.highest_qualification}\n`;
+        csvContent += `Address,${fullTeacherData.address || ""}\n`;
+        csvContent += `Cabin No,${fullTeacherData.cabin_no || ""}\n`;
+        csvContent += `Block,${fullTeacherData.block || ""}\n\n`;
+
+        csvContent += "Achievements\n";
+        csvContent += "Category,Title,Date Achieved,Status\n";
+        if (fullTeacherData.achievements && fullTeacherData.achievements.length > 0) {
+          fullTeacherData.achievements.forEach((achievement: DetailedAchievement) => {
+            csvContent += `"${achievement.category}","${achievement.title}","${achievement.date_achieved}","${achievement.status}"\n`;
+          });
+        } else {
+          csvContent += "No achievements found\n";
+        }
+
+        // Create and download the CSV file
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `${fullTeacherData.full_name}_${format(new Date(), "yyyy-MM-dd")}.csv`);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        toast.success(`Teacher data exported as CSV`);
+      } 
+      // For PDF and DOCX - client-side handling is limited
+      else {
+        toast.info(`${format.toUpperCase()} export would require a server-side implementation with a PDF/DOCX library`);
+        
+        // Mock export for demonstration
+        const jsonStr = JSON.stringify(fullTeacherData, null, 2);
+        const blob = new Blob([jsonStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `${fullTeacherData.full_name}_data.json`);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (error) {
+      console.error(`Error exporting teacher data as ${format}:`, error);
+      toast.error(`Failed to export teacher data as ${format}`);
+    }
+  };
+
   const handleUpdateAchievementStatus = async (achievementId: string, newStatus: "Approved" | "Rejected") => {
     try {
       const { error } = await supabase
@@ -230,14 +311,23 @@ const AdminTeachers = () => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Teacher Management</h1>
-        <Button
-          onClick={handleExportToCSV}
-          disabled={isExporting}
-          className="bg-green-600 hover:bg-green-700"
-        >
-          {isExporting ? "Exporting..." : "Export to CSV"}
-          <Download className="ml-2 h-4 w-4" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              disabled={isExporting}
+            >
+              {isExporting ? "Exporting..." : "Export"}
+              <Download className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={handleExportToCSV}>
+              <FileDown className="mr-2 h-4 w-4" />
+              Export All to CSV
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <Card className="mb-6">
@@ -271,7 +361,7 @@ const AdminTeachers = () => {
                   <th className="p-3 text-left">Department</th>
                   <th className="p-3 text-left">Designation</th>
                   <th className="p-3 text-left">Achievements</th>
-                  <th className="p-3 text-center">Action</th>
+                  <th className="p-3 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -296,13 +386,33 @@ const AdminTeachers = () => {
                         </div>
                       </td>
                       <td className="p-3 text-center">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewDetails(teacher)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" /> View
-                        </Button>
+                        <div className="flex justify-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewDetails(teacher)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" /> View
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <Download className="h-4 w-4 mr-1" /> Export
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              <DropdownMenuItem onClick={() => handleExportTeacher(teacher, 'csv')}>
+                                Export as CSV
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleExportTeacher(teacher, 'pdf')}>
+                                Export as PDF
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleExportTeacher(teacher, 'docx')}>
+                                Export as Word
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </td>
                     </tr>
                   ))
