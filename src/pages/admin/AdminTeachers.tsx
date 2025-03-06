@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,7 +72,6 @@ const AdminTeachers = () => {
       if (error) throw error;
 
       if (teachersData) {
-        // Get achievements for each teacher
         const teachersWithAchievements = await Promise.all(
           teachersData.map(async (teacher) => {
             const { data: achievements } = await supabase
@@ -105,7 +103,7 @@ const AdminTeachers = () => {
   const renderFieldValue = (value: any, isLink = false) => {
     if (!value) return <span className="text-gray-400">Not provided</span>;
     
-    if (isLink && value.startsWith('http')) {
+    if (isLink && typeof value === 'string' && value.startsWith('http')) {
       return (
         <a 
           href={value} 
@@ -124,7 +122,6 @@ const AdminTeachers = () => {
   const handleExportToCSV = async () => {
     setIsExporting(true);
     try {
-      // Get all teachers with their achievements
       const { data: teachersData, error } = await supabase
         .from("teacher_details")
         .select("*")
@@ -142,7 +139,6 @@ const AdminTeachers = () => {
         })
       );
 
-      // Create CSV content
       let csvContent = "Name,EID,Email,Department,Designation,Mobile,Achievement Count,Approved Achievements\n";
 
       teachersWithAchievements.forEach((teacher) => {
@@ -152,7 +148,6 @@ const AdminTeachers = () => {
         csvContent += `"${teacher.full_name}","${teacher.eid}","${teacher.email_id}","${teacher.department}","${teacher.designation}","${teacher.mobile_number}","${achievementCount}","${approvedCount}"\n`;
       });
 
-      // Create and download the CSV file
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -172,10 +167,8 @@ const AdminTeachers = () => {
     }
   };
 
-  // Function to export individual teacher data
   const handleExportTeacher = async (teacher: Teacher, format: 'csv' | 'pdf' | 'docx') => {
     try {
-      // Get full teacher data with achievements
       const { data: teacherData, error } = await supabase
         .from("teacher_details")
         .select("*")
@@ -191,7 +184,6 @@ const AdminTeachers = () => {
 
       const fullTeacherData = { ...teacherData, achievements: achievements || [] };
 
-      // For CSV export
       if (format === 'csv') {
         let csvContent = "Teacher Information\n";
         csvContent += `Name,${fullTeacherData.full_name}\n`;
@@ -217,7 +209,6 @@ const AdminTeachers = () => {
           csvContent += "No achievements found\n";
         }
 
-        // Create and download the CSV file
         const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -229,12 +220,9 @@ const AdminTeachers = () => {
         document.body.removeChild(link);
 
         toast.success(`Teacher data exported as CSV`);
-      } 
-      // For PDF and DOCX - client-side handling is limited
-      else {
+      } else {
         toast.info(`${format.toUpperCase()} export would require a server-side implementation with a PDF/DOCX library`);
         
-        // Mock export for demonstration
         const jsonStr = JSON.stringify(fullTeacherData, null, 2);
         const blob = new Blob([jsonStr], { type: "application/json" });
         const url = URL.createObjectURL(blob);
@@ -261,7 +249,6 @@ const AdminTeachers = () => {
 
       if (error) throw error;
 
-      // Update the local state
       if (selectedTeacher) {
         const updatedAchievements = selectedTeacher.achievements?.map((a) =>
           a.id === achievementId ? { ...a, status: newStatus } : a
@@ -272,7 +259,6 @@ const AdminTeachers = () => {
           achievements: updatedAchievements,
         });
 
-        // Also update in the teachers array
         const updatedTeachers = teachers.map((t) =>
           t.id === selectedTeacher.id
             ? { ...t, achievements: updatedAchievements }
@@ -429,7 +415,6 @@ const AdminTeachers = () => {
         </CardContent>
       </Card>
 
-      {/* Teacher Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -484,7 +469,6 @@ const AdminTeachers = () => {
                                 {achievement.category} | {new Date(achievement.date_achieved).toLocaleDateString()}
                               </div>
                               
-                              {/* Document proof link */}
                               {achievement.document_url && (
                                 <Button 
                                   variant="outline" 
@@ -630,7 +614,6 @@ const AdminTeachers = () => {
                                   {achievement.category} | {new Date(achievement.date_achieved).toLocaleDateString()}
                                 </div>
                                 
-                                {/* Document proof link */}
                                 {achievement.document_url && (
                                   <Button 
                                     variant="outline" 
@@ -648,7 +631,6 @@ const AdminTeachers = () => {
                                     <AccordionTrigger className="text-sm py-2">View Achievement Details</AccordionTrigger>
                                     <AccordionContent>
                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 mt-2">
-                                        {/* ... similar content as above for specific category details */}
                                         {achievement.category === 'Journal Articles' && (
                                           <>
                                             <div>
@@ -715,7 +697,6 @@ const AdminTeachers = () => {
                                   {achievement.category} | {new Date(achievement.date_achieved).toLocaleDateString()}
                                 </div>
                                 
-                                {/* Document proof link */}
                                 {achievement.document_url && (
                                   <Button 
                                     variant="outline" 
@@ -733,7 +714,6 @@ const AdminTeachers = () => {
                                     <AccordionTrigger className="text-sm py-2">View Achievement Details</AccordionTrigger>
                                     <AccordionContent>
                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 mt-2">
-                                        {/* ... similar content as above for specific category details */}
                                         {achievement.category === 'Journal Articles' && (
                                           <>
                                             <div>
@@ -776,7 +756,6 @@ const AdminTeachers = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Document Viewer Modal */}
       {viewDocumentUrl && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="relative bg-white p-4 rounded-lg max-w-6xl max-h-[90vh] w-full overflow-auto">
