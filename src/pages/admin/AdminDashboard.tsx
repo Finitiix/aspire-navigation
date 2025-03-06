@@ -1,9 +1,11 @@
+
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash, ExternalLink, FileText, X } from "lucide-react";
+import { Trash, ExternalLink, FileText, X, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Helper to ensure the URL includes a protocol and has no extra whitespace
 const ensureValidUrl = (url: string) => {
@@ -30,6 +32,7 @@ type DetailedAchievement = {
     full_name: string;
     eid: string;
     designation: string;
+    email_id?: string;
   };
   [key: string]: any;
 };
@@ -48,7 +51,7 @@ const AdminDashboard = () => {
   const [newMessage, setNewMessage] = useState("");
   const [newDetail, setNewDetail] = useState("");
   
-  // New state to handle viewing the document modal
+  // State for viewing the document modal
   const [viewDocumentUrl, setViewDocumentUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -108,7 +111,8 @@ const AdminDashboard = () => {
           teacher_details (
             full_name,
             eid,
-            designation
+            designation,
+            email_id
           )
         `)
         .eq("status", "Pending Approval")

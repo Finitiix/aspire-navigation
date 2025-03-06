@@ -5,13 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Search, Download, Check, X, Eye, ExternalLink, FileText } from "lucide-react";
+import { Search, X, Eye, ExternalLink, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format } from "date-fns";
+import { format as dateFormat } from "date-fns";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
-// Define types
 type Teacher = {
   id: string;
   full_name: string;
@@ -20,6 +19,7 @@ type Teacher = {
   designation: string;
   mobile_number: string;
   eid: string;
+  profile_pic_url: string | null;
   achievements?: DetailedAchievement[];
   [key: string]: any;
 };
@@ -40,7 +40,6 @@ const AdminTeachers = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
   const [viewDocumentUrl, setViewDocumentUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -72,7 +71,6 @@ const AdminTeachers = () => {
       if (error) throw error;
 
       if (teachersData) {
-        // Get achievements for each teacher
         const teachersWithAchievements = await Promise.all(
           teachersData.map(async (teacher) => {
             const { data: achievements } = await supabase
@@ -104,7 +102,7 @@ const AdminTeachers = () => {
   const renderFieldValue = (value: any, isLink = false) => {
     if (!value) return <span className="text-gray-400">Not provided</span>;
     
-    if (isLink && value.startsWith('http')) {
+    if (isLink && typeof value === 'string' && value.startsWith('http')) {
       return (
         <a 
           href={value} 
@@ -120,57 +118,6 @@ const AdminTeachers = () => {
     return value;
   };
 
-  const handleExportToCSV = async () => {
-    setIsExporting(true);
-    try {
-      // Get all teachers with their achievements
-      const { data: teachersData, error } = await supabase
-        .from("teacher_details")
-        .select("*")
-        .order("full_name");
-
-      if (error) throw error;
-
-      const teachersWithAchievements = await Promise.all(
-        teachersData.map(async (teacher) => {
-          const { data: achievements } = await supabase
-            .from("detailed_achievements")
-            .select("*")
-            .eq("teacher_id", teacher.id);
-          return { ...teacher, achievements: achievements || [] };
-        })
-      );
-
-      // Create CSV content
-      let csvContent = "Name,EID,Email,Department,Designation,Mobile,Achievement Count,Approved Achievements\n";
-
-      teachersWithAchievements.forEach((teacher) => {
-        const achievementCount = teacher.achievements?.length || 0;
-        const approvedCount = teacher.achievements?.filter((a: DetailedAchievement) => a.status === "Approved").length || 0;
-        
-        csvContent += `"${teacher.full_name}","${teacher.eid}","${teacher.email_id}","${teacher.department}","${teacher.designation}","${teacher.mobile_number}","${achievementCount}","${approvedCount}"\n`;
-      });
-
-      // Create and download the CSV file
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `teachers_report_${format(new Date(), "yyyy-MM-dd")}.csv`);
-      link.style.visibility = "hidden";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      toast.success("CSV exported successfully");
-    } catch (error) {
-      console.error("Error exporting CSV:", error);
-      toast.error("Failed to export CSV");
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   const handleUpdateAchievementStatus = async (achievementId: string, newStatus: "Approved" | "Rejected") => {
     try {
       const { error } = await supabase
@@ -180,7 +127,6 @@ const AdminTeachers = () => {
 
       if (error) throw error;
 
-      // Update the local state
       if (selectedTeacher) {
         const updatedAchievements = selectedTeacher.achievements?.map((a) =>
           a.id === achievementId ? { ...a, status: newStatus } : a
@@ -191,7 +137,6 @@ const AdminTeachers = () => {
           achievements: updatedAchievements,
         });
 
-        // Also update in the teachers array
         const updatedTeachers = teachers.map((t) =>
           t.id === selectedTeacher.id
             ? { ...t, achievements: updatedAchievements }
@@ -230,14 +175,6 @@ const AdminTeachers = () => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Teacher Management</h1>
-        <Button
-          onClick={handleExportToCSV}
-          disabled={isExporting}
-          className="bg-green-600 hover:bg-green-700"
-        >
-          {isExporting ? "Exporting..." : "Export to CSV"}
-          <Download className="ml-2 h-4 w-4" />
-        </Button>
       </div>
 
       <Card className="mb-6">
@@ -271,14 +208,23 @@ const AdminTeachers = () => {
                   <th className="p-3 text-left">Department</th>
                   <th className="p-3 text-left">Designation</th>
                   <th className="p-3 text-left">Achievements</th>
-                  <th className="p-3 text-center">Action</th>
+                  <th className="p-3 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredTeachers.length > 0 ? (
                   filteredTeachers.map((teacher) => (
                     <tr key={teacher.id} className="border-t">
-                      <td className="p-3">{teacher.full_name}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-3">
+                          <img 
+                            src={teacher.profile_pic_url || '/placeholder.svg'} 
+                            alt={teacher.full_name}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                          {teacher.full_name}
+                        </div>
+                      </td>
                       <td className="p-3">{teacher.eid}</td>
                       <td className="p-3">{teacher.department}</td>
                       <td className="p-3">{teacher.designation}</td>
@@ -301,7 +247,7 @@ const AdminTeachers = () => {
                           size="sm"
                           onClick={() => handleViewDetails(teacher)}
                         >
-                          <Eye className="h-4 w-4 mr-1" /> View
+                          <Eye className="h-4 w-4 mr-1" /> View Details
                         </Button>
                       </td>
                     </tr>
@@ -329,29 +275,34 @@ const AdminTeachers = () => {
           {selectedTeacher && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-medium">Name</h3>
-                  <p>{selectedTeacher.full_name}</p>
+                <div className="flex items-center gap-4">
+                  <img
+                    src={selectedTeacher.profile_pic_url || '/placeholder.svg'}
+                    alt={selectedTeacher.full_name}
+                    className="w-16 h-16 rounded-full object-cover"
+                  />
+                  <div>
+                    <h3 className="font-medium text-lg">{selectedTeacher.full_name}</h3>
+                    <p className="text-gray-600">{selectedTeacher.eid}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-medium">EID</h3>
-                  <p>{selectedTeacher.eid}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium">Email</h3>
-                  <p>{selectedTeacher.email_id}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium">Mobile</h3>
-                  <p>{selectedTeacher.mobile_number}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium">Department</h3>
-                  <p>{selectedTeacher.department}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium">Designation</h3>
-                  <p>{selectedTeacher.designation}</p>
+                <div className="grid grid-cols-1 gap-2">
+                  <div>
+                    <h3 className="font-medium">Email</h3>
+                    <p>{selectedTeacher.email_id}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Mobile</h3>
+                    <p>{selectedTeacher.mobile_number}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Department</h3>
+                    <p>{selectedTeacher.department}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Designation</h3>
+                    <p>{selectedTeacher.designation}</p>
+                  </div>
                 </div>
               </div>
 
@@ -374,7 +325,6 @@ const AdminTeachers = () => {
                                 {achievement.category} | {new Date(achievement.date_achieved).toLocaleDateString()}
                               </div>
                               
-                              {/* Document proof link */}
                               {achievement.document_url && (
                                 <Button 
                                   variant="outline" 
@@ -484,7 +434,7 @@ const AdminTeachers = () => {
                                     className="bg-green-500 hover:bg-green-600 text-white"
                                     onClick={() => handleUpdateAchievementStatus(achievement.id, "Approved")}
                                   >
-                                    <Check className="h-4 w-4" />
+                                    <X className="h-4 w-4" />
                                   </Button>
                                   <Button
                                     size="sm"
@@ -520,7 +470,6 @@ const AdminTeachers = () => {
                                   {achievement.category} | {new Date(achievement.date_achieved).toLocaleDateString()}
                                 </div>
                                 
-                                {/* Document proof link */}
                                 {achievement.document_url && (
                                   <Button 
                                     variant="outline" 
@@ -538,8 +487,8 @@ const AdminTeachers = () => {
                                     <AccordionTrigger className="text-sm py-2">View Achievement Details</AccordionTrigger>
                                     <AccordionContent>
                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 mt-2">
-                                        {/* ... similar content as above for specific category details */}
-                                        {achievement.category === 'Journal Articles' && (
+                                        {
+                                        achievement.category === 'Journal Articles' && (
                                           <>
                                             <div>
                                               <p className="text-sm font-medium">Journal Name:</p>
@@ -558,7 +507,8 @@ const AdminTeachers = () => {
                                               <p className="text-sm">{renderFieldValue(achievement.journal_link, true)}</p>
                                             </div>
                                           </>
-                                        )}
+                                        )
+                                        }
                                       </div>
                                     </AccordionContent>
                                   </AccordionItem>
@@ -571,7 +521,7 @@ const AdminTeachers = () => {
                                   className="bg-green-500 hover:bg-green-600 text-white"
                                   onClick={() => handleUpdateAchievementStatus(achievement.id, "Approved")}
                                 >
-                                  <Check className="h-4 w-4" />
+                                  <X className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   size="sm"
@@ -592,9 +542,11 @@ const AdminTeachers = () => {
                 </TabsContent>
 
                 <TabsContent value="approved" className="mt-4">
-                  {selectedTeacher.achievements && selectedTeacher.achievements.filter(a => a.status === "Approved").length > 0 ? (
+                  {
+                  selectedTeacher.achievements && selectedTeacher.achievements.filter(a => a.status === "Approved").length > 0 ? (
                     <div className="space-y-3">
-                      {selectedTeacher.achievements
+                      {
+                      selectedTeacher.achievements
                         .filter(a => a.status === "Approved")
                         .map((achievement) => (
                           <Card key={achievement.id} className="p-3">
@@ -605,7 +557,6 @@ const AdminTeachers = () => {
                                   {achievement.category} | {new Date(achievement.date_achieved).toLocaleDateString()}
                                 </div>
                                 
-                                {/* Document proof link */}
                                 {achievement.document_url && (
                                   <Button 
                                     variant="outline" 
@@ -623,7 +574,6 @@ const AdminTeachers = () => {
                                     <AccordionTrigger className="text-sm py-2">View Achievement Details</AccordionTrigger>
                                     <AccordionContent>
                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 mt-2">
-                                        {/* ... similar content as above for specific category details */}
                                         {achievement.category === 'Journal Articles' && (
                                           <>
                                             <div>
@@ -658,7 +608,8 @@ const AdminTeachers = () => {
                     </div>
                   ) : (
                     <div className="text-center py-4 text-gray-500">No approved achievements</div>
-                  )}
+                  )
+                  }
                 </TabsContent>
               </Tabs>
             </div>
@@ -666,7 +617,7 @@ const AdminTeachers = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Document Viewer Modal */}
+      {/* Document Viewer Dialog */}
       {viewDocumentUrl && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="relative bg-white p-4 rounded-lg max-w-6xl max-h-[90vh] w-full overflow-auto">
