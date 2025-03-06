@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,6 @@ import { Trash, ExternalLink, FileText, X, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 // Helper to ensure the URL includes a protocol and has no extra whitespace
@@ -53,10 +51,10 @@ const AdminDashboard = () => {
   const [newMessage, setNewMessage] = useState("");
   const [newDetail, setNewDetail] = useState("");
   
-  // New state to handle viewing the document modal
+  // State for viewing the document modal
   const [viewDocumentUrl, setViewDocumentUrl] = useState<string | null>(null);
   
-  // New state for rejection dialog
+  // State for rejection dialog
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [selectedAchievementForRejection, setSelectedAchievementForRejection] = useState<DetailedAchievement | null>(null);
@@ -173,7 +171,7 @@ const AdminDashboard = () => {
     }
 
     try {
-      // First update the status in the database
+      // Update the status and rejection reason in the database
       const { error } = await supabase
         .from("detailed_achievements")
         .update({ 
@@ -186,22 +184,8 @@ const AdminDashboard = () => {
         throw error;
       }
 
-      // Send email notification via edge function
-      const response = await supabase.functions.invoke("send-rejection-email", {
-        body: {
-          achievementId: selectedAchievementForRejection.id,
-          rejectionReason: rejectionReason,
-          teacherEmail: selectedAchievementForRejection.teacher_details?.email_id
-        }
-      });
-
-      if (response.error) {
-        console.error("Error sending email:", response.error);
-        toast.error("Achievement rejected but email notification failed");
-      } else {
-        toast.success("Achievement rejected and notification sent");
-      }
-
+      toast.success("Achievement rejected");
+      
       // Close dialog and reset states
       setIsRejectionDialogOpen(false);
       setRejectionReason("");
