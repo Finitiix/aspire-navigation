@@ -1,11 +1,11 @@
+
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trash, ExternalLink, FileText, X, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Helper to ensure the URL includes a protocol and has no extra whitespace
 const ensureValidUrl = (url: string) => {
@@ -53,11 +53,6 @@ const AdminDashboard = () => {
   
   // State for viewing the document modal
   const [viewDocumentUrl, setViewDocumentUrl] = useState<string | null>(null);
-  
-  // State for rejection dialog
-  const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [selectedAchievementForRejection, setSelectedAchievementForRejection] = useState<DetailedAchievement | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -136,16 +131,6 @@ const AdminDashboard = () => {
   };
 
   const handleApproval = async (id: string, status: "Approved" | "Rejected") => {
-    // For rejections, open the rejection dialog
-    if (status === "Rejected") {
-      const achievement = pendingAchievements.find(a => a.id === id);
-      if (achievement) {
-        setSelectedAchievementForRejection(achievement);
-        setIsRejectionDialogOpen(true);
-        return;
-      }
-    }
-
     try {
       const { error } = await supabase
         .from("detailed_achievements")
@@ -161,42 +146,6 @@ const AdminDashboard = () => {
       }
     } catch (error) {
       toast.error("Error processing request");
-    }
-  };
-
-  const handleRejectionSubmit = async () => {
-    if (!selectedAchievementForRejection || !rejectionReason.trim()) {
-      toast.error("Please provide a reason for rejection");
-      return;
-    }
-
-    try {
-      // Update the status and rejection reason in the database
-      const { error } = await supabase
-        .from("detailed_achievements")
-        .update({ 
-          status: "Rejected",
-          rejection_reason: rejectionReason 
-        })
-        .eq("id", selectedAchievementForRejection.id);
-
-      if (error) {
-        throw error;
-      }
-
-      toast.success("Achievement rejected");
-      
-      // Close dialog and reset states
-      setIsRejectionDialogOpen(false);
-      setRejectionReason("");
-      setSelectedAchievementForRejection(null);
-      
-      // Refresh the achievements list and stats
-      fetchPendingAchievements();
-      fetchData();
-    } catch (error) {
-      console.error("Error rejecting achievement:", error);
-      toast.error("Error rejecting achievement");
     }
   };
 
@@ -532,48 +481,6 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
-
-      {/* Rejection Reason Dialog */}
-      <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Provide Rejection Reason</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <p className="text-sm text-gray-500">
-                Please provide a reason for rejecting "{selectedAchievementForRejection?.title}". 
-                This will be included in the email notification sent to {selectedAchievementForRejection?.teacher_details?.full_name}.
-              </p>
-              <Textarea
-                placeholder="Enter reason for rejection..."
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                className="min-h-[100px]"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setIsRejectionDialogOpen(false);
-                setRejectionReason("");
-                setSelectedAchievementForRejection(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleRejectionSubmit}
-              disabled={!rejectionReason.trim()}
-            >
-              Reject & Send Notification
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

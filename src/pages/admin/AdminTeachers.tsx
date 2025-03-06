@@ -1,15 +1,15 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Search, Download, Check, X, Eye, ExternalLink, FileText, FileDown } from "lucide-react";
+import { Search, X, Eye, ExternalLink, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format as dateFormat } from "date-fns";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type Teacher = {
   id: string;
@@ -40,11 +40,7 @@ const AdminTeachers = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
   const [viewDocumentUrl, setViewDocumentUrl] = useState<string | null>(null);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [showRejectionDialog, setShowRejectionDialog] = useState(false);
-  const [selectedAchievementId, setSelectedAchievementId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTeachers();
@@ -122,128 +118,8 @@ const AdminTeachers = () => {
     return value;
   };
 
-  const handleExportToCSV = async () => {
-    setIsExporting(true);
-    try {
-      const { data: teachersData, error } = await supabase
-        .from("teacher_details")
-        .select("*")
-        .order("full_name");
-
-      if (error) throw error;
-
-      const teachersWithAchievements = await Promise.all(
-        teachersData.map(async (teacher) => {
-          const { data: achievements } = await supabase
-            .from("detailed_achievements")
-            .select("*")
-            .eq("teacher_id", teacher.id);
-          return { ...teacher, achievements: achievements || [] };
-        })
-      );
-
-      let csvContent = "Name,EID,Email,Department,Designation,Mobile,Achievement Count,Approved Achievements\n";
-
-      teachersWithAchievements.forEach((teacher) => {
-        const achievementCount = teacher.achievements?.length || 0;
-        const approvedCount = teacher.achievements?.filter((a) => a.status === "Approved").length || 0;
-        
-        csvContent += `"${teacher.full_name || ''}","${teacher.eid || ''}","${teacher.email_id || ''}","${teacher.department || ''}","${teacher.designation || ''}","${teacher.mobile_number || ''}","${achievementCount}","${approvedCount}"\n`;
-      });
-
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `teachers_report_${dateFormat(new Date(), "yyyy-MM-dd")}.csv`);
-      link.style.visibility = "hidden";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      toast.success("CSV exported successfully");
-    } catch (error) {
-      console.error("Error exporting CSV:", error);
-      toast.error("Failed to export CSV");
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleShowRejectionDialog = (achievementId: string) => {
-    setSelectedAchievementId(achievementId);
-    setRejectionReason("");
-    setShowRejectionDialog(true);
-  };
-
-  const handleSubmitRejection = async () => {
-    if (!selectedAchievementId || !rejectionReason.trim()) {
-      toast.error("Please provide a reason for rejection");
-      return;
-    }
-
-    try {
-      // Send the rejection email and update the status
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-rejection-email`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({
-          achievementId: selectedAchievementId,
-          rejectionReason: rejectionReason
-        })
-      });
-
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to send rejection email");
-      }
-
-      // Update the UI
-      if (selectedTeacher) {
-        const updatedAchievements = selectedTeacher.achievements?.map((a) =>
-          a.id === selectedAchievementId ? { ...a, status: "Rejected", rejection_reason: rejectionReason } : a
-        );
-        
-        setSelectedTeacher({
-          ...selectedTeacher,
-          achievements: updatedAchievements,
-        });
-
-        const updatedTeachers = teachers.map((t) =>
-          t.id === selectedTeacher.id
-            ? { ...t, achievements: updatedAchievements }
-            : t
-        );
-        
-        setTeachers(updatedTeachers);
-        setFilteredTeachers(
-          filteredTeachers.map((t) =>
-            t.id === selectedTeacher.id
-              ? { ...t, achievements: updatedAchievements }
-              : t
-          )
-        );
-      }
-
-      setShowRejectionDialog(false);
-      toast.success("Achievement rejected and notification sent");
-    } catch (error) {
-      console.error("Error rejecting achievement:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to reject achievement");
-    }
-  };
-
   const handleUpdateAchievementStatus = async (achievementId: string, newStatus: "Approved" | "Rejected") => {
     try {
-      if (newStatus === "Rejected") {
-        handleShowRejectionDialog(achievementId);
-        return;
-      }
-
       const { error } = await supabase
         .from("detailed_achievements")
         .update({ status: newStatus })
@@ -299,14 +175,6 @@ const AdminTeachers = () => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Teacher Management</h1>
-        <Button
-          className="bg-green-600 hover:bg-green-700"
-          onClick={handleExportToCSV}
-          disabled={isExporting}
-        >
-          {isExporting ? "Exporting..." : "Export All to CSV"}
-          <Download className="ml-2 h-4 w-4" />
-        </Button>
       </div>
 
       <Card className="mb-6">
@@ -549,13 +417,6 @@ const AdminTeachers = () => {
                                           </div>
                                         </>
                                       )}
-
-                                      {achievement.rejection_reason && (
-                                        <div className="col-span-2">
-                                          <p className="text-sm font-medium text-red-600">Rejection Reason:</p>
-                                          <p className="text-sm text-red-600">{achievement.rejection_reason}</p>
-                                        </div>
-                                      )}
                                     </div>
                                   </AccordionContent>
                                 </AccordionItem>
@@ -573,7 +434,7 @@ const AdminTeachers = () => {
                                     className="bg-green-500 hover:bg-green-600 text-white"
                                     onClick={() => handleUpdateAchievementStatus(achievement.id, "Approved")}
                                   >
-                                    <Check className="h-4 w-4" />
+                                    <X className="h-4 w-4" />
                                   </Button>
                                   <Button
                                     size="sm"
@@ -660,7 +521,7 @@ const AdminTeachers = () => {
                                   className="bg-green-500 hover:bg-green-600 text-white"
                                   onClick={() => handleUpdateAchievementStatus(achievement.id, "Approved")}
                                 >
-                                  <Check className="h-4 w-4" />
+                                  <X className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   size="sm"
@@ -753,33 +614,6 @@ const AdminTeachers = () => {
               </Tabs>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Rejection Reason Dialog */}
-      <Dialog open={showRejectionDialog} onOpenChange={setShowRejectionDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Provide Rejection Reason</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-gray-600">
-              Please provide a reason for rejecting this achievement. This will be included in the notification email to the teacher.
-            </p>
-            <Input
-              placeholder="Enter rejection reason"
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-            />
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowRejectionDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSubmitRejection}>
-                Submit & Send Notification
-              </Button>
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
 

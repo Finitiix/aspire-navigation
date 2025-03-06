@@ -14,7 +14,6 @@ type RecentAchievement = {
   category: string;
   date_achieved: string;
   status: string;
-  rejection_reason?: string;
 }
 
 const TeacherHome = () => {
@@ -81,7 +80,7 @@ const TeacherHome = () => {
       if (user) {
         const { data, error } = await supabase
           .from("detailed_achievements")
-          .select("id, title, category, date_achieved, status, rejection_reason")
+          .select("id, title, category, date_achieved, status")
           .eq("teacher_id", user.id)
           .order("created_at", { ascending: false })
           .limit(5);
@@ -221,12 +220,6 @@ const TeacherHome = () => {
                       <span className="ml-1">{achievement.status}</span>
                     </div>
                   </div>
-                  {achievement.status === "Rejected" && achievement.rejection_reason && (
-                    <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded">
-                      <p className="font-medium">Rejection Reason:</p>
-                      <p>{achievement.rejection_reason}</p>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
