@@ -19,6 +19,7 @@ type Teacher = {
   designation: string;
   mobile_number: string;
   eid: string;
+  profile_pic_url: string | null;
   achievements?: DetailedAchievement[];
   [key: string]: any;
 };
@@ -41,6 +42,9 @@ const AdminTeachers = () => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [viewDocumentUrl, setViewDocumentUrl] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [showRejectionDialog, setShowRejectionDialog] = useState(false);
+  const [selectedAchievementId, setSelectedAchievementId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTeachers();
@@ -166,81 +170,80 @@ const AdminTeachers = () => {
     }
   };
 
-  const handleExportTeacher = async (teacher: Teacher, format: 'csv' | 'pdf' | 'docx') => {
+  const handleShowRejectionDialog = (achievementId: string) => {
+    setSelectedAchievementId(achievementId);
+    setRejectionReason("");
+    setShowRejectionDialog(true);
+  };
+
+  const handleSubmitRejection = async () => {
+    if (!selectedAchievementId || !rejectionReason.trim()) {
+      toast.error("Please provide a reason for rejection");
+      return;
+    }
+
     try {
-      const { data: teacherData, error } = await supabase
-        .from("teacher_details")
-        .select("*")
-        .eq("id", teacher.id)
-        .single();
+      // Send the rejection email and update the status
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-rejection-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          achievementId: selectedAchievementId,
+          rejectionReason: rejectionReason
+        })
+      });
 
-      if (error) throw error;
-
-      const { data: achievements } = await supabase
-        .from("detailed_achievements")
-        .select("*")
-        .eq("teacher_id", teacher.id);
-
-      const fullTeacherData = { ...teacherData, achievements: achievements || [] };
-
-      if (format === 'csv') {
-        let csvContent = "Teacher Information\n";
-        csvContent += `Name,${fullTeacherData.full_name || ''}\n`;
-        csvContent += `EID,${fullTeacherData.eid || ''}\n`;
-        csvContent += `Email,${fullTeacherData.email_id || ''}\n`;
-        csvContent += `Department,${fullTeacherData.department || ''}\n`;
-        csvContent += `Designation,${fullTeacherData.designation || ''}\n`;
-        csvContent += `Mobile,${fullTeacherData.mobile_number || ''}\n`;
-        csvContent += `Date of Joining,${fullTeacherData.date_of_joining || ''}\n`;
-        csvContent += `Gender,${fullTeacherData.gender || ''}\n`;
-        csvContent += `Highest Qualification,${fullTeacherData.highest_qualification || ''}\n`;
-        csvContent += `Address,${fullTeacherData.address || ''}\n`;
-        csvContent += `Cabin No,${fullTeacherData.cabin_no || ''}\n`;
-        csvContent += `Block,${fullTeacherData.block || ''}\n\n`;
-
-        csvContent += "Achievements\n";
-        csvContent += "Category,Title,Date Achieved,Status\n";
-        if (fullTeacherData.achievements && fullTeacherData.achievements.length > 0) {
-          fullTeacherData.achievements.forEach((achievement: DetailedAchievement) => {
-            csvContent += `"${achievement.category || ''}","${achievement.title || ''}","${achievement.date_achieved || ''}","${achievement.status || ''}"\n`;
-          });
-        } else {
-          csvContent += "No achievements found\n";
-        }
-
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `${fullTeacherData.full_name}_${dateFormat(new Date(), "yyyy-MM-dd")}.csv`);
-        link.style.visibility = "hidden";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        toast.success(`Teacher data exported as CSV`);
-      } else {
-        toast.info(`${format.toUpperCase()} export would require a server-side implementation with a PDF/DOCX library`);
-        
-        const jsonStr = JSON.stringify(fullTeacherData, null, 2);
-        const blob = new Blob([jsonStr], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `${fullTeacherData.full_name}_data.json`);
-        link.style.visibility = "hidden";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to send rejection email");
       }
+
+      // Update the UI
+      if (selectedTeacher) {
+        const updatedAchievements = selectedTeacher.achievements?.map((a) =>
+          a.id === selectedAchievementId ? { ...a, status: "Rejected", rejection_reason: rejectionReason } : a
+        );
+        
+        setSelectedTeacher({
+          ...selectedTeacher,
+          achievements: updatedAchievements,
+        });
+
+        const updatedTeachers = teachers.map((t) =>
+          t.id === selectedTeacher.id
+            ? { ...t, achievements: updatedAchievements }
+            : t
+        );
+        
+        setTeachers(updatedTeachers);
+        setFilteredTeachers(
+          filteredTeachers.map((t) =>
+            t.id === selectedTeacher.id
+              ? { ...t, achievements: updatedAchievements }
+              : t
+          )
+        );
+      }
+
+      setShowRejectionDialog(false);
+      toast.success("Achievement rejected and notification sent");
     } catch (error) {
-      console.error(`Error exporting teacher data as ${format}:`, error);
-      toast.error(`Failed to export teacher data as ${format}`);
+      console.error("Error rejecting achievement:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to reject achievement");
     }
   };
 
   const handleUpdateAchievementStatus = async (achievementId: string, newStatus: "Approved" | "Rejected") => {
     try {
+      if (newStatus === "Rejected") {
+        handleShowRejectionDialog(achievementId);
+        return;
+      }
+
       const { error } = await supabase
         .from("detailed_achievements")
         .update({ status: newStatus })
@@ -296,23 +299,14 @@ const AdminTeachers = () => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Teacher Management</h1>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              className="bg-green-600 hover:bg-green-700"
-              disabled={isExporting}
-            >
-              {isExporting ? "Exporting..." : "Export"}
-              <Download className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onClick={handleExportToCSV}>
-              <FileDown className="mr-2 h-4 w-4" />
-              Export All to CSV
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          className="bg-green-600 hover:bg-green-700"
+          onClick={handleExportToCSV}
+          disabled={isExporting}
+        >
+          {isExporting ? "Exporting..." : "Export All to CSV"}
+          <Download className="ml-2 h-4 w-4" />
+        </Button>
       </div>
 
       <Card className="mb-6">
@@ -353,7 +347,16 @@ const AdminTeachers = () => {
                 {filteredTeachers.length > 0 ? (
                   filteredTeachers.map((teacher) => (
                     <tr key={teacher.id} className="border-t">
-                      <td className="p-3">{teacher.full_name}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-3">
+                          <img 
+                            src={teacher.profile_pic_url || '/placeholder.svg'} 
+                            alt={teacher.full_name}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                          {teacher.full_name}
+                        </div>
+                      </td>
                       <td className="p-3">{teacher.eid}</td>
                       <td className="p-3">{teacher.department}</td>
                       <td className="p-3">{teacher.designation}</td>
@@ -371,33 +374,13 @@ const AdminTeachers = () => {
                         </div>
                       </td>
                       <td className="p-3 text-center">
-                        <div className="flex justify-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewDetails(teacher)}
-                          >
-                            <Eye className="h-4 w-4 mr-1" /> View
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                <Download className="h-4 w-4 mr-1" /> Export
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              <DropdownMenuItem onClick={() => handleExportTeacher(teacher, 'csv')}>
-                                Export as CSV
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleExportTeacher(teacher, 'pdf')}>
-                                Export as PDF
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleExportTeacher(teacher, 'docx')}>
-                                Export as Word
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDetails(teacher)}
+                        >
+                          <Eye className="h-4 w-4 mr-1" /> View Details
+                        </Button>
                       </td>
                     </tr>
                   ))
@@ -414,6 +397,7 @@ const AdminTeachers = () => {
         </CardContent>
       </Card>
 
+      {/* Teacher Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -423,29 +407,34 @@ const AdminTeachers = () => {
           {selectedTeacher && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-medium">Name</h3>
-                  <p>{selectedTeacher.full_name}</p>
+                <div className="flex items-center gap-4">
+                  <img
+                    src={selectedTeacher.profile_pic_url || '/placeholder.svg'}
+                    alt={selectedTeacher.full_name}
+                    className="w-16 h-16 rounded-full object-cover"
+                  />
+                  <div>
+                    <h3 className="font-medium text-lg">{selectedTeacher.full_name}</h3>
+                    <p className="text-gray-600">{selectedTeacher.eid}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-medium">EID</h3>
-                  <p>{selectedTeacher.eid}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium">Email</h3>
-                  <p>{selectedTeacher.email_id}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium">Mobile</h3>
-                  <p>{selectedTeacher.mobile_number}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium">Department</h3>
-                  <p>{selectedTeacher.department}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium">Designation</h3>
-                  <p>{selectedTeacher.designation}</p>
+                <div className="grid grid-cols-1 gap-2">
+                  <div>
+                    <h3 className="font-medium">Email</h3>
+                    <p>{selectedTeacher.email_id}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Mobile</h3>
+                    <p>{selectedTeacher.mobile_number}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Department</h3>
+                    <p>{selectedTeacher.department}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Designation</h3>
+                    <p>{selectedTeacher.designation}</p>
+                  </div>
                 </div>
               </div>
 
@@ -560,6 +549,13 @@ const AdminTeachers = () => {
                                           </div>
                                         </>
                                       )}
+
+                                      {achievement.rejection_reason && (
+                                        <div className="col-span-2">
+                                          <p className="text-sm font-medium text-red-600">Rejection Reason:</p>
+                                          <p className="text-sm text-red-600">{achievement.rejection_reason}</p>
+                                        </div>
+                                      )}
                                     </div>
                                   </AccordionContent>
                                 </AccordionItem>
@@ -630,7 +626,8 @@ const AdminTeachers = () => {
                                     <AccordionTrigger className="text-sm py-2">View Achievement Details</AccordionTrigger>
                                     <AccordionContent>
                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 mt-2">
-                                        {achievement.category === 'Journal Articles' && (
+                                        {
+                                        achievement.category === 'Journal Articles' && (
                                           <>
                                             <div>
                                               <p className="text-sm font-medium">Journal Name:</p>
@@ -649,7 +646,8 @@ const AdminTeachers = () => {
                                               <p className="text-sm">{renderFieldValue(achievement.journal_link, true)}</p>
                                             </div>
                                           </>
-                                        )}
+                                        )
+                                        }
                                       </div>
                                     </AccordionContent>
                                   </AccordionItem>
@@ -683,9 +681,11 @@ const AdminTeachers = () => {
                 </TabsContent>
 
                 <TabsContent value="approved" className="mt-4">
-                  {selectedTeacher.achievements && selectedTeacher.achievements.filter(a => a.status === "Approved").length > 0 ? (
+                  {
+                  selectedTeacher.achievements && selectedTeacher.achievements.filter(a => a.status === "Approved").length > 0 ? (
                     <div className="space-y-3">
-                      {selectedTeacher.achievements
+                      {
+                      selectedTeacher.achievements
                         .filter(a => a.status === "Approved")
                         .map((achievement) => (
                           <Card key={achievement.id} className="p-3">
@@ -747,7 +747,8 @@ const AdminTeachers = () => {
                     </div>
                   ) : (
                     <div className="text-center py-4 text-gray-500">No approved achievements</div>
-                  )}
+                  )
+                  }
                 </TabsContent>
               </Tabs>
             </div>
@@ -755,6 +756,34 @@ const AdminTeachers = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Rejection Reason Dialog */}
+      <Dialog open={showRejectionDialog} onOpenChange={setShowRejectionDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Provide Rejection Reason</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-gray-600">
+              Please provide a reason for rejecting this achievement. This will be included in the notification email to the teacher.
+            </p>
+            <Input
+              placeholder="Enter rejection reason"
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowRejectionDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmitRejection}>
+                Submit & Send Notification
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Document Viewer Dialog */}
       {viewDocumentUrl && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="relative bg-white p-4 rounded-lg max-w-6xl max-h-[90vh] w-full overflow-auto">

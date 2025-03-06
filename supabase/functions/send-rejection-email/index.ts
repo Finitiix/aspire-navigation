@@ -80,7 +80,10 @@ serve(async (req) => {
     // Update the rejection reason in the database
     const { error: updateError } = await supabase
       .from("detailed_achievements")
-      .update({ rejection_reason: rejectionReason })
+      .update({ 
+        rejection_reason: rejectionReason,
+        status: "Rejected" 
+      })
       .eq("id", achievementId);
 
     if (updateError) {
@@ -88,9 +91,8 @@ serve(async (req) => {
       throw new Error("Failed to update rejection reason");
     }
 
-    // Send email
-    // In a production environment, you would integrate with an email service
-    // like SendGrid, Mailgun, or Amazon SES
+    // In a production environment, you would send an actual email here
+    // For demonstration purposes, we're logging the email details
     console.log(`Sending email to ${email}`);
     console.log(`Subject: Achievement Rejection Notification`);
     console.log(`Body: Your achievement "${achievement.title}" was rejected due to: ${rejectionReason}`);
