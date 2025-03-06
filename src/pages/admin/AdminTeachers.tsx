@@ -142,9 +142,9 @@ const AdminTeachers = () => {
 
       teachersWithAchievements.forEach((teacher) => {
         const achievementCount = teacher.achievements?.length || 0;
-        const approvedCount = teacher.achievements?.filter((a: DetailedAchievement) => a.status === "Approved").length || 0;
+        const approvedCount = teacher.achievements?.filter((a) => a.status === "Approved").length || 0;
         
-        csvContent += `"${teacher.full_name}","${teacher.eid}","${teacher.email_id}","${teacher.department}","${teacher.designation}","${teacher.mobile_number}","${achievementCount}","${approvedCount}"\n`;
+        csvContent += `"${teacher.full_name || ''}","${teacher.eid || ''}","${teacher.email_id || ''}","${teacher.department || ''}","${teacher.designation || ''}","${teacher.mobile_number || ''}","${achievementCount}","${approvedCount}"\n`;
       });
 
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -185,24 +185,24 @@ const AdminTeachers = () => {
 
       if (format === 'csv') {
         let csvContent = "Teacher Information\n";
-        csvContent += `Name,${fullTeacherData.full_name}\n`;
-        csvContent += `EID,${fullTeacherData.eid}\n`;
-        csvContent += `Email,${fullTeacherData.email_id}\n`;
-        csvContent += `Department,${fullTeacherData.department}\n`;
-        csvContent += `Designation,${fullTeacherData.designation}\n`;
-        csvContent += `Mobile,${fullTeacherData.mobile_number}\n`;
-        csvContent += `Date of Joining,${fullTeacherData.date_of_joining}\n`;
-        csvContent += `Gender,${fullTeacherData.gender}\n`;
-        csvContent += `Highest Qualification,${fullTeacherData.highest_qualification}\n`;
-        csvContent += `Address,${fullTeacherData.address || ""}\n`;
-        csvContent += `Cabin No,${fullTeacherData.cabin_no || ""}\n`;
-        csvContent += `Block,${fullTeacherData.block || ""}\n\n`;
+        csvContent += `Name,${fullTeacherData.full_name || ''}\n`;
+        csvContent += `EID,${fullTeacherData.eid || ''}\n`;
+        csvContent += `Email,${fullTeacherData.email_id || ''}\n`;
+        csvContent += `Department,${fullTeacherData.department || ''}\n`;
+        csvContent += `Designation,${fullTeacherData.designation || ''}\n`;
+        csvContent += `Mobile,${fullTeacherData.mobile_number || ''}\n`;
+        csvContent += `Date of Joining,${fullTeacherData.date_of_joining || ''}\n`;
+        csvContent += `Gender,${fullTeacherData.gender || ''}\n`;
+        csvContent += `Highest Qualification,${fullTeacherData.highest_qualification || ''}\n`;
+        csvContent += `Address,${fullTeacherData.address || ''}\n`;
+        csvContent += `Cabin No,${fullTeacherData.cabin_no || ''}\n`;
+        csvContent += `Block,${fullTeacherData.block || ''}\n\n`;
 
         csvContent += "Achievements\n";
         csvContent += "Category,Title,Date Achieved,Status\n";
         if (fullTeacherData.achievements && fullTeacherData.achievements.length > 0) {
           fullTeacherData.achievements.forEach((achievement: DetailedAchievement) => {
-            csvContent += `"${achievement.category}","${achievement.title}","${achievement.date_achieved}","${achievement.status}"\n`;
+            csvContent += `"${achievement.category || ''}","${achievement.title || ''}","${achievement.date_achieved || ''}","${achievement.status || ''}"\n`;
           });
         } else {
           csvContent += "No achievements found\n";

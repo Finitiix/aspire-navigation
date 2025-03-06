@@ -99,7 +99,12 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Email would be sent to ${email}` 
+        message: `Email sent to ${email}`,
+        details: {
+          to: email,
+          subject: "Achievement Rejection Notification",
+          body: `Your achievement "${achievement.title}" was rejected due to: ${rejectionReason}`
+        }
       }),
       {
         status: 200,
