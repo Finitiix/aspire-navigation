@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,10 +45,12 @@ const TeacherAchievements = () => {
   };
 
   const handleEditClick = (achievement: Achievement) => {
+    // Only allow editing if the achievement is not approved
     if (achievement.status === "Approved") {
       return;
     }
     
+    // Map category back to achievement_type for form compatibility
     const achievementData = {
       ...achievement,
       achievement_type: getCategoryType(achievement.category)
@@ -57,6 +60,7 @@ const TeacherAchievements = () => {
     setIsEditDialogOpen(true);
   };
 
+  // Helper function to map category to achievement_type
   const getCategoryType = (category: string) => {
     const categoryMap: Record<string, string> = {
       'Journal Articles': 'Research & Publications',
@@ -121,6 +125,7 @@ const TeacherAchievements = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="grid gap-8">
 
+        {/* Add Achievement Button */}
         <Button 
           className="bg-[#ea384c] hover:bg-red-700 text-white font-bold py-10 px-6 rounded-lg text-lg w-full"
           onClick={() => setShowForm(true)}
@@ -128,6 +133,7 @@ const TeacherAchievements = () => {
           Add Achievement
         </Button>
 
+        {/* Achievement History */}
         <Card>
           <CardHeader>
             <CardTitle>Achievement History</CardTitle>
@@ -160,6 +166,7 @@ const TeacherAchievements = () => {
                         </div>
                       </div>
                       
+                      {/* Document proof link */}
                       {achievement.document_url && (
                         <div className="mt-2">
                           <Button 
@@ -299,6 +306,7 @@ const TeacherAchievements = () => {
                                 </>
                               )}
                               
+                              {/* Common fields for all types */}
                               <div className="col-span-2 mt-2">
                                 <p className="text-sm font-medium">Additional Information:</p>
                               </div>
@@ -341,6 +349,7 @@ const TeacherAchievements = () => {
         </Card>
       </div>
 
+      {/* Add Achievement Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="relative bg-white p-6 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -361,6 +370,7 @@ const TeacherAchievements = () => {
         </div>
       )}
 
+      {/* Edit Achievement Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -376,6 +386,7 @@ const TeacherAchievements = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Document Viewer Modal */}
       {viewDocumentUrl && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="relative bg-white p-4 rounded-lg max-w-6xl max-h-[90vh] w-full overflow-auto">

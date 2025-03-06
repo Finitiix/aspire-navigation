@@ -74,7 +74,6 @@ export type Database = {
           proof_link: string | null
           publisher: string | null
           q_ranking: string | null
-          rejection_reason: string | null
           remarks: string | null
           research_area: string | null
           startup_center_name: string | null
@@ -135,7 +134,6 @@ export type Database = {
           proof_link?: string | null
           publisher?: string | null
           q_ranking?: string | null
-          rejection_reason?: string | null
           remarks?: string | null
           research_area?: string | null
           startup_center_name?: string | null
@@ -196,7 +194,6 @@ export type Database = {
           proof_link?: string | null
           publisher?: string | null
           q_ranking?: string | null
-          rejection_reason?: string | null
           remarks?: string | null
           research_area?: string | null
           startup_center_name?: string | null

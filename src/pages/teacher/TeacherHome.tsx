@@ -2,19 +2,10 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, X, Award, Clock, Calendar, CheckCircle, XCircle } from "lucide-react";
+import { Plus, X, Award, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AchievementForm } from "@/components/teacher/AchievementForm";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-
-type RecentAchievement = {
-  id: string;
-  title: string;
-  category: string;
-  date_achieved: string;
-  status: string;
-}
 
 const TeacherHome = () => {
   const [messages, setMessages] = useState({
@@ -25,12 +16,10 @@ const TeacherHome = () => {
   const [isAchievementFormOpen, setIsAchievementFormOpen] = useState(false);
   const [teacherDetails, setTeacherDetails] = useState<any>(null);
   const [showTimetable, setShowTimetable] = useState(false);
-  const [recentAchievements, setRecentAchievements] = useState<RecentAchievement[]>([]);
 
   useEffect(() => {
     fetchMessages();
     fetchTeacherDetails();
-    fetchRecentAchievements();
   }, []);
 
   // Fetch important messages and details from the admin section
@@ -70,54 +59,6 @@ const TeacherHome = () => {
       }
     } catch (error) {
       console.error("Error fetching teacher details:", error);
-    }
-  };
-
-  // Fetch recent achievements
-  const fetchRecentAchievements = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data, error } = await supabase
-          .from("detailed_achievements")
-          .select("id, title, category, date_achieved, status")
-          .eq("teacher_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(5);
-
-        if (error) {
-          console.error("Error fetching recent achievements:", error);
-          return;
-        }
-
-        setRecentAchievements(data || []);
-      }
-    } catch (error) {
-      console.error("Error fetching recent achievements:", error);
-    }
-  };
-
-  // Get status badge color based on achievement status
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Approved":
-        return "bg-green-100 text-green-800";
-      case "Rejected":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-yellow-100 text-yellow-800";
-    }
-  };
-
-  // Get status icon based on achievement status
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "Approved":
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case "Rejected":
-        return <XCircle className="w-4 h-4 text-red-600" />;
-      default:
-        return <Clock className="w-4 h-4 text-yellow-600" />;
     }
   };
 
@@ -190,44 +131,6 @@ const TeacherHome = () => {
           </Card>
         </div>
       </div>
-
-      {/* Recent Achievements Section */}
-      <Card className="shadow-md hover:shadow-lg transition-all duration-300 mb-8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <div className="bg-red-100 p-1.5 rounded-full">
-              <Award className="w-5 h-5 text-red-500" />
-            </div>
-            Recent Achievements
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {recentAchievements.length > 0 ? (
-            <div className="space-y-4">
-              {recentAchievements.map((achievement) => (
-                <div key={achievement.id} className="border border-gray-200 rounded-md p-4 hover:shadow-sm transition-all">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-medium text-lg">{achievement.title}</h3>
-                      <p className="text-sm text-gray-600">{achievement.category}</p>
-                      <p className="text-sm text-gray-600 mt-1 flex items-center">
-                        <Calendar className="w-4 h-4 mr-1" />
-                        {format(new Date(achievement.date_achieved), "PPP")}
-                      </p>
-                    </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium flex items-center ${getStatusColor(achievement.status)}`}>
-                      {getStatusIcon(achievement.status)}
-                      <span className="ml-1">{achievement.status}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-600 text-center py-6">No recent achievements found. Click "Add Achievement" to add your first achievement.</p>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Timetable Section */}
       <Card className="shadow-md hover:shadow-lg transition-all duration-300 mt-8">
