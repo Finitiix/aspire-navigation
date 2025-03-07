@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -152,8 +151,6 @@ export const TeacherDetailsForm = () => {
       });
 
       if (error) throw error;
-
-      // Removed the email_notifications insertion that was causing the error
 
       toast.success("Teacher profile created successfully!");
       window.location.href = "/teacher-dashboard";
