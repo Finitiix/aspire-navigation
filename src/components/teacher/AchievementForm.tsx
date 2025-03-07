@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,13 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DateInput } from "@/components/ui/date-input";
-import { Loader2, Upload } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { CalendarIcon, Loader2, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { format } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
 
 type AchievementCategory = Database["public"]["Enums"]["achievement_category"];
@@ -524,6 +524,31 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
     }
   };
 
+  const renderDatePicker = (label: string, date: Date | undefined, onChange: (date: Date | undefined) => void) => (
+    <div className="space-y-2">
+      <label className="text-sm font-medium">{label} *</label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={`w-full justify-start text-left font-normal ${!date && "text-muted-foreground"}`}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {date ? format(date, "PPP") : "Pick a date"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={onChange}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+
   const renderFileUpload = () => (
     <div className="space-y-2">
       <label className="text-sm font-medium">Upload File (Proof) *</label>
@@ -657,12 +682,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 />
               </div>
               
-              <DateInput
-                date={conferenceDate}
-                onDateChange={setConferenceDate}
-                label="Conference Date"
-                required
-              />
+              {renderDatePicker("Conference Date", conferenceDate, setConferenceDate)}
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -767,13 +787,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
               </div>
             </div>
             
-            <DateInput
-              date={yearOfPublication}
-              onDateChange={setYearOfPublication}
-              label="Year of Publication"
-              required
-              format="yyyy"
-            />
+            {renderDatePicker("Year of Publication", yearOfPublication, setYearOfPublication)}
             
             <div className="space-y-2">
               <label className="text-sm font-medium">Book Drive Link</label>
@@ -844,17 +858,8 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DateInput
-                date={filingDate}
-                onDateChange={setFilingDate}
-                label="Filing Date"
-                required
-              />
-              <DateInput
-                date={grantDate}
-                onDateChange={setGrantDate}
-                label="Grant Date"
-              />
+              {renderDatePicker("Filing Date", filingDate, setFilingDate)}
+              {renderDatePicker("Grant Date", grantDate, setGrantDate)}
             </div>
             
             <div className="space-y-2">
@@ -1022,17 +1027,8 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DateInput
-                date={projectStartDate}
-                onDateChange={setProjectStartDate}
-                label="Project Start Date"
-                required
-              />
-              <DateInput
-                date={projectEndDate}
-                onDateChange={setProjectEndDate}
-                label="Project End Date"
-              />
+              {renderDatePicker("Project Start Date", projectStartDate, setProjectStartDate)}
+              {renderDatePicker("Project End Date", projectEndDate, setProjectEndDate)}
             </div>
             
             <div className="space-y-2">
@@ -1218,12 +1214,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 />
               </div>
               
-              <DateInput
-                date={dateAchieved}
-                onDateChange={setDateAchieved}
-                label="Date of Achievement"
-                required
-              />
+              {renderDatePicker("Date of Achievement", dateAchieved, setDateAchieved)}
             </div>
           </div>
           

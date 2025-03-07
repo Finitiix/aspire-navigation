@@ -221,6 +221,38 @@ export type Database = {
           },
         ]
       }
+      email_notifications: {
+        Row: {
+          created_at: string | null
+          email_on_approval: boolean | null
+          email_on_rejection: boolean | null
+          id: string
+          teacher_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email_on_approval?: boolean | null
+          email_on_rejection?: boolean | null
+          id?: string
+          teacher_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email_on_approval?: boolean | null
+          email_on_rejection?: boolean | null
+          id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_notifications_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feedback: {
         Row: {
           created_at: string | null
