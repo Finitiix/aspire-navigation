@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Upload } from "lucide-react";
+import { DateInput } from "../ui/date-input";
 
 export const TeacherDetailsForm = () => {
   const [loading, setLoading] = useState(false);
@@ -25,6 +26,7 @@ export const TeacherDetailsForm = () => {
   });
   const [uploadingProfilePic, setUploadingProfilePic] = useState(false);
   const profilePicRef = useRef<HTMLInputElement>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     const getUser = async () => {
@@ -52,6 +54,16 @@ export const TeacherDetailsForm = () => {
       ...formData,
       [name]: value,
     });
+  };
+
+  const handleDateChange = (date: Date | undefined) => {
+    setSelectedDate(date);
+    if (date) {
+      setFormData({
+        ...formData,
+        date_of_joining: date.toISOString().split('T')[0],
+      });
+    }
   };
 
   const handleFileUpload = async (fileInput: HTMLInputElement) => {
@@ -141,10 +153,7 @@ export const TeacherDetailsForm = () => {
 
       if (error) throw error;
 
-      // Create email notification preferences
-      await supabase.from("email_notifications").insert({
-        teacher_id: userData.user.id,
-      });
+      // Removed the email_notifications insertion that was causing the error
 
       toast.success("Teacher profile created successfully!");
       window.location.href = "/teacher-dashboard";
@@ -280,13 +289,12 @@ export const TeacherDetailsForm = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Date of Joining *</label>
-                <Input
-                  name="date_of_joining"
-                  value={formData.date_of_joining}
-                  onChange={handleChange}
-                  required
-                  type="date"
+                <DateInput
+                  date={selectedDate}
+                  onDateChange={handleDateChange}
+                  label="Date of Joining *"
+                  placeholder="Select date of joining"
+                  required={true}
                 />
               </div>
               <div className="space-y-2">
