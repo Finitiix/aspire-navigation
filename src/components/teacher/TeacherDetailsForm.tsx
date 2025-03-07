@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -140,11 +139,6 @@ export const TeacherDetailsForm = () => {
       });
 
       if (error) throw error;
-
-      // Create email notification preferences
-      await supabase.from("email_notifications").insert({
-        teacher_id: userData.user.id,
-      });
 
       toast.success("Teacher profile created successfully!");
       window.location.href = "/teacher-dashboard";
