@@ -124,8 +124,8 @@ const TeacherHome = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {/* Important Messages Section - With shadow and hover effect */}
-        <Card className="h-80 shadow-md hover:shadow-lg transition-all duration-300">
+        {/* Important Messages Section - Now with dynamic height */}
+        <Card className="shadow-md hover:shadow-lg transition-all duration-300">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <div className="bg-red-100 p-1.5 rounded-full">
@@ -134,7 +134,7 @@ const TeacherHome = () => {
               Important Messages
             </CardTitle>
           </CardHeader>
-          <CardContent className="h-64 overflow-y-auto">
+          <CardContent className="max-h-[400px] overflow-y-auto">
             {messages.important_messages.length > 0 ? (
               messages.important_messages.map((msg: any, index) => (
                 <div key={index} className="flex items-start gap-3 mb-4 leading-relaxed">
@@ -148,11 +148,11 @@ const TeacherHome = () => {
           </CardContent>
         </Card>
 
-        {/* Add Achievement Button & Important Details - Ensuring same height */}
+        {/* Add Achievement Button & Important Details - With dynamic height */}
         <div className="flex flex-col gap-6">
           <Dialog open={isAchievementFormOpen} onOpenChange={setIsAchievementFormOpen}>
             <DialogTrigger asChild>
-              <Button className="w-full h-32 bg-[#ea384c] hover:bg-red-700 text-white font-bold rounded-lg text-lg">
+              <Button className="w-full py-8 bg-[#ea384c] hover:bg-red-700 text-white font-bold rounded-lg text-lg">
                 <Award className="w-6 h-6 mr-2" />
                 Add Achievement
               </Button>
@@ -165,8 +165,8 @@ const TeacherHome = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Important Details Section - With exact same height as the message section minus achievement button */}
-          <Card className="h-48 shadow-md hover:shadow-lg transition-all duration-300">
+          {/* Important Details Section - Now with dynamic height */}
+          <Card className="shadow-md hover:shadow-lg transition-all duration-300 flex-grow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <div className="bg-red-100 p-1.5 rounded-full">
@@ -175,7 +175,7 @@ const TeacherHome = () => {
                 Important Details
               </CardTitle>
             </CardHeader>
-            <CardContent className="h-32 overflow-y-auto">
+            <CardContent className="max-h-[300px] overflow-y-auto">
               {messages.important_details.length > 0 ? (
                 messages.important_details.map((detail: any, index) => (
                   <div key={index} className="flex items-start gap-3 mb-4 leading-relaxed">
