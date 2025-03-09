@@ -1,15 +1,15 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Search, X, Eye, ExternalLink, FileText, Check } from "lucide-react";
+import { Search, X, Eye, ExternalLink, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format as dateFormat } from "date-fns";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Textarea } from "@/components/ui/textarea";
 
 type Teacher = {
   id: string;
@@ -31,7 +31,6 @@ type DetailedAchievement = {
   date_achieved: string;
   status: string;
   document_url: string;
-  rejection_reason?: string;
   [key: string]: any;
 };
 
@@ -42,9 +41,6 @@ const AdminTeachers = () => {
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [viewDocumentUrl, setViewDocumentUrl] = useState<string | null>(null);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [showRejectionDialog, setShowRejectionDialog] = useState(false);
-  const [achievementToReject, setAchievementToReject] = useState<DetailedAchievement | null>(null);
 
   useEffect(() => {
     fetchTeachers();
@@ -122,91 +118,7 @@ const AdminTeachers = () => {
     return value;
   };
 
-  const openRejectionDialog = (achievement: DetailedAchievement) => {
-    setAchievementToReject(achievement);
-    setRejectionReason("");
-    setShowRejectionDialog(true);
-  };
-
-  const handleRejectAchievement = async () => {
-    if (!achievementToReject || !rejectionReason.trim() || !selectedTeacher) {
-      toast.error("Please provide a reason for rejection");
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from("detailed_achievements")
-        .update({ 
-          status: "Rejected",
-          rejection_reason: rejectionReason
-        })
-        .eq("id", achievementToReject.id);
-
-      if (error) throw error;
-
-      toast.info("Processing rejection and sending notification...");
-      
-      const emailResponse = await supabase.functions.invoke("send-rejection-email", {
-        body: {
-          achievementId: achievementToReject.id,
-          teacherId: selectedTeacher.id,
-          achievementTitle: achievementToReject.title,
-          rejectionReason: rejectionReason
-        }
-      });
-
-      console.log("Email function response:", emailResponse);
-
-      if (emailResponse.error) {
-        console.error("Error sending email:", emailResponse.error);
-        toast.error("Achievement rejected but email notification failed");
-      } else {
-        toast.success("Achievement rejected and notification sent");
-      }
-
-      if (selectedTeacher) {
-        const updatedAchievements = selectedTeacher.achievements?.map((a) =>
-          a.id === achievementToReject.id ? { ...a, status: "Rejected", rejection_reason: rejectionReason } : a
-        );
-        
-        setSelectedTeacher({
-          ...selectedTeacher,
-          achievements: updatedAchievements,
-        });
-
-        const updatedTeachers = teachers.map((t) =>
-          t.id === selectedTeacher.id
-            ? { ...t, achievements: updatedAchievements }
-            : t
-        );
-        
-        setTeachers(updatedTeachers);
-        setFilteredTeachers(
-          filteredTeachers.map((t) =>
-            t.id === selectedTeacher.id
-              ? { ...t, achievements: updatedAchievements }
-              : t
-          )
-        );
-      }
-
-      setShowRejectionDialog(false);
-    } catch (error: any) {
-      console.error("Error rejecting achievement:", error);
-      toast.error(`Failed to reject achievement: ${error.message}`);
-    }
-  };
-
   const handleUpdateAchievementStatus = async (achievementId: string, newStatus: "Approved" | "Rejected") => {
-    if (newStatus === "Rejected") {
-      const achievement = selectedTeacher?.achievements?.find(a => a.id === achievementId);
-      if (achievement) {
-        openRejectionDialog(achievement);
-      }
-      return;
-    }
-
     try {
       const { error } = await supabase
         .from("detailed_achievements")
@@ -425,13 +337,6 @@ const AdminTeachers = () => {
                                 </Button>
                               )}
                               
-                              {achievement.rejection_reason && (
-                                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
-                                  <p className="text-sm font-medium text-red-700">Rejection Reason:</p>
-                                  <p className="text-sm text-red-600">{achievement.rejection_reason}</p>
-                                </div>
-                              )}
-                              
                               <Accordion type="single" collapsible className="w-full mt-2">
                                 <AccordionItem value="details">
                                   <AccordionTrigger className="text-sm py-2">View Achievement Details</AccordionTrigger>
@@ -529,7 +434,7 @@ const AdminTeachers = () => {
                                     className="bg-green-500 hover:bg-green-600 text-white"
                                     onClick={() => handleUpdateAchievementStatus(achievement.id, "Approved")}
                                   >
-                                    <Check className="h-4 w-4" />
+                                    <X className="h-4 w-4" />
                                   </Button>
                                   <Button
                                     size="sm"
@@ -616,7 +521,7 @@ const AdminTeachers = () => {
                                   className="bg-green-500 hover:bg-green-600 text-white"
                                   onClick={() => handleUpdateAchievementStatus(achievement.id, "Approved")}
                                 >
-                                  <Check className="h-4 w-4" />
+                                  <X className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   size="sm"
@@ -751,38 +656,6 @@ const AdminTeachers = () => {
           </div>
         </div>
       )}
-
-      {/* Rejection Reason Dialog */}
-      <Dialog open={showRejectionDialog} onOpenChange={setShowRejectionDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Provide Rejection Reason</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Please provide a reason for rejecting this achievement. This will be included in the email sent to the teacher.
-            </p>
-            <Textarea
-              placeholder="Enter rejection reason..."
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              className="min-h-[100px]"
-            />
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setShowRejectionDialog(false)}>
-                Cancel
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={handleRejectAchievement}
-                disabled={!rejectionReason.trim()}
-              >
-                Reject & Send Notification
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
