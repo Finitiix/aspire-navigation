@@ -145,6 +145,8 @@ const AdminTeachers = () => {
 
       if (error) throw error;
 
+      toast.info("Processing rejection and sending notification...");
+      
       const emailResponse = await supabase.functions.invoke("send-rejection-email", {
         body: {
           achievementId: achievementToReject.id,
@@ -153,6 +155,8 @@ const AdminTeachers = () => {
           rejectionReason: rejectionReason
         }
       });
+
+      console.log("Email function response:", emailResponse);
 
       if (emailResponse.error) {
         console.error("Error sending email:", emailResponse.error);
@@ -188,9 +192,9 @@ const AdminTeachers = () => {
       }
 
       setShowRejectionDialog(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error rejecting achievement:", error);
-      toast.error("Failed to reject achievement");
+      toast.error(`Failed to reject achievement: ${error.message}`);
     }
   };
 
