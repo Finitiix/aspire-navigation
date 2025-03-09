@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Search, X, Eye, ExternalLink, FileText } from "lucide-react";
+import { Search, X, Eye, ExternalLink, FileText, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format as dateFormat } from "date-fns";
@@ -31,6 +31,7 @@ type DetailedAchievement = {
   date_achieved: string;
   status: string;
   document_url: string;
+  rejection_reason?: string;
   [key: string]: any;
 };
 
@@ -420,6 +421,13 @@ const AdminTeachers = () => {
                                 </Button>
                               )}
                               
+                              {achievement.rejection_reason && (
+                                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+                                  <p className="text-sm font-medium text-red-700">Rejection Reason:</p>
+                                  <p className="text-sm text-red-600">{achievement.rejection_reason}</p>
+                                </div>
+                              )}
+                              
                               <Accordion type="single" collapsible className="w-full mt-2">
                                 <AccordionItem value="details">
                                   <AccordionTrigger className="text-sm py-2">View Achievement Details</AccordionTrigger>
@@ -517,7 +525,7 @@ const AdminTeachers = () => {
                                     className="bg-green-500 hover:bg-green-600 text-white"
                                     onClick={() => handleUpdateAchievementStatus(achievement.id, "Approved")}
                                   >
-                                    <X className="h-4 w-4" />
+                                    <Check className="h-4 w-4" />
                                   </Button>
                                   <Button
                                     size="sm"
@@ -604,7 +612,7 @@ const AdminTeachers = () => {
                                   className="bg-green-500 hover:bg-green-600 text-white"
                                   onClick={() => handleUpdateAchievementStatus(achievement.id, "Approved")}
                                 >
-                                  <X className="h-4 w-4" />
+                                  <Check className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   size="sm"
