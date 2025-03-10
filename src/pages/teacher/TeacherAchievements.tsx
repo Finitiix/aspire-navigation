@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,8 +7,6 @@ import { X, Pencil, ExternalLink, FileText } from "lucide-react";
 import { AchievementForm } from "@/components/teacher/AchievementForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AchievementStats } from "@/components/teacher/AchievementStats";
-import { toast } from "sonner";
 
 type Achievement = {
   id: string;
@@ -79,13 +76,11 @@ const TeacherAchievements = () => {
     setIsEditDialogOpen(false);
     setEditingAchievement(null);
     fetchAchievements();
-    toast.success("Achievement updated successfully");
   };
 
   const handleAddSuccess = () => {
     setShowForm(false);
     fetchAchievements();
-    toast.success("Achievement added successfully");
   };
 
   const handleViewDocument = (url: string) => {
@@ -125,8 +120,6 @@ const TeacherAchievements = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="grid gap-8">
-        {/* Achievement Statistics */}
-        <AchievementStats />
 
         <Button 
           className="bg-[#ea384c] hover:bg-red-700 text-white font-bold py-10 px-6 rounded-lg text-lg w-full"
