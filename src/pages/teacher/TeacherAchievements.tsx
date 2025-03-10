@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -87,7 +88,7 @@ const TeacherAchievements = () => {
     <div className="container mx-auto px-4 py-6">
       <h1 className="text-2xl font-bold mb-6">My Achievements</h1>
       
-      {/* Add Achievement Stats */}
+      {/* Achievement Statistics */}
       <AchievementStats />
       
       <div className="flex justify-end mb-6">

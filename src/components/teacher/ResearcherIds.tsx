@@ -94,7 +94,8 @@ export const ResearcherIds = ({ teacherId, isEditable = true }: ResearcherIdsPro
           .eq('teacher_id', userId)
           .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') {
+        if (error) {
+          console.error("Error fetching researcher IDs:", error);
           throw error;
         }
 
@@ -195,16 +196,16 @@ export const ResearcherIds = ({ teacherId, isEditable = true }: ResearcherIdsPro
             no_crossref: formData.no_crossref,
             no_ssrn: formData.no_ssrn,
           }])
-          .select()
-          .single();
+          .select();
           
         if (error) throw error;
         
-        if (data) {
+        if (data && data[0]) {
           setFormData({
             ...formData,
-            id: data.id
+            id: data[0].id
           });
+          toast.success('Researcher IDs saved successfully');
         }
       } else {
         // Update existing record
@@ -241,9 +242,8 @@ export const ResearcherIds = ({ teacherId, isEditable = true }: ResearcherIdsPro
           .eq('id', formData.id);
           
         if (error) throw error;
+        toast.success('Researcher IDs updated successfully');
       }
-      
-      toast.success('Researcher IDs saved successfully');
     } catch (error) {
       console.error('Error saving researcher IDs:', error);
       toast.error('Failed to save researcher IDs');

@@ -5,6 +5,7 @@ import { TeacherNavbar } from "@/components/teacher/TeacherNavbar";
 import { TeacherBottomNav } from "@/components/teacher/TeacherBottomNav";
 import { AuthPage } from "@/components/AuthPage";
 import { supabase } from "@/integrations/supabase/client";
+import { ResearcherIds } from "@/components/teacher/ResearcherIds";
 
 const Teacher = () => {
   const [session, setSession] = useState<any>(null);
