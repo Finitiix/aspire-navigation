@@ -95,6 +95,7 @@ export function ResearcherIds({ teacherId, readOnly = false }: ResearcherIdsProp
 
         setFormData(prev => ({ ...prev, teacher_id: userId as string }));
 
+        // Use the correct typing for Supabase query
         const { data, error } = await supabase
           .from('researcher_ids')
           .select('*')
@@ -104,7 +105,7 @@ export function ResearcherIds({ teacherId, readOnly = false }: ResearcherIdsProp
         if (error) throw error;
 
         if (data) {
-          setFormData(data);
+          setFormData(data as ResearcherData);
         }
       } catch (error) {
         console.error("Error fetching researcher IDs:", error);
@@ -147,18 +148,20 @@ export function ResearcherIds({ teacherId, readOnly = false }: ResearcherIdsProp
       
       if (data) {
         // Update existing record
-        result = await supabase
+        const { error } = await supabase
           .from('researcher_ids')
-          .update(formData)
+          .update(formData as any)
           .eq('id', data.id);
+          
+        if (error) throw error;
       } else {
         // Insert new record
-        result = await supabase
+        const { error } = await supabase
           .from('researcher_ids')
-          .insert(formData);
+          .insert(formData as any);
+          
+        if (error) throw error;
       }
-      
-      if (result.error) throw result.error;
       
       toast({
         title: "Success",

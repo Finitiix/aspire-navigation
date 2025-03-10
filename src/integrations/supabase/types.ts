@@ -313,6 +313,113 @@ export type Database = {
           },
         ]
       }
+      researcher_ids: {
+        Row: {
+          arxiv_id: string | null
+          created_at: string | null
+          crossref_id: string | null
+          doi: string | null
+          google_scholar_id: string | null
+          id: string
+          microsoft_academic_id: string | null
+          no_arxiv_id: boolean | null
+          no_crossref_id: boolean | null
+          no_doi: boolean | null
+          no_google_scholar_id: boolean | null
+          no_microsoft_academic_id: boolean | null
+          no_orcid: boolean | null
+          no_pubmed_author_id: boolean | null
+          no_pubmed_id: boolean | null
+          no_scopus_author_id: boolean | null
+          no_scopus_eid: boolean | null
+          no_semantic_scholar_id: boolean | null
+          no_ssrn_id: boolean | null
+          no_web_of_science_id: boolean | null
+          orcid: string | null
+          pubmed_author_id: string | null
+          pubmed_id: string | null
+          scopus_author_id: string | null
+          scopus_eid: string | null
+          semantic_scholar_id: string | null
+          ssrn_id: string | null
+          teacher_id: string
+          updated_at: string | null
+          web_of_science_id: string | null
+        }
+        Insert: {
+          arxiv_id?: string | null
+          created_at?: string | null
+          crossref_id?: string | null
+          doi?: string | null
+          google_scholar_id?: string | null
+          id?: string
+          microsoft_academic_id?: string | null
+          no_arxiv_id?: boolean | null
+          no_crossref_id?: boolean | null
+          no_doi?: boolean | null
+          no_google_scholar_id?: boolean | null
+          no_microsoft_academic_id?: boolean | null
+          no_orcid?: boolean | null
+          no_pubmed_author_id?: boolean | null
+          no_pubmed_id?: boolean | null
+          no_scopus_author_id?: boolean | null
+          no_scopus_eid?: boolean | null
+          no_semantic_scholar_id?: boolean | null
+          no_ssrn_id?: boolean | null
+          no_web_of_science_id?: boolean | null
+          orcid?: string | null
+          pubmed_author_id?: string | null
+          pubmed_id?: string | null
+          scopus_author_id?: string | null
+          scopus_eid?: string | null
+          semantic_scholar_id?: string | null
+          ssrn_id?: string | null
+          teacher_id: string
+          updated_at?: string | null
+          web_of_science_id?: string | null
+        }
+        Update: {
+          arxiv_id?: string | null
+          created_at?: string | null
+          crossref_id?: string | null
+          doi?: string | null
+          google_scholar_id?: string | null
+          id?: string
+          microsoft_academic_id?: string | null
+          no_arxiv_id?: boolean | null
+          no_crossref_id?: boolean | null
+          no_doi?: boolean | null
+          no_google_scholar_id?: boolean | null
+          no_microsoft_academic_id?: boolean | null
+          no_orcid?: boolean | null
+          no_pubmed_author_id?: boolean | null
+          no_pubmed_id?: boolean | null
+          no_scopus_author_id?: boolean | null
+          no_scopus_eid?: boolean | null
+          no_semantic_scholar_id?: boolean | null
+          no_ssrn_id?: boolean | null
+          no_web_of_science_id?: boolean | null
+          orcid?: string | null
+          pubmed_author_id?: string | null
+          pubmed_id?: string | null
+          scopus_author_id?: string | null
+          scopus_eid?: string | null
+          semantic_scholar_id?: string | null
+          ssrn_id?: string | null
+          teacher_id?: string
+          updated_at?: string | null
+          web_of_science_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "researcher_ids_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_details"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teacher_details: {
         Row: {
           address: string | null

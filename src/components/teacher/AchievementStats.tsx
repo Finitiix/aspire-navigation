@@ -37,68 +37,68 @@ export function AchievementStats({ teacherId, className = "" }: StatProps) {
         if (!userId) return;
 
         // Get count for each category
-        const { data: journal } = await supabase
+        const { data: journalData, count: journalCount } = await supabase
           .from('detailed_achievements')
-          .select('id', { count: 'exact', head: true })
+          .select('id', { count: 'exact' })
           .eq('teacher_id', userId)
           .eq('category', 'Journal Articles');
 
-        const { data: conference } = await supabase
+        const { data: conferenceData, count: conferenceCount } = await supabase
           .from('detailed_achievements')
-          .select('id', { count: 'exact', head: true })
+          .select('id', { count: 'exact' })
           .eq('teacher_id', userId)
           .eq('category', 'Conference Papers');
 
-        const { data: book } = await supabase
+        const { data: bookData, count: bookCount } = await supabase
           .from('detailed_achievements')
-          .select('id', { count: 'exact', head: true })
+          .select('id', { count: 'exact' })
           .eq('teacher_id', userId)
           .eq('category', 'Books & Book Chapters');
 
-        const { data: patent } = await supabase
+        const { data: patentData, count: patentCount } = await supabase
           .from('detailed_achievements')
-          .select('id', { count: 'exact', head: true })
+          .select('id', { count: 'exact' })
           .eq('teacher_id', userId)
           .eq('category', 'Patents');
 
-        const { data: award } = await supabase
+        const { data: awardData, count: awardCount } = await supabase
           .from('detailed_achievements')
-          .select('id', { count: 'exact', head: true })
+          .select('id', { count: 'exact' })
           .eq('teacher_id', userId)
           .eq('category', 'Awards & Recognitions');
 
-        const { data: consultancy } = await supabase
+        const { data: consultancyData, count: consultancyCount } = await supabase
           .from('detailed_achievements')
-          .select('id', { count: 'exact', head: true })
+          .select('id', { count: 'exact' })
           .eq('teacher_id', userId)
           .eq('category', 'Consultancy & Funded Projects');
 
-        const { data: startup } = await supabase
+        const { data: startupData, count: startupCount } = await supabase
           .from('detailed_achievements')
-          .select('id', { count: 'exact', head: true })
+          .select('id', { count: 'exact' })
           .eq('teacher_id', userId)
           .eq('category', 'Startups & Centers of Excellence');
 
-        const { data: other } = await supabase
+        const { data: otherData, count: otherCount } = await supabase
           .from('detailed_achievements')
-          .select('id', { count: 'exact', head: true })
+          .select('id', { count: 'exact' })
           .eq('teacher_id', userId)
           .eq('category', 'Others');
 
-        const { count: totalCount } = await supabase
+        const { data: totalData, count: totalCount } = await supabase
           .from('detailed_achievements')
-          .select('id', { count: 'exact', head: true })
+          .select('id', { count: 'exact' })
           .eq('teacher_id', userId);
 
         setStats({
-          journal: journal?.count || 0,
-          conference: conference?.count || 0,
-          book: book?.count || 0,
-          patent: patent?.count || 0,
-          award: award?.count || 0,
-          consultancy: consultancy?.count || 0,
-          startup: startup?.count || 0,
-          other: other?.count || 0,
+          journal: journalCount || 0,
+          conference: conferenceCount || 0,
+          book: bookCount || 0,
+          patent: patentCount || 0,
+          award: awardCount || 0,
+          consultancy: consultancyCount || 0,
+          startup: startupCount || 0,
+          other: otherCount || 0,
           total: totalCount || 0
         });
       } catch (error) {
