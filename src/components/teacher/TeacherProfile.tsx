@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { ResearcherIds } from "./ResearcherIds";
 
 type TeacherProfileData = {
   full_name: string;
@@ -452,6 +453,9 @@ export const TeacherProfile = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Add Researcher IDs section */}
+      <ResearcherIds />
 
       {/* Timetable Modal */}
       {showTimetable && (
