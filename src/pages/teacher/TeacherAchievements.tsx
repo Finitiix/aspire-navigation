@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -7,6 +8,7 @@ import { Award, FileText, Clock, CalendarDays, ExternalLink, BadgeCheck, BadgeX 
 import { format } from "date-fns";
 import { AchievementStats } from "@/components/teacher/AchievementStats";
 import type { Database } from "@/integrations/supabase/types";
+import { toast } from "@/components/ui/use-toast";
 
 type Achievement = {
   id: string;
@@ -49,12 +51,22 @@ const TeacherAchievements = () => {
 
         if (error) {
           console.error("Error fetching achievements:", error);
+          toast({
+            title: "Error",
+            description: "Could not fetch achievements. Please try again.",
+            variant: "destructive",
+          });
         } else {
           setAchievements(data || []);
         }
       }
     } catch (error) {
       console.error("Error fetching achievements:", error);
+      toast({
+        title: "Error",
+        description: "Could not fetch achievements. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -108,6 +120,11 @@ const TeacherAchievements = () => {
             <AchievementForm onSuccess={() => {
               setIsFormOpen(false);
               fetchAchievements();
+              toast({
+                title: "Success",
+                description: "Achievement added successfully!",
+                variant: "success",
+              });
             }} />
           </DialogContent>
         </Dialog>
