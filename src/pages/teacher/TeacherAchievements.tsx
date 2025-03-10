@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -7,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Award, FileText, Clock, CalendarDays, ExternalLink, BadgeCheck, BadgeX } from "lucide-react";
 import { format } from "date-fns";
 import { AchievementStats } from "@/components/teacher/AchievementStats";
+import type { Database } from "@/integrations/supabase/types";
 
 type Achievement = {
   id: string;
@@ -17,11 +17,13 @@ type Achievement = {
   created_at: string;
 };
 
+type AchievementCategory = Database["public"]["Enums"]["achievement_category"];
+
 const TeacherAchievements = () => {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState<"all" | AchievementCategory>("all");
   const [tab, setTab] = useState("pending");
 
   const fetchAchievements = useCallback(async () => {
@@ -119,7 +121,7 @@ const TeacherAchievements = () => {
           id="filter"
           className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
           value={filter}
-          onChange={(e) => setFilter(e.target.value)}
+          onChange={(e) => setFilter(e.target.value as "all" | AchievementCategory)}
         >
           <option value="all">All Categories</option>
           <option value="Journal Articles">Journal Articles</option>
