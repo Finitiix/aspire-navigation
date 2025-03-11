@@ -305,33 +305,7 @@ const TeacherAchievements = () => {
                                 </>
                               )}
 
-                              <div className="col-span-2 mt-2">
-                                <p className="text-sm font-medium">Additional Information:</p>
-                              </div>
-                              <div className="col-span-2">
-                                <p className="text-sm font-medium">Research Collaboration:</p>
-                                <p className="text-sm">{renderFieldValue(achievement.research_collaboration)}</p>
-                              </div>
-                              <div className="col-span-2">
-                                <p className="text-sm font-medium">Awards/Recognitions:</p>
-                                <p className="text-sm">{renderFieldValue(achievement.awards_recognitions)}</p>
-                              </div>
-                              <div className="col-span-2">
-                                <p className="text-sm font-medium">Consultancy Services:</p>
-                                <p className="text-sm">{renderFieldValue(achievement.consultancy_services)}</p>
-                              </div>
-                              <div className="col-span-2">
-                                <p className="text-sm font-medium">Startups/Excellence Centers:</p>
-                                <p className="text-sm">{renderFieldValue(achievement.startup_details)}</p>
-                              </div>
-                              <div className="col-span-2">
-                                <p className="text-sm font-medium">Research Areas:</p>
-                                <p className="text-sm">{renderFieldValue(achievement.research_area)}</p>
-                              </div>
-                              <div className="col-span-2">
-                                <p className="text-sm font-medium">General Remarks:</p>
-                                <p className="text-sm">{renderFieldValue(achievement.remarks)}</p>
-                              </div>
+                              
                             </div>
                           </AccordionContent>
                         </AccordionItem>
