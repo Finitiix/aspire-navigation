@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +9,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format as dateFormat } from "date-fns";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  PieChart, 
+  Pie, 
+  Cell, 
+  Legend, 
+  ResponsiveContainer 
+} from "recharts";
 
 type Teacher = {
   id: string;
@@ -20,6 +31,16 @@ type Teacher = {
   mobile_number: string;
   eid: string;
   profile_pic_url: string | null;
+  // Additional teacher details as per the teacher_details table
+  gender?: string;
+  date_of_joining?: string;
+  highest_qualification?: string;
+  skills?: string[];
+  address?: string;
+  cabin_no?: string;
+  block?: string;
+  created_at?: string;
+  updated_at?: string;
   achievements?: DetailedAchievement[];
   [key: string]: any;
 };
@@ -31,7 +52,77 @@ type DetailedAchievement = {
   date_achieved: string;
   status: string;
   document_url: string;
+  // Additional fields for statistics
+  indexed_in?: string[];
+  q_ranking?: "Q1" | "Q2" | "Q3" | "Q4";
   [key: string]: any;
+};
+
+// Compute aggregated statistics for a teacher's achievements
+const computeTeacherStats = (achievements: DetailedAchievement[]) => {
+  const stats = {
+    totalDocuments: achievements.length,
+    indexed: {
+      SCI: 0,
+      Scopus: 0,
+      "UGC Approved": 0,
+      WOS: 0,
+      "IEEE Xplore": 0,
+      Springer: 0,
+      Elsevier: 0,
+    },
+    categories: {
+      "Journal Articles": 0,
+      "Conference Papers": 0,
+      "Books & Book Chapters": 0,
+      "Patents": 0,
+      "Research Collaborations": 0,
+      "Awards & Recognitions": 0,
+      "Consultancy & Funded Projects": 0,
+      "Startups & Centers of Excellence": 0,
+      "Others": 0,
+    },
+    yearly: {
+      2022: 0,
+      2023: 0,
+      2024: 0,
+      2025: 0,
+    },
+    quality: {
+      Q1: 0,
+      Q2: 0,
+      Q3: 0,
+      Q4: 0,
+    },
+  };
+
+  achievements.forEach((achievement) => {
+    // Category breakdown
+    if (achievement.category && stats.categories[achievement.category] !== undefined) {
+      stats.categories[achievement.category]++;
+    }
+    // Yearly breakdown based on date_achieved
+    if (achievement.date_achieved) {
+      const year = new Date(achievement.date_achieved).getFullYear();
+      if ([2022, 2023, 2024, 2025].includes(year)) {
+        stats.yearly[year]++;
+      }
+    }
+    // Quality ranking breakdown
+    if (achievement.q_ranking && stats.quality[achievement.q_ranking] !== undefined) {
+      stats.quality[achievement.q_ranking]++;
+    }
+    // Indexed documents breakdown using indexed_in array
+    if (achievement.indexed_in && Array.isArray(achievement.indexed_in)) {
+      achievement.indexed_in.forEach((index: string) => {
+        if (stats.indexed[index] !== undefined) {
+          stats.indexed[index]++;
+        }
+      });
+    }
+  });
+
+  return stats;
 };
 
 const AdminTeachers = () => {
@@ -102,7 +193,7 @@ const AdminTeachers = () => {
   const renderFieldValue = (value: any, isLink = false) => {
     if (!value) return <span className="text-gray-400">Not provided</span>;
     
-    if (isLink && typeof value === 'string' && value.startsWith('http')) {
+    if (isLink && typeof value === "string" && value.startsWith("http")) {
       return (
         <a 
           href={value} 
@@ -161,13 +252,13 @@ const AdminTeachers = () => {
   };
 
   const getStatusBadgeClass = (status: string) => {
-    switch(status) {
-      case 'Approved':
-        return 'bg-green-100 text-green-800';
-      case 'Rejected':
-        return 'bg-red-100 text-red-800';
+    switch (status) {
+      case "Approved":
+        return "bg-green-100 text-green-800";
+      case "Rejected":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-yellow-100 text-yellow-800';
+        return "bg-yellow-100 text-yellow-800";
     }
   };
 
@@ -218,7 +309,7 @@ const AdminTeachers = () => {
                       <td className="p-3">
                         <div className="flex items-center gap-3">
                           <img 
-                            src={teacher.profile_pic_url || '/placeholder.svg'} 
+                            src={teacher.profile_pic_url || "/placeholder.svg"} 
                             alt={teacher.full_name}
                             className="w-8 h-8 rounded-full object-cover"
                           />
@@ -273,20 +364,21 @@ const AdminTeachers = () => {
           </DialogHeader>
 
           {selectedTeacher && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-6">
+              {/* Basic Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="flex items-center gap-4">
                   <img
-                    src={selectedTeacher.profile_pic_url || '/placeholder.svg'}
+                    src={selectedTeacher.profile_pic_url || "/placeholder.svg"}
                     alt={selectedTeacher.full_name}
                     className="w-16 h-16 rounded-full object-cover"
                   />
                   <div>
-                    <h3 className="font-medium text-lg">{selectedTeacher.full_name}</h3>
+                    <h3 className="text-xl font-bold">{selectedTeacher.full_name}</h3>
                     <p className="text-gray-600">{selectedTeacher.eid}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 gap-2">
+                <div className="space-y-2">
                   <div>
                     <h3 className="font-medium">Email</h3>
                     <p>{selectedTeacher.email_id}</p>
@@ -305,6 +397,135 @@ const AdminTeachers = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Additional Teacher Details */}
+              <div className="border-t pt-6">
+                <h3 className="text-xl font-bold mb-4">Additional Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  
+                  <div>
+                    <h4 className="font-medium">Date of Joining</h4>
+                    <p>{selectedTeacher.date_of_joining ? dateFormat(new Date(selectedTeacher.date_of_joining), "PPP") : "Not provided"}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Highest Qualification</h4>
+                    <p>{selectedTeacher.highest_qualification || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Skills</h4>
+                    <p>{selectedTeacher.skills ? selectedTeacher.skills.join(", ") : "Not provided"}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Address</h4>
+                    <p>{selectedTeacher.address || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Cabin No</h4>
+                    <p>{selectedTeacher.cabin_no || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Block</h4>
+                    <p>{selectedTeacher.block || "Not provided"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Enhanced Teacher Document Statistics Section */}
+              {selectedTeacher && (
+                (() => {
+                  const teacherStats = computeTeacherStats(selectedTeacher.achievements || []);
+                  return (
+                    <Card className="bg-white shadow-lg rounded-xl overflow-hidden">
+                      <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-500 p-4">
+                        <CardTitle className="text-2xl font-bold text-white">Teacher Document Statistics</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-6">
+                        {/* Top Stats Row */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                          <div className="bg-gray-50 p-4 rounded-lg border">
+                            <h3 className="text-lg font-semibold text-gray-700">Total Documents Uploaded</h3>
+                            <p className="text-3xl font-bold text-blue-600 mt-2">{teacherStats.totalDocuments}</p>
+                          </div>
+                          <div className="bg-gray-50 p-4 rounded-lg border">
+                            <h3 className="text-lg font-semibold text-gray-700">Indexed Documents</h3>
+                            <ul className="mt-2 space-y-1">
+                              {Object.entries(teacherStats.indexed).map(([key, value]) => (
+                                <li key={key} className="flex justify-between">
+                                  <span>{key}</span>
+                                  <span className="font-semibold text-blue-600">{value}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div className="bg-gray-50 p-4 rounded-lg border">
+                            <h3 className="text-lg font-semibold text-gray-700">Yearly Uploads</h3>
+                            <ul className="mt-2 space-y-1">
+                              {Object.entries(teacherStats.yearly).map(([year, count]) => (
+                                <li key={year} className="flex justify-between">
+                                  <span>{year}</span>
+                                  <span className="font-semibold text-blue-600">{count}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                        {/* Charts Section */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          {/* Category Breakdown */}
+                          <div className="bg-gray-50 p-4 rounded-lg border">
+                            <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Category Breakdown</h3>
+                            <div className="mt-4">
+                              <h3 className="text-md font-semibold text-gray-700">Category Details</h3>
+                              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {Object.entries(teacherStats.categories).map(([cat, count]) => (
+                                  <div key={cat} className="flex justify-between items-center p-2 border rounded bg-white">
+                                    <span>{cat}</span>
+                                    <span className="font-bold text-blue-600">{count}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          {/* Yearly Uploads Bar Chart */}
+                          <div className="bg-gray-50 p-4 rounded-lg border">
+                            <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Yearly Uploads</h3>
+                            <ResponsiveContainer width="100%" height={250}>
+                              <BarChart data={[
+                                { year: "2022", count: teacherStats.yearly[2022] },
+                                { year: "2023", count: teacherStats.yearly[2023] },
+                                { year: "2024", count: teacherStats.yearly[2024] },
+                                { year: "2025", count: teacherStats.yearly[2025] },
+                              ]}>
+                                <XAxis dataKey="year" stroke="#333" />
+                                <YAxis stroke="#333" />
+                                <Tooltip />
+                                <Bar dataKey="count" fill="#82ca9d" />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                        {/* Quality Ranking Chart */}
+                        <div className="mt-6 bg-gray-50 p-4 rounded-lg border">
+                          <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Quality Ranking (Q1 - Q4)</h3>
+                          <ResponsiveContainer width="100%" height={250}>
+                            <BarChart data={[
+                              { quality: "Q1", count: teacherStats.quality["Q1"] },
+                              { quality: "Q2", count: teacherStats.quality["Q2"] },
+                              { quality: "Q3", count: teacherStats.quality["Q3"] },
+                              { quality: "Q4", count: teacherStats.quality["Q4"] },
+                            ]}>
+                              <XAxis dataKey="quality" stroke="#333" />
+                              <YAxis stroke="#333" />
+                              <Tooltip />
+                              <Bar dataKey="count" fill="#8884d8" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })()
+              )}
 
               <Tabs defaultValue="all" className="mt-6">
                 <TabsList className="grid w-full grid-cols-3">
@@ -357,63 +578,8 @@ const AdminTeachers = () => {
                                             <p className="text-sm">{renderFieldValue(achievement.doi)}</p>
                                           </div>
                                           <div>
-                                            <p className="text-sm font-medium">Publisher:</p>
-                                            <p className="text-sm">{renderFieldValue(achievement.publisher)}</p>
-                                          </div>
-                                          <div>
                                             <p className="text-sm font-medium">Journal Link:</p>
                                             <p className="text-sm">{renderFieldValue(achievement.journal_link, true)}</p>
-                                          </div>
-                                        </>
-                                      )}
-                                      
-                                      {achievement.category === 'Conference Papers' && (
-                                        <>
-                                          <div>
-                                            <p className="text-sm font-medium">Conference Name:</p>
-                                            <p className="text-sm">{renderFieldValue(achievement.conference_name)}</p>
-                                          </div>
-                                          <div>
-                                            <p className="text-sm font-medium">DOI:</p>
-                                            <p className="text-sm">{renderFieldValue(achievement.doi)}</p>
-                                          </div>
-                                          <div>
-                                            <p className="text-sm font-medium">ISBN:</p>
-                                            <p className="text-sm">{renderFieldValue(achievement.isbn)}</p>
-                                          </div>
-                                          <div>
-                                            <p className="text-sm font-medium">Paper Link:</p>
-                                            <p className="text-sm">{renderFieldValue(achievement.paper_link, true)}</p>
-                                          </div>
-                                        </>
-                                      )}
-                                      
-                                      {achievement.category === 'Books & Book Chapters' && (
-                                        <>
-                                          <div>
-                                            <p className="text-sm font-medium">Book Title:</p>
-                                            <p className="text-sm">{renderFieldValue(achievement.book_title)}</p>
-                                          </div>
-                                          <div>
-                                            <p className="text-sm font-medium">ISBN:</p>
-                                            <p className="text-sm">{renderFieldValue(achievement.isbn)}</p>
-                                          </div>
-                                          <div>
-                                            <p className="text-sm font-medium">Book Drive Link:</p>
-                                            <p className="text-sm">{renderFieldValue(achievement.book_drive_link, true)}</p>
-                                          </div>
-                                        </>
-                                      )}
-
-                                      {achievement.category === 'Patents' && (
-                                        <>
-                                          <div>
-                                            <p className="text-sm font-medium">Patent Number:</p>
-                                            <p className="text-sm">{renderFieldValue(achievement.patent_number)}</p>
-                                          </div>
-                                          <div>
-                                            <p className="text-sm font-medium">Patent Link:</p>
-                                            <p className="text-sm">{renderFieldValue(achievement.patent_link, true)}</p>
                                           </div>
                                         </>
                                       )}
@@ -487,8 +653,7 @@ const AdminTeachers = () => {
                                     <AccordionTrigger className="text-sm py-2">View Achievement Details</AccordionTrigger>
                                     <AccordionContent>
                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 mt-2">
-                                        {
-                                        achievement.category === 'Journal Articles' && (
+                                        {achievement.category === 'Journal Articles' && (
                                           <>
                                             <div>
                                               <p className="text-sm font-medium">Journal Name:</p>
@@ -507,8 +672,7 @@ const AdminTeachers = () => {
                                               <p className="text-sm">{renderFieldValue(achievement.journal_link, true)}</p>
                                             </div>
                                           </>
-                                        )
-                                        }
+                                        )}
                                       </div>
                                     </AccordionContent>
                                   </AccordionItem>
@@ -542,11 +706,9 @@ const AdminTeachers = () => {
                 </TabsContent>
 
                 <TabsContent value="approved" className="mt-4">
-                  {
-                  selectedTeacher.achievements && selectedTeacher.achievements.filter(a => a.status === "Approved").length > 0 ? (
+                  {selectedTeacher.achievements && selectedTeacher.achievements.filter(a => a.status === "Approved").length > 0 ? (
                     <div className="space-y-3">
-                      {
-                      selectedTeacher.achievements
+                      {selectedTeacher.achievements
                         .filter(a => a.status === "Approved")
                         .map((achievement) => (
                           <Card key={achievement.id} className="p-3">
@@ -608,8 +770,7 @@ const AdminTeachers = () => {
                     </div>
                   ) : (
                     <div className="text-center py-4 text-gray-500">No approved achievements</div>
-                  )
-                  }
+                  )}
                 </TabsContent>
               </Tabs>
             </div>
