@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AchievementForm } from "@/components/teacher/AchievementForm";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  PieChart, 
+  Pie, 
+  Cell, 
+  Legend, 
+  ResponsiveContainer 
+} from "recharts";
 
 type RecentAchievement = {
   id: string;
@@ -14,23 +25,38 @@ type RecentAchievement = {
   category: string;
   date_achieved: string;
   status: string;
-}
+};
+
+type DetailedAchievement = {
+  id: string;
+  category: string;
+  title: string;
+  date_achieved: string;
+  status: string;
+  document_url: string;
+  // Additional fields for statistics
+  indexed_in?: string[];
+  q_ranking?: "Q1" | "Q2" | "Q3" | "Q4";
+  [key: string]: any;
+};
 
 const TeacherHome = () => {
   const [messages, setMessages] = useState({
     important_messages: [],
     important_details: [],
   });
-
   const [isAchievementFormOpen, setIsAchievementFormOpen] = useState(false);
   const [teacherDetails, setTeacherDetails] = useState<any>(null);
   const [showTimetable, setShowTimetable] = useState(false);
   const [recentAchievements, setRecentAchievements] = useState<RecentAchievement[]>([]);
+  // New state: overall achievements (all teacher documents)
+  const [overallAchievements, setOverallAchievements] = useState<DetailedAchievement[]>([]);
 
   useEffect(() => {
     fetchMessages();
     fetchTeacherDetails();
     fetchRecentAchievements();
+    fetchOverallAchievements();
   }, []);
 
   // Fetch important messages and details from the admin section
@@ -73,7 +99,7 @@ const TeacherHome = () => {
     }
   };
 
-  // Fetch recent achievements
+  // Fetch recent achievements (limit 5)
   const fetchRecentAchievements = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -95,6 +121,94 @@ const TeacherHome = () => {
     } catch (error) {
       console.error("Error fetching recent achievements:", error);
     }
+  };
+
+  // New: Fetch all achievements for overall metrics
+  const fetchOverallAchievements = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from("detailed_achievements")
+          .select("*")
+          .eq("teacher_id", user.id)
+          .order("created_at", { ascending: false });
+        if (error) {
+          console.error("Error fetching overall achievements:", error);
+          return;
+        }
+        setOverallAchievements(data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching overall achievements:", error);
+    }
+  };
+
+  // Compute aggregated statistics for a teacher's achievements
+  const computeTeacherStats = (achievements: DetailedAchievement[]) => {
+    const stats = {
+      totalDocuments: achievements.length,
+      indexed: {
+        SCI: 0,
+        Scopus: 0,
+        "UGC Approved": 0,
+        WOS: 0,
+        "IEEE Xplore": 0,
+        Springer: 0,
+        Elsevier: 0,
+      },
+      categories: {
+        "Journal Articles": 0,
+        "Conference Papers": 0,
+        "Books & Book Chapters": 0,
+        "Patents": 0,
+        "Research Collaborations": 0,
+        "Awards & Recognitions": 0,
+        "Consultancy & Funded Projects": 0,
+        "Startups & Centers of Excellence": 0,
+        "Others": 0,
+      },
+      yearly: {
+        2022: 0,
+        2023: 0,
+        2024: 0,
+        2025: 0,
+      },
+      quality: {
+        Q1: 0,
+        Q2: 0,
+        Q3: 0,
+        Q4: 0,
+      },
+    };
+
+    achievements.forEach((achievement) => {
+      // Category breakdown
+      if (achievement.category && stats.categories[achievement.category] !== undefined) {
+        stats.categories[achievement.category]++;
+      }
+      // Yearly breakdown based on date_achieved
+      if (achievement.date_achieved) {
+        const year = new Date(achievement.date_achieved).getFullYear();
+        if ([2022, 2023, 2024, 2025].includes(year)) {
+          stats.yearly[year]++;
+        }
+      }
+      // Quality ranking breakdown
+      if (achievement.q_ranking && stats.quality[achievement.q_ranking] !== undefined) {
+        stats.quality[achievement.q_ranking]++;
+      }
+      // Indexed documents breakdown using indexed_in array
+      if (achievement.indexed_in && Array.isArray(achievement.indexed_in)) {
+        achievement.indexed_in.forEach((index: string) => {
+          if (stats.indexed[index] !== undefined) {
+            stats.indexed[index]++;
+          }
+        });
+      }
+    });
+
+    return stats;
   };
 
   // Get status badge color based on achievement status
@@ -121,10 +235,14 @@ const TeacherHome = () => {
     }
   };
 
+  // Compute overall teacher statistics using all achievements
+  const teacherStats = computeTeacherStats(overallAchievements);
+
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Important Messages and Important Details Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {/* Important Messages Section - Now with dynamic height */}
+        {/* Important Messages Section */}
         <Card className="shadow-md hover:shadow-lg transition-all duration-300">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -148,7 +266,7 @@ const TeacherHome = () => {
           </CardContent>
         </Card>
 
-        {/* Add Achievement Button & Important Details - With dynamic height */}
+        {/* Add Achievement Button & Important Details */}
         <div className="flex flex-col gap-6">
           <Dialog open={isAchievementFormOpen} onOpenChange={setIsAchievementFormOpen}>
             <DialogTrigger asChild>
@@ -165,7 +283,7 @@ const TeacherHome = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Important Details Section - Now with dynamic height */}
+          {/* Important Details Section */}
           <Card className="shadow-md hover:shadow-lg transition-all duration-300 flex-grow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -190,6 +308,106 @@ const TeacherHome = () => {
           </Card>
         </div>
       </div>
+
+      {/* New Overall Metrics Section */}
+      <Card className="shadow-md hover:shadow-lg transition-all duration-300 mb-8">
+        <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-500 p-4">
+          <CardTitle className="text-2xl font-bold text-white">Overall Metrics</CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          {/* Top Metrics Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div className="bg-gray-50 p-4 rounded-lg border">
+              <h3 className="text-lg font-semibold text-gray-700">Total Documents Uploaded</h3>
+              <p className="text-3xl font-bold text-blue-600 mt-2">{teacherStats.totalDocuments}</p>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-lg border">
+              <h3 className="text-lg font-semibold text-gray-700">Indexed Documents</h3>
+              <ul className="mt-2 space-y-1">
+                {Object.entries(teacherStats.indexed).map(([key, value]) => (
+                  <li key={key} className="flex justify-between">
+                    <span>{key}</span>
+                    <span className="font-semibold text-blue-600">{value}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-lg border">
+              <h3 className="text-lg font-semibold text-gray-700">Yearly Uploads</h3>
+              <ul className="mt-2 space-y-1">
+                {Object.entries(teacherStats.yearly).map(([year, count]) => (
+                  <li key={year} className="flex justify-between">
+                    <span>{year}</span>
+                    <span className="font-semibold text-blue-600">{count}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          {/* Charts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Category Breakdown Pie Chart */}
+            <div className="bg-gray-50 p-4 rounded-lg border">
+              <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Category Breakdown</h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie 
+                    data={Object.entries(teacherStats.categories).map(([name, value]) => ({ name, value }))}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    fill="#8884d8"
+                    label
+                  >
+                    {Object.entries(teacherStats.categories).map((entry, index) => {
+                      const colors = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AA336A", "#33AA77", "#7755AA", "#AA5577", "#55AA77"];
+                      return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                    })}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Yearly Uploads Bar Chart */}
+            <div className="bg-gray-50 p-4 rounded-lg border">
+              <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Yearly Uploads</h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={[
+                  { year: "2022", count: teacherStats.yearly[2022] },
+                  { year: "2023", count: teacherStats.yearly[2023] },
+                  { year: "2024", count: teacherStats.yearly[2024] },
+                  { year: "2025", count: teacherStats.yearly[2025] },
+                ]}>
+                  <XAxis dataKey="year" stroke="#333" />
+                  <YAxis stroke="#333" />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#82ca9d" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          {/* Quality Ranking Bar Chart */}
+          <div className="mt-6 bg-gray-50 p-4 rounded-lg border">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Quality Ranking (Q1 - Q4)</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={[
+                { quality: "Q1", count: teacherStats.quality["Q1"] },
+                { quality: "Q2", count: teacherStats.quality["Q2"] },
+                { quality: "Q3", count: teacherStats.quality["Q3"] },
+                { quality: "Q4", count: teacherStats.quality["Q4"] },
+              ]}>
+                <XAxis dataKey="quality" stroke="#333" />
+                <YAxis stroke="#333" />
+                <Tooltip />
+                <Bar dataKey="count" fill="#8884d8" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Recent Achievements Section */}
       <Card className="shadow-md hover:shadow-lg transition-all duration-300 mb-8">
