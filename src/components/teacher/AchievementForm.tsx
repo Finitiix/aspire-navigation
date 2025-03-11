@@ -69,7 +69,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
   const [achievement, setAchievement] = useState({
     category: initialData?.category || '',
     title: initialData?.title || '',
-    
+
     // Journal Articles
     journal_name: initialData?.journal_name || '',
     issn: initialData?.issn || '',
@@ -78,35 +78,35 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
     indexed_in: initialData?.indexed_in || [],
     q_ranking: initialData?.q_ranking || '',
     journal_link: initialData?.journal_link || '',
-    
+
     // Conference Papers
     conference_name: initialData?.conference_name || '',
     proceedings_publisher: initialData?.proceedings_publisher || '',
     isbn: initialData?.isbn || '',
     paper_link: initialData?.paper_link || '',
-    
+
     // Books & Book Chapters
     book_title: initialData?.book_title || '',
     chapter_title: initialData?.chapter_title || '',
     book_drive_link: initialData?.book_drive_link || '',
-    
+
     // Patents
     patent_number: initialData?.patent_number || '',
     patent_office: initialData?.patent_office || '',
     patent_status: initialData?.patent_status || '',
     patent_link: initialData?.patent_link || '',
-    
+
     // Research Collaborations
     partner_institutions: initialData?.partner_institutions || '',
     research_area: initialData?.research_area || '',
     collaboration_details: initialData?.collaboration_details || '',
-    
+
     // Awards & Recognitions
     award_name: initialData?.award_name || '',
     awarding_body: initialData?.awarding_body || '',
     award_type: initialData?.award_type || '',
     certificate_link: initialData?.certificate_link || '',
-    
+
     // Consultancy & Funded Projects
     client_organization: initialData?.client_organization || '',
     project_title: initialData?.project_title || '',
@@ -114,18 +114,18 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
     funding_amount: initialData?.funding_amount || '',
     project_status: initialData?.project_status || '',
     project_details_link: initialData?.project_details_link || '',
-    
+
     // Startups & Centers of Excellence
     startup_center_name: initialData?.startup_center_name || '',
     domain: initialData?.domain || '',
     funding_details: initialData?.funding_details || '',
     website_link: initialData?.website_link || '',
-    
+
     // Others
     description: initialData?.description || '',
     organization: initialData?.organization || '',
     proof_link: initialData?.proof_link || '',
-    
+
     // Common fields
     remarks: initialData?.remarks || '',
     document_url: initialData?.document_url || '',
@@ -179,7 +179,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
   const handleCheckboxChange = (option: string, checked: boolean) => {
     setAchievement(prev => {
       const currentIndexed = [...(prev.indexed_in || [])];
-      
+
       if (checked) {
         if (!currentIndexed.includes(option)) {
           return { ...prev, indexed_in: [...currentIndexed, option] };
@@ -187,7 +187,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
       } else {
         return { ...prev, indexed_in: currentIndexed.filter(item => item !== option) };
       }
-      
+
       return prev;
     });
   };
@@ -207,13 +207,13 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
     try {
       // Create safe folder name from teacher's name
       const folderName = teacherDetails.full_name.replace(/[^a-zA-Z0-9]/g, "_");
-      
+
       // Sanitize filename
       const fileExt = file.name.split('.').pop();
       const fileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
       const timestamp = Date.now();
       const filePath = `${folderName}/${timestamp}_${fileName}`;
-      
+
       // Upload to the new "teacher_proofs" bucket
       const { data, error } = await supabase.storage
         .from('teacher_proofs')
@@ -221,14 +221,14 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
           cacheControl: '3600',
           upsert: true
         });
-      
+
       if (error) throw error;
-      
+
       // Get the public URL
       const { data: urlData } = supabase.storage
         .from('teacher_proofs')
         .getPublicUrl(filePath);
-      
+
       handleChange('document_url', urlData.publicUrl);
       toast.success("File uploaded successfully");
     } catch (error: any) {
@@ -280,6 +280,10 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
           toast.error("Journal Link is required for Journal Articles");
           return false;
         }
+        if (!achievement.q_ranking) {
+          toast.error("Q-Ranking is required for Journal Articles");
+          return false;
+        }
         break;
       case 'Conference Papers':
         if (!achievement.conference_name || !conferenceDate) {
@@ -294,6 +298,10 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
           toast.error("ISBN is required for Conference Papers");
           return false;
         }
+        if (!achievement.q_ranking) {
+          toast.error("Q-Ranking is required for Conference Papers");
+          return false;
+        }
         break;
       case 'Books & Book Chapters':
         if (!achievement.book_title || !yearOfPublication) {
@@ -302,6 +310,10 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
         }
         if (!achievement.isbn) {
           toast.error("ISBN is required for Books & Book Chapters");
+          return false;
+        }
+        if (!achievement.q_ranking) {
+          toast.error("Q-Ranking is required for Books & Book Chapters");
           return false;
         }
         break;
@@ -348,7 +360,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm() || !teacherDetails || !dateAchieved) {
       return;
     }
@@ -360,18 +372,18 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
         category: achievement.category as AchievementCategory,
         title: achievement.title,
         date_achieved: format(dateAchieved, 'yyyy-MM-dd'),
-        
+
         // Teacher details (auto-filled, read-only)
         teacher_name: teacherDetails.full_name,
         teacher_eid: teacherDetails.eid,
         teacher_designation: teacherDetails.designation,
         teacher_mobile: teacherDetails.mobile_number,
         teacher_department: teacherDetails.department,
-        
+
         // Common fields
         remarks: achievement.remarks || null,
         document_url: achievement.document_url || null,
-        
+
         // Journal Articles fields
         journal_name: achievement.category === 'Journal Articles' ? achievement.journal_name : null,
         issn: achievement.category === 'Journal Articles' ? achievement.issn : null,
@@ -380,20 +392,20 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
         indexed_in: ['Journal Articles', 'Conference Papers', 'Books & Book Chapters'].includes(achievement.category) ? achievement.indexed_in : null,
         q_ranking: ['Journal Articles', 'Conference Papers', 'Books & Book Chapters'].includes(achievement.category) ? achievement.q_ranking : null,
         journal_link: achievement.category === 'Journal Articles' ? achievement.journal_link : null,
-        
+
         // Conference Papers fields
         conference_name: achievement.category === 'Conference Papers' ? achievement.conference_name : null,
         conference_date: achievement.category === 'Conference Papers' && conferenceDate ? format(conferenceDate, 'yyyy-MM-dd') : null,
         proceedings_publisher: achievement.category === 'Conference Papers' ? achievement.proceedings_publisher : null,
         paper_link: achievement.category === 'Conference Papers' ? achievement.paper_link : null,
-        
+
         // Books & Book Chapters fields
         book_title: achievement.category === 'Books & Book Chapters' ? achievement.book_title : null,
         chapter_title: achievement.category === 'Books & Book Chapters' ? achievement.chapter_title : null,
         book_drive_link: achievement.category === 'Books & Book Chapters' ? achievement.book_drive_link : null,
         year_of_publication: achievement.category === 'Books & Book Chapters' && yearOfPublication ? format(yearOfPublication, 'yyyy-MM-dd') : null,
         isbn: achievement.category === 'Books & Book Chapters' || achievement.category === 'Conference Papers' ? achievement.isbn : null,
-        
+
         // Patents fields
         patent_number: achievement.category === 'Patents' ? achievement.patent_number : null,
         patent_office: achievement.category === 'Patents' ? achievement.patent_office : null,
@@ -401,18 +413,18 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
         grant_date: achievement.category === 'Patents' && grantDate ? format(grantDate, 'yyyy-MM-dd') : null,
         patent_status: achievement.category === 'Patents' ? achievement.patent_status : null,
         patent_link: achievement.category === 'Patents' ? achievement.patent_link : null,
-        
+
         // Research Collaborations fields
         partner_institutions: achievement.category === 'Research Collaborations' ? achievement.partner_institutions : null,
         research_area: achievement.category === 'Research Collaborations' ? achievement.research_area : null,
         collaboration_details: achievement.category === 'Research Collaborations' ? achievement.collaboration_details : null,
-        
+
         // Awards & Recognitions fields
         award_name: achievement.category === 'Awards & Recognitions' ? achievement.award_name : null,
         awarding_body: achievement.category === 'Awards & Recognitions' ? achievement.awarding_body : null,
         award_type: achievement.category === 'Awards & Recognitions' ? achievement.award_type : null,
         certificate_link: achievement.category === 'Awards & Recognitions' ? achievement.certificate_link : null,
-        
+
         // Consultancy & Funded Projects fields
         client_organization: achievement.category === 'Consultancy & Funded Projects' ? achievement.client_organization : null,
         project_title: achievement.category === 'Consultancy & Funded Projects' ? achievement.project_title : null,
@@ -422,18 +434,18 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
         project_duration_end: achievement.category === 'Consultancy & Funded Projects' && projectEndDate ? format(projectEndDate, 'yyyy-MM-dd') : null,
         project_status: achievement.category === 'Consultancy & Funded Projects' ? achievement.project_status : null,
         project_details_link: achievement.category === 'Consultancy & Funded Projects' ? achievement.project_details_link : null,
-        
+
         // Startups & Centers of Excellence fields
         startup_center_name: achievement.category === 'Startups & Centers of Excellence' ? achievement.startup_center_name : null,
         domain: achievement.category === 'Startups & Centers of Excellence' ? achievement.domain : null,
         funding_details: achievement.category === 'Startups & Centers of Excellence' ? achievement.funding_details : null,
         website_link: achievement.category === 'Startups & Centers of Excellence' ? achievement.website_link : null,
-        
+
         // Others fields
         description: achievement.category === 'Others' ? achievement.description : null,
         organization: achievement.category === 'Others' ? achievement.organization : null,
         proof_link: achievement.category === 'Others' ? achievement.proof_link : null,
-        
+
         // Status
         status: isEditing && initialData?.status ? initialData.status : 'Pending Approval',
       };
@@ -456,7 +468,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
         if (error) throw error;
         toast.success("Achievement submitted successfully!");
       }
-      
+
       // Reset form for new submissions
       if (!isEditing) {
         setAchievement({
@@ -512,7 +524,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
         setProjectEndDate(undefined);
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
-      
+
       if (onSuccess) {
         onSuccess();
       }
@@ -613,7 +625,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 />
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">DOI *</label>
@@ -632,14 +644,15 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 />
               </div>
             </div>
-            
+
             {renderIndexedInCheckboxes()}
-            
+
             <div className="space-y-2">
-              <label className="text-sm font-medium">Q-Ranking</label>
+              <label className="text-sm font-medium">Q-Ranking *</label>
               <Select
                 value={achievement.q_ranking}
                 onValueChange={(value) => handleChange('q_ranking', value)}
+                required
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Q-Ranking" />
@@ -653,7 +666,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Journal Link *</label>
               <Input
@@ -664,11 +677,11 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 required
               />
             </div>
-            
+
             {renderFileUpload()}
           </div>
         );
-        
+
       case 'Conference Papers':
         return (
           <div className="space-y-4">
@@ -681,10 +694,10 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                   required
                 />
               </div>
-              
+
               {renderDatePicker("Conference Date", conferenceDate, setConferenceDate)}
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Proceedings Publisher</label>
@@ -702,7 +715,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">ISBN *</label>
               <Input
@@ -711,14 +724,15 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 required
               />
             </div>
-            
+
             {renderIndexedInCheckboxes()}
-            
+
             <div className="space-y-2">
-              <label className="text-sm font-medium">Q-Ranking</label>
+              <label className="text-sm font-medium">Q-Ranking *</label>
               <Select
                 value={achievement.q_ranking}
                 onValueChange={(value) => handleChange('q_ranking', value)}
+                required
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Q-Ranking" />
@@ -732,7 +746,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Paper Link</label>
               <Input
@@ -742,11 +756,11 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 placeholder="https://"
               />
             </div>
-            
+
             {renderFileUpload()}
           </div>
         );
-        
+
       case 'Books & Book Chapters':
         return (
           <div className="space-y-4">
@@ -767,7 +781,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 />
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Publisher *</label>
@@ -786,9 +800,9 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 />
               </div>
             </div>
-            
+
             {renderDatePicker("Year of Publication", yearOfPublication, setYearOfPublication)}
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Book Drive Link</label>
               <Input
@@ -798,14 +812,15 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 placeholder="https://"
               />
             </div>
-            
+
             {renderIndexedInCheckboxes()}
-            
+
             <div className="space-y-2">
-              <label className="text-sm font-medium">Q-Ranking</label>
+              <label className="text-sm font-medium">Q-Ranking *</label>
               <Select
                 value={achievement.q_ranking}
                 onValueChange={(value) => handleChange('q_ranking', value)}
+                required
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Q-Ranking" />
@@ -819,11 +834,11 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 </SelectContent>
               </Select>
             </div>
-            
+
             {renderFileUpload()}
           </div>
         );
-        
+
       case 'Patents':
         return (
           <div className="space-y-4">
@@ -856,12 +871,12 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 </Select>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {renderDatePicker("Filing Date", filingDate, setFilingDate)}
               {renderDatePicker("Grant Date", grantDate, setGrantDate)}
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Status *</label>
               <Select
@@ -881,7 +896,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Patent Link</label>
               <Input
@@ -891,11 +906,11 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 placeholder="https://"
               />
             </div>
-            
+
             {renderFileUpload()}
           </div>
         );
-        
+
       case 'Research Collaborations':
         return (
           <div className="space-y-4">
@@ -907,7 +922,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Research Area *</label>
               <Input
@@ -916,7 +931,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Collaboration Details</label>
               <Textarea
@@ -925,11 +940,11 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 rows={4}
               />
             </div>
-            
+
             {renderFileUpload()}
           </div>
         );
-        
+
       case 'Awards & Recognitions':
         return (
           <div className="space-y-4">
@@ -951,7 +966,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Type *</label>
               <Select
@@ -971,7 +986,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Certificate/Proof Link</label>
               <Input
@@ -981,11 +996,11 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 placeholder="https://"
               />
             </div>
-            
+
             {renderFileUpload()}
           </div>
         );
-        
+
       case 'Consultancy & Funded Projects':
         return (
           <div className="space-y-4">
@@ -1006,7 +1021,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 />
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Funding Agency *</label>
@@ -1025,12 +1040,12 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 />
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {renderDatePicker("Project Start Date", projectStartDate, setProjectStartDate)}
               {renderDatePicker("Project End Date", projectEndDate, setProjectEndDate)}
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Project Status</label>
               <Select
@@ -1049,7 +1064,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Project Details Link</label>
               <Input
@@ -1059,11 +1074,11 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 placeholder="https://"
               />
             </div>
-            
+
             {renderFileUpload()}
           </div>
         );
-        
+
       case 'Startups & Centers of Excellence':
         return (
           <div className="space-y-4">
@@ -1075,7 +1090,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Domain *</label>
               <Input
@@ -1084,7 +1099,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Funding Details</label>
               <Textarea
@@ -1093,7 +1108,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 rows={4}
               />
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Website Link</label>
               <Input
@@ -1103,11 +1118,11 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 placeholder="https://"
               />
             </div>
-            
+
             {renderFileUpload()}
           </div>
         );
-        
+
       case 'Others':
         return (
           <div className="space-y-4">
@@ -1120,7 +1135,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Organization</label>
               <Input
@@ -1128,7 +1143,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 onChange={(e) => handleChange('organization', e.target.value)}
               />
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Proof Link</label>
               <Input
@@ -1138,11 +1153,11 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                 placeholder="https://"
               />
             </div>
-            
+
             {renderFileUpload()}
           </div>
         );
-        
+
       default:
         return null;
     }
@@ -1161,28 +1176,28 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
               <label className="text-sm font-medium">Name</label>
               <Input value={teacherDetails?.full_name || ''} disabled />
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">EID</label>
               <Input value={teacherDetails?.eid || ''} disabled />
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Designation</label>
               <Input value={teacherDetails?.designation || ''} disabled />
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Mobile No.</label>
               <Input value={teacherDetails?.mobile_number || ''} disabled />
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Department</label>
               <Input value={teacherDetails?.department || ''} disabled />
             </div>
           </div>
-          
+
           <div className="border-t pt-4">
             <div className="space-y-4">
               <div className="space-y-2">
@@ -1213,11 +1228,11 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
                   required
                 />
               </div>
-              
+
               {renderDatePicker("Date of Achievement", dateAchieved, setDateAchieved)}
             </div>
           </div>
-          
+
           {/* Category specific fields */}
           {achievement.category && (
             <div className="border-t pt-4">
@@ -1225,7 +1240,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
               {renderCategoryFields()}
             </div>
           )}
-          
+
           {/* Common fields for all types */}
           <div className="border-t pt-4">
             <div className="space-y-2">
@@ -1237,7 +1252,7 @@ export const AchievementForm = ({ onSuccess, initialData, isEditing = false }: A
               />
             </div>
           </div>
-          
+
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Submitting..." : (isEditing ? "Update Achievement" : "Submit Achievement")}
           </Button>
