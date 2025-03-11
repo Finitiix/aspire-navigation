@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,7 +39,7 @@ const TeacherAchievements = () => {
         .select('*')
         .eq('teacher_id', user.id)
         .order('created_at', { ascending: false });
-      
+
       if (data) setAchievements(data);
       if (error) console.error("Error fetching achievements:", error);
     }
@@ -50,12 +49,12 @@ const TeacherAchievements = () => {
     if (achievement.status === "Approved") {
       return;
     }
-    
+
     const achievementData = {
       ...achievement,
       achievement_type: getCategoryType(achievement.category)
     };
-    
+
     setEditingAchievement(achievementData);
     setIsEditDialogOpen(true);
   };
@@ -71,7 +70,7 @@ const TeacherAchievements = () => {
       'Startups & Centers of Excellence': 'Others',
       'Others': 'Others'
     };
-    
+
     return categoryMap[category] || 'Others';
   };
 
@@ -105,7 +104,7 @@ const TeacherAchievements = () => {
 
   const renderFieldValue = (value: any, isLink = false) => {
     if (!value) return <span className="text-gray-400">Not provided</span>;
-    
+
     if (isLink && value.startsWith('http')) {
       return (
         <a 
@@ -118,7 +117,7 @@ const TeacherAchievements = () => {
         </a>
       );
     }
-    
+
     return value;
   };
 
@@ -155,7 +154,7 @@ const TeacherAchievements = () => {
                           <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadgeClass(achievement.status)}`}>
                             {achievement.status}
                           </span>
-                          {achievement.status !== "Approved" && (
+                          {achievement.status === "Pending Approval" && (
                             <Button 
                               variant="ghost" 
                               size="sm" 
@@ -166,7 +165,7 @@ const TeacherAchievements = () => {
                           )}
                         </div>
                       </div>
-                      
+
                       {achievement.document_url && (
                         <div className="mt-2">
                           <Button 
@@ -180,9 +179,9 @@ const TeacherAchievements = () => {
                           </Button>
                         </div>
                       )}
-                      
+
                       <Accordion type="single" collapsible className="w-full">
-                        <AccordionItem value="details">
+                        <AccordionItem value={`details-${achievement.id}`}>
                           <AccordionTrigger className="text-sm">View Details</AccordionTrigger>
                           <AccordionContent>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 mt-2">
@@ -222,7 +221,7 @@ const TeacherAchievements = () => {
                                   </div>
                                 </>
                               )}
-                              
+
                               {achievement.category === 'Conference Papers' && (
                                 <>
                                   <div>
@@ -247,7 +246,7 @@ const TeacherAchievements = () => {
                                   </div>
                                 </>
                               )}
-                              
+
                               {(achievement.category === 'Books & Book Chapters') && (
                                 <>
                                   <div>
@@ -276,7 +275,7 @@ const TeacherAchievements = () => {
                                   </div>
                                 </>
                               )}
-                              
+
                               {achievement.category === 'Patents' && (
                                 <>
                                   <div>
@@ -305,7 +304,7 @@ const TeacherAchievements = () => {
                                   </div>
                                 </>
                               )}
-                              
+
                               <div className="col-span-2 mt-2">
                                 <p className="text-sm font-medium">Additional Information:</p>
                               </div>
@@ -359,7 +358,7 @@ const TeacherAchievements = () => {
             >
               <X className="h-5 w-5" />
             </Button>
-            
+
             <h2 className="text-xl font-bold mb-4">Add Achievement</h2>
             <div className="max-h-[70vh] overflow-y-auto">
               <AchievementForm onSuccess={handleAddSuccess} />
@@ -394,10 +393,10 @@ const TeacherAchievements = () => {
             >
               <X className="h-4 w-4" />
             </Button>
-            
+
             <div className="flex flex-col items-center">
               <h3 className="text-lg font-medium mb-4">Achievement Proof Document</h3>
-              
+
               <div className="w-full h-[70vh] border border-gray-300 rounded">
                 <iframe 
                   src={viewDocumentUrl} 
@@ -405,7 +404,7 @@ const TeacherAchievements = () => {
                   className="w-full h-full"
                 />
               </div>
-              
+
               <div className="mt-4">
                 <a 
                   href={viewDocumentUrl} 
