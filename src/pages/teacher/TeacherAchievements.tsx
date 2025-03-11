@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +17,7 @@ type Achievement = {
   date_achieved: string;
   status: string;
   document_url: string;
+  q_ranking?: string;
   [key: string]: any; // For dynamic fields
 };
 
@@ -213,7 +213,7 @@ const TeacherAchievements = () => {
                                     <p className="text-sm">{renderFieldValue(achievement.google_scholar_link, true)}</p>
                                   </div>
                                   <div>
-                                    <p className="text-sm font-medium">Q1/Q2 Papers:</p>
+                                    <p className="text-sm font-medium">Q-Ranking:</p>
                                     <p className="text-sm">{renderFieldValue(achievement.q_ranking)}</p>
                                   </div>
                                   <div>
@@ -296,7 +296,7 @@ const TeacherAchievements = () => {
                                     <p className="text-sm">{achievement.grant_date ? format(new Date(achievement.grant_date), 'PPP') : 'Not provided'}</p>
                                   </div>
                                   <div>
-                                    <p className="text-sm font-medium">Patents Status:</p>
+                                    <p className="text-sm font-medium">Patent Status:</p>
                                     <p className="text-sm">{renderFieldValue(achievement.patent_status)}</p>
                                   </div>
                                   <div>
