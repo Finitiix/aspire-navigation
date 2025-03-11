@@ -120,8 +120,6 @@ const TeacherAchievements = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="grid gap-8">
-        {/* Achievement Statistics */}
-        <AchievementStats />
 
         <Button 
           className="bg-[#ea384c] hover:bg-red-700 text-white font-bold py-10 px-6 rounded-lg text-lg w-full"
