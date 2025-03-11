@@ -1,123 +1,16 @@
+
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { X, Pencil, ExternalLink, FileText } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AchievementForm } from "@/components/teacher/AchievementForm";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AchievementStats } from "@/components/teacher/AchievementStats";
 import { toast } from "sonner";
 
-//
-// AchievementForm Component
-//
-type AchievementFormData = {
-  category: string;
-  title: string;
-  date_achieved: string;
-  q_ranking?: string;
-  // include other fields as necessary
-};
-
-type AchievementFormProps = {
-  initialData?: AchievementFormData;
-  isEditing?: boolean;
-  onSuccess: () => void;
-};
-
-export const AchievementForm: React.FC<AchievementFormProps> = ({ initialData, isEditing, onSuccess }) => {
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors }
-  } = useForm<AchievementFormData>({
-    defaultValues: initialData || {}
-  });
-
-  const category = watch("category");
-
-  const onSubmit = async (data: AchievementFormData) => {
-    try {
-      // TODO: Implement your API call to add/update achievement here.
-      // For demonstration, we simulate a delay and then call onSuccess:
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      onSuccess();
-    } catch (error: any) {
-      toast.error("Error saving achievement: " + error.message);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div>
-        <label className="block font-medium">Category</label>
-        <select 
-          {...register("category", { required: "Category is required" })}
-          className="border p-2 w-full"
-        >
-          <option value="">Select Category</option>
-          <option value="Journal Articles">Journal Articles</option>
-          <option value="Conference Papers">Conference Papers</option>
-          <option value="Books & Book Chapters">Books & Book Chapters</option>
-          <option value="Patents">Patents</option>
-          <option value="Awards & Recognitions">Awards & Recognitions</option>
-          <option value="Consultancy & Funded Projects">Consultancy & Funded Projects</option>
-          <option value="Startups & Centers of Excellence">Startups & Centers of Excellence</option>
-          <option value="Others">Others</option>
-        </select>
-        {errors.category && <p className="text-red-600">{errors.category.message}</p>}
-      </div>
-
-      <div>
-        <label className="block font-medium">Title</label>
-        <input 
-          type="text" 
-          {...register("title", { required: "Title is required" })}
-          className="border p-2 w-full"
-        />
-        {errors.title && <p className="text-red-600">{errors.title.message}</p>}
-      </div>
-
-      <div>
-        <label className="block font-medium">Date Achieved</label>
-        <input 
-          type="date" 
-          {...register("date_achieved", { required: "Date Achieved is required" })}
-          className="border p-2 w-full"
-        />
-        {errors.date_achieved && <p className="text-red-600">{errors.date_achieved.message}</p>}
-      </div>
-
-      {category === "Journal Articles" && (
-        <div>
-          <label className="block font-medium">
-            Q Ranking <span className="text-red-600">*</span>
-          </label>
-          <input 
-            type="text" 
-            placeholder="e.g., Q1, Q2, Q3, Q4"
-            {...register("q_ranking", { required: "Q Ranking is required for Journal Articles" })}
-            className="border p-2 w-full"
-          />
-          {errors.q_ranking && <p className="text-red-600">{errors.q_ranking.message}</p>}
-        </div>
-      )}
-
-      <div>
-        <Button type="submit" className="mt-4">
-          {isEditing ? "Update Achievement" : "Add Achievement"}
-        </Button>
-      </div>
-    </form>
-  );
-};
-
-//
-// TeacherAchievements Component
-//
 type Achievement = {
   id: string;
   category: string;
@@ -125,11 +18,10 @@ type Achievement = {
   date_achieved: string;
   status: string;
   document_url: string;
-  q_ranking?: string;
-  // other dynamic fields can be added here
+  [key: string]: any; // For dynamic fields
 };
 
-const TeacherAchievements: React.FC = () => {
+const TeacherAchievements = () => {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingAchievement, setEditingAchievement] = useState<Achievement | null>(null);
@@ -155,9 +47,32 @@ const TeacherAchievements: React.FC = () => {
   };
 
   const handleEditClick = (achievement: Achievement) => {
-    if (achievement.status === "Approved") return;
-    setEditingAchievement(achievement);
+    if (achievement.status === "Approved") {
+      return;
+    }
+    
+    const achievementData = {
+      ...achievement,
+      achievement_type: getCategoryType(achievement.category)
+    };
+    
+    setEditingAchievement(achievementData);
     setIsEditDialogOpen(true);
+  };
+
+  const getCategoryType = (category: string) => {
+    const categoryMap: Record<string, string> = {
+      'Journal Articles': 'Research & Publications',
+      'Conference Papers': 'Research & Publications',
+      'Books & Book Chapters': 'Book Published',
+      'Patents': 'Patents & Grants',
+      'Awards & Recognitions': 'Awards & Recognitions',
+      'Consultancy & Funded Projects': 'Projects & Workshops',
+      'Startups & Centers of Excellence': 'Others',
+      'Others': 'Others'
+    };
+    
+    return categoryMap[category] || 'Others';
   };
 
   const handleEditSuccess = () => {
@@ -190,6 +105,7 @@ const TeacherAchievements: React.FC = () => {
 
   const renderFieldValue = (value: any, isLink = false) => {
     if (!value) return <span className="text-gray-400">Not provided</span>;
+    
     if (isLink && value.startsWith('http')) {
       return (
         <a 
@@ -202,12 +118,14 @@ const TeacherAchievements: React.FC = () => {
         </a>
       );
     }
+    
     return value;
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="grid gap-8">
+        {/* Achievement Statistics */}
         <AchievementStats />
 
         <Button 
@@ -231,9 +149,7 @@ const TeacherAchievements: React.FC = () => {
                         <div>
                           <h3 className="font-medium">{achievement.title}</h3>
                           <p className="text-sm text-gray-600">{achievement.category}</p>
-                          <p className="text-sm text-gray-600">
-                            Date: {format(new Date(achievement.date_achieved), 'PPP')}
-                          </p>
+                          <p className="text-sm text-gray-600">Date: {format(new Date(achievement.date_achieved), 'PPP')}</p>
                         </div>
                         <div className="flex items-center space-x-2">
                           <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadgeClass(achievement.status)}`}>
@@ -297,7 +213,7 @@ const TeacherAchievements: React.FC = () => {
                                     <p className="text-sm">{renderFieldValue(achievement.google_scholar_link, true)}</p>
                                   </div>
                                   <div>
-                                    <p className="text-sm font-medium">Q Ranking:</p>
+                                    <p className="text-sm font-medium">Q1/Q2 Papers:</p>
                                     <p className="text-sm">{renderFieldValue(achievement.q_ranking)}</p>
                                   </div>
                                   <div>
@@ -315,9 +231,7 @@ const TeacherAchievements: React.FC = () => {
                                   </div>
                                   <div>
                                     <p className="text-sm font-medium">Conference Date:</p>
-                                    <p className="text-sm">
-                                      {achievement.conference_date ? format(new Date(achievement.conference_date), 'PPP') : 'Not provided'}
-                                    </p>
+                                    <p className="text-sm">{achievement.conference_date ? format(new Date(achievement.conference_date), 'PPP') : 'Not provided'}</p>
                                   </div>
                                   <div>
                                     <p className="text-sm font-medium">DOI:</p>
@@ -350,9 +264,7 @@ const TeacherAchievements: React.FC = () => {
                                   </div>
                                   <div>
                                     <p className="text-sm font-medium">Year of Publication:</p>
-                                    <p className="text-sm">
-                                      {achievement.year_of_publication ? format(new Date(achievement.year_of_publication), 'PPP') : 'Not provided'}
-                                    </p>
+                                    <p className="text-sm">{achievement.year_of_publication ? format(new Date(achievement.year_of_publication), 'PPP') : 'Not provided'}</p>
                                   </div>
                                   <div className="col-span-2">
                                     <p className="text-sm font-medium">Book Drive Link:</p>
@@ -377,15 +289,11 @@ const TeacherAchievements: React.FC = () => {
                                   </div>
                                   <div>
                                     <p className="text-sm font-medium">Filing Date:</p>
-                                    <p className="text-sm">
-                                      {achievement.filing_date ? format(new Date(achievement.filing_date), 'PPP') : 'Not provided'}
-                                    </p>
+                                    <p className="text-sm">{achievement.filing_date ? format(new Date(achievement.filing_date), 'PPP') : 'Not provided'}</p>
                                   </div>
                                   <div>
                                     <p className="text-sm font-medium">Grant Date:</p>
-                                    <p className="text-sm">
-                                      {achievement.grant_date ? format(new Date(achievement.grant_date), 'PPP') : 'Not provided'}
-                                    </p>
+                                    <p className="text-sm">{achievement.grant_date ? format(new Date(achievement.grant_date), 'PPP') : 'Not provided'}</p>
                                   </div>
                                   <div>
                                     <p className="text-sm font-medium">Patents Status:</p>
