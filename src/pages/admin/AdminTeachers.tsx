@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
+import jsPDF from "jspdf";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Search, X, Eye, ExternalLink, FileText } from "lucide-react";
+import { Search, X, Eye, ExternalLink, FileText, Trash } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format as dateFormat } from "date-fns";
@@ -123,6 +124,14 @@ const computeTeacherStats = (achievements: DetailedAchievement[]) => {
   });
 
   return stats;
+};
+
+// Helper function to extract the file path from the document URL.
+// Assumes URL format: https://<project-ref>.supabase.co/storage/v1/object/public/teacher_proofs/<file-path>
+const extractFilePath = (url: string): string | null => {
+  const regex = /teacher_proofs\/(.+)$/;
+  const match = url.match(regex);
+  return match ? match[1] : null;
 };
 
 const AdminTeachers = () => {
@@ -251,6 +260,165 @@ const AdminTeachers = () => {
     }
   };
 
+  // New function to delete an achievement along with its associated file in the bucket
+  const handleDeleteAchievement = async (achievementId: string) => {
+    try {
+      // Find the achievement to delete
+      const achievement = selectedTeacher?.achievements.find((a) => a.id === achievementId);
+      if (achievement && achievement.document_url) {
+        const filePath = extractFilePath(achievement.document_url);
+        if (filePath) {
+          const { error: storageError } = await supabase
+            .storage
+            .from("teacher_proofs")
+            .remove([filePath]);
+          if (storageError) {
+            console.error("Error deleting file from bucket:", storageError);
+            toast.error("Failed to delete file from storage");
+            return;
+          }
+        }
+      }
+
+      // Delete the achievement record
+      const { error } = await supabase
+        .from("detailed_achievements")
+        .delete()
+        .eq("id", achievementId);
+      if (error) throw error;
+
+      if (selectedTeacher) {
+        const updatedAchievements = selectedTeacher.achievements.filter((a) => a.id !== achievementId);
+        setSelectedTeacher({ ...selectedTeacher, achievements: updatedAchievements });
+
+        const updatedTeachers = teachers.map((t) =>
+          t.id === selectedTeacher.id ? { ...t, achievements: updatedAchievements } : t
+        );
+        setTeachers(updatedTeachers);
+        setFilteredTeachers(
+          filteredTeachers.map((t) =>
+            t.id === selectedTeacher.id ? { ...t, achievements: updatedAchievements } : t
+          )
+        );
+      }
+      toast.success("Achievement and file deleted successfully");
+    } catch (error) {
+      console.error("Error deleting achievement:", error);
+      toast.error("Failed to delete achievement");
+    }
+  };
+
+  // Export teacher details as PDF
+  const exportPDF = () => {
+    if (!selectedTeacher) return;
+    const teacher = selectedTeacher;
+    const doc = new jsPDF();
+
+    doc.setFontSize(18);
+    doc.text("Teacher Details", 14, 22);
+
+    doc.setFontSize(12);
+    let y = 30;
+    doc.text(`Name: ${teacher.full_name}`, 14, y);
+    y += 7;
+    doc.text(`EID: ${teacher.eid}`, 14, y);
+    y += 7;
+    doc.text(`Email: ${teacher.email_id}`, 14, y);
+    y += 7;
+    doc.text(`Department: ${teacher.department}`, 14, y);
+    y += 7;
+    doc.text(`Designation: ${teacher.designation}`, 14, y);
+    y += 10;
+
+    // Additional details
+    doc.text("Additional Details:", 14, y);
+    y += 7;
+    doc.text(`Date of Joining: ${teacher.date_of_joining || "Not provided"}`, 14, y);
+    y += 7;
+    doc.text(`Highest Qualification: ${teacher.highest_qualification || "Not provided"}`, 14, y);
+    y += 7;
+    doc.text(`Skills: ${teacher.skills ? teacher.skills.join(", ") : "Not provided"}`, 14, y);
+    y += 7;
+    doc.text(`Address: ${teacher.address || "Not provided"}`, 14, y);
+    y += 7;
+    doc.text(`Cabin No: ${teacher.cabin_no || "Not provided"}`, 14, y);
+    y += 7;
+    doc.text(`Block: ${teacher.block || "Not provided"}`, 14, y);
+    y += 10;
+
+    // Teacher Document Statistics
+    const stats = computeTeacherStats(teacher.achievements || []);
+    doc.text("Teacher Document Statistics:", 14, y);
+    y += 7;
+    doc.text(`Total Documents: ${stats.totalDocuments}`, 14, y);
+    y += 7;
+    Object.entries(stats.indexed).forEach(([key, value]) => {
+      doc.text(`${key}: ${value}`, 14, y);
+      y += 7;
+    });
+    y += 10;
+
+    // Achievements details
+    doc.text("Achievements:", 14, y);
+    y += 7;
+    teacher.achievements?.forEach((achievement, index) => {
+      doc.text(`${index + 1}. ${achievement.title} (${achievement.category}) - ${achievement.status}`, 14, y);
+      y += 7;
+      doc.text(`Date Achieved: ${new Date(achievement.date_achieved).toLocaleDateString()}`, 14, y);
+      y += 7;
+      if (achievement.document_url) {
+        doc.text(`Document URL: ${achievement.document_url}`, 14, y);
+        y += 7;
+      }
+      y += 5;
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+    });
+
+    doc.save(`${teacher.full_name}_details.pdf`);
+  };
+
+  // Export teacher details as CSV
+  const exportCSV = () => {
+    if (!selectedTeacher) return;
+    const teacher = selectedTeacher;
+    const headers = [
+      "Full Name", "EID", "Email", "Department", "Designation", "Date of Joining",
+      "Highest Qualification", "Skills", "Address", "Cabin No", "Block",
+      "Achievement Title", "Achievement Category", "Date Achieved", "Status", "Document URL"
+    ];
+    const rows = [];
+    teacher.achievements?.forEach((achievement) => {
+      rows.push([
+        teacher.full_name,
+        teacher.eid,
+        teacher.email_id,
+        teacher.department,
+        teacher.designation,
+        teacher.date_of_joining || "",
+        teacher.highest_qualification || "",
+        teacher.skills ? teacher.skills.join(", ") : "",
+        teacher.address || "",
+        teacher.cabin_no || "",
+        teacher.block || "",
+        achievement.title,
+        achievement.category,
+        new Date(achievement.date_achieved).toLocaleDateString(),
+        achievement.status,
+        achievement.document_url || ""
+      ]);
+    });
+    const csvContent = [headers.join(","), ...rows.map((r) => r.map((v) => `"${v}"`).join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${teacher.full_name}_details.csv`);
+    link.click();
+  };
+
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case "Approved":
@@ -360,7 +528,18 @@ const AdminTeachers = () => {
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Teacher Details</DialogTitle>
+            <div className="flex items-center justify-between w-full">
+              <DialogTitle>Teacher Details</DialogTitle>
+              {/* Export Buttons */}
+              <div className="flex space-x-2">
+                <Button onClick={exportPDF} variant="outline" size="sm">
+                  Export PDF
+                </Button>
+                <Button onClick={exportCSV} variant="outline" size="sm">
+                  Export CSV
+                </Button>
+              </div>
+            </div>
           </DialogHeader>
 
           {selectedTeacher && (
@@ -402,7 +581,6 @@ const AdminTeachers = () => {
               <div className="border-t pt-6">
                 <h3 className="text-xl font-bold mb-4">Additional Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  
                   <div>
                     <h4 className="font-medium">Date of Joining</h4>
                     <p>{selectedTeacher.date_of_joining ? dateFormat(new Date(selectedTeacher.date_of_joining), "PPP") : "Not provided"}</p>
@@ -612,6 +790,13 @@ const AdminTeachers = () => {
                                   </Button>
                                 </>
                               )}
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDeleteAchievement(achievement.id)}
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
                             </div>
                           </div>
                         </Card>
@@ -695,6 +880,13 @@ const AdminTeachers = () => {
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleDeleteAchievement(achievement.id)}
+                                >
+                                  <Trash className="h-4 w-4" />
+                                </Button>
                               </div>
                             </div>
                           </Card>
@@ -761,9 +953,18 @@ const AdminTeachers = () => {
                                   </AccordionItem>
                                 </Accordion>
                               </div>
-                              <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
-                                Approved
-                              </span>
+                              <div className="flex items-center space-x-2">
+                                <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                  Approved
+                                </span>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleDeleteAchievement(achievement.id)}
+                                >
+                                  <Trash className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
                           </Card>
                         ))}
