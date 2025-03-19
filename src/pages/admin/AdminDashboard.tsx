@@ -339,109 +339,6 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Document & Achievement Statistics Section */}
-      <Card className="p-6 mb-8">
-        <h2 className="text-2xl font-bold mb-6 text-center">Document & Achievement Statistics</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <div className="bg-gray-50 p-4 rounded shadow">
-            <h3 className="text-lg font-semibold text-gray-700">Total Documents Uploaded</h3>
-            <p className="text-3xl font-bold text-primary mt-2">{docStats.totalDocuments}</p>
-          </div>
-          <div className="bg-gray-50 p-4 rounded shadow">
-            <h3 className="text-lg font-semibold text-gray-700">Indexed Documents</h3>
-            <ul className="mt-2 space-y-1">
-              {Object.entries(docStats.indexed).map(([key, value]) => (
-                <li key={key} className="flex justify-between">
-                  <span>{key}</span>
-                  <span className="font-semibold">{value}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="bg-gray-50 p-4 rounded shadow">
-            <h3 className="text-lg font-semibold text-gray-700">Yearly Uploads</h3>
-            <ul className="mt-2 space-y-1">
-              {Object.entries(docStats.yearly).map(([year, count]) => (
-                <li key={year} className="flex justify-between">
-                  <span>{year}</span>
-                  <span className="font-semibold">{count}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-gray-50 p-4 rounded shadow">
-            <h3 className="text-lg font-semibold text-gray-700 mb-2 text-center">Category Breakdown (Pie Chart)</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie 
-                  data={Object.entries(docStats.categories).map(([name, value]) => ({ name, value }))}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  fill="#8884d8"
-                  label
-                >
-                  {Object.entries(docStats.categories).map((entry, index) => {
-                    const colors = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AA336A", "#33AA77", "#7755AA", "#AA5577", "#55AA77"];
-                    return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
-                  })}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-            {/* Category List */}
-            <div className="mt-4">
-              <h3 className="text-md font-semibold text-gray-700">Category Details</h3>
-              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {Object.entries(docStats.categories).map(([cat, count]) => (
-                  <div key={cat} className="flex justify-between items-center p-2 border rounded bg-white">
-                    <span>{cat}</span>
-                    <span className="font-bold">{count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="bg-gray-50 p-4 rounded shadow">
-            <h3 className="text-lg font-semibold text-gray-700 mb-2 text-center">Yearly Uploads (Bar Chart)</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={[
-                { year: "2022", count: docStats.yearly[2022] },
-                { year: "2023", count: docStats.yearly[2023] },
-                { year: "2024", count: docStats.yearly[2024] },
-                { year: "2025", count: docStats.yearly[2025] },
-              ]}>
-                <XAxis dataKey="year" stroke="#333" />
-                <YAxis stroke="#333" />
-                <Tooltip />
-                <Bar dataKey="count" fill="#82ca9d" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        <div className="mt-6 bg-gray-50 p-4 rounded shadow">
-          <h3 className="text-lg font-semibold text-gray-700 mb-2 text-center">Quality Ranking (Q1 - Q4)</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={[
-              { quality: "Q1", count: docStats.quality["Q1"] },
-              { quality: "Q2", count: docStats.quality["Q2"] },
-              { quality: "Q3", count: docStats.quality["Q3"] },
-              { quality: "Q4", count: docStats.quality["Q4"] },
-            ]}>
-              <XAxis dataKey="quality" stroke="#333" />
-              <YAxis stroke="#333" />
-              <Tooltip />
-              <Bar dataKey="count" fill="#8884d8" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
-
       {/* Approval Requests for Achievements Section - Improved with details and clickable links */}
       <Card className="p-6 mb-8">
         <h2 className="text-xl font-bold mb-4">Approval Requests for Achievements</h2>
@@ -594,6 +491,109 @@ const AdminDashboard = () => {
           ) : (
             <p className="text-gray-500">No pending achievements.</p>
           )}
+        </div>
+      </Card>
+
+      {/* Document & Achievement Statistics Section */}
+      <Card className="p-6 mb-8">
+        <h2 className="text-2xl font-bold mb-6 text-center">Document & Achievement Statistics</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <div className="bg-gray-50 p-4 rounded shadow">
+            <h3 className="text-lg font-semibold text-gray-700">Total Documents Uploaded</h3>
+            <p className="text-3xl font-bold text-primary mt-2">{docStats.totalDocuments}</p>
+          </div>
+          <div className="bg-gray-50 p-4 rounded shadow">
+            <h3 className="text-lg font-semibold text-gray-700">Indexed Documents</h3>
+            <ul className="mt-2 space-y-1">
+              {Object.entries(docStats.indexed).map(([key, value]) => (
+                <li key={key} className="flex justify-between">
+                  <span>{key}</span>
+                  <span className="font-semibold">{value}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="bg-gray-50 p-4 rounded shadow">
+            <h3 className="text-lg font-semibold text-gray-700">Yearly Uploads</h3>
+            <ul className="mt-2 space-y-1">
+              {Object.entries(docStats.yearly).map(([year, count]) => (
+                <li key={year} className="flex justify-between">
+                  <span>{year}</span>
+                  <span className="font-semibold">{count}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-gray-50 p-4 rounded shadow">
+            <h3 className="text-lg font-semibold text-gray-700 mb-2 text-center">Category Breakdown (Pie Chart)</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie 
+                  data={Object.entries(docStats.categories).map(([name, value]) => ({ name, value }))}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  fill="#8884d8"
+                  label
+                >
+                  {Object.entries(docStats.categories).map((entry, index) => {
+                    const colors = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AA336A", "#33AA77", "#7755AA", "#AA5577", "#55AA77"];
+                    return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                  })}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+            {/* Category List */}
+            <div className="mt-4">
+              <h3 className="text-md font-semibold text-gray-700">Category Details</h3>
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {Object.entries(docStats.categories).map(([cat, count]) => (
+                  <div key={cat} className="flex justify-between items-center p-2 border rounded bg-white">
+                    <span>{cat}</span>
+                    <span className="font-bold">{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="bg-gray-50 p-4 rounded shadow">
+            <h3 className="text-lg font-semibold text-gray-700 mb-2 text-center">Yearly Uploads (Bar Chart)</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={[
+                { year: "2022", count: docStats.yearly[2022] },
+                { year: "2023", count: docStats.yearly[2023] },
+                { year: "2024", count: docStats.yearly[2024] },
+                { year: "2025", count: docStats.yearly[2025] },
+              ]}>
+                <XAxis dataKey="year" stroke="#333" />
+                <YAxis stroke="#333" />
+                <Tooltip />
+                <Bar dataKey="count" fill="#82ca9d" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="mt-6 bg-gray-50 p-4 rounded shadow">
+          <h3 className="text-lg font-semibold text-gray-700 mb-2 text-center">Quality Ranking (Q1 - Q4)</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={[
+              { quality: "Q1", count: docStats.quality["Q1"] },
+              { quality: "Q2", count: docStats.quality["Q2"] },
+              { quality: "Q3", count: docStats.quality["Q3"] },
+              { quality: "Q4", count: docStats.quality["Q4"] },
+            ]}>
+              <XAxis dataKey="quality" stroke="#333" />
+              <YAxis stroke="#333" />
+              <Tooltip />
+              <Bar dataKey="count" fill="#8884d8" />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </Card>
 
