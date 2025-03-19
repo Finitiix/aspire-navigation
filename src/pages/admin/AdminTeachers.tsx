@@ -141,6 +141,9 @@ const AdminTeachers = () => {
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [viewDocumentUrl, setViewDocumentUrl] = useState<string | null>(null);
+  // New state for delete confirmation dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [achievementToDelete, setAchievementToDelete] = useState<DetailedAchievement | null>(null);
 
   useEffect(() => {
     fetchTeachers();
@@ -260,7 +263,13 @@ const AdminTeachers = () => {
     }
   };
 
-  // New function to delete an achievement along with its associated file in the bucket
+  // New function to open delete confirmation dialog
+  const openDeleteDialog = (achievement: DetailedAchievement) => {
+    setAchievementToDelete(achievement);
+    setDeleteDialogOpen(true);
+  };
+
+  // Existing function to delete an achievement along with its associated file in the bucket
   const handleDeleteAchievement = async (achievementId: string) => {
     try {
       // Find the achievement to delete
@@ -415,7 +424,7 @@ const AdminTeachers = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `${teacher.full_name}_details.csv`);
+    link.setAttribute("download", `${selectedTeacher.full_name}_details.csv`);
     link.click();
   };
 
@@ -793,7 +802,7 @@ const AdminTeachers = () => {
                               <Button
                                 size="sm"
                                 variant="destructive"
-                                onClick={() => handleDeleteAchievement(achievement.id)}
+                                onClick={() => openDeleteDialog(achievement)}
                               >
                                 <Trash className="h-4 w-4" />
                               </Button>
@@ -883,7 +892,7 @@ const AdminTeachers = () => {
                                 <Button
                                   size="sm"
                                   variant="destructive"
-                                  onClick={() => handleDeleteAchievement(achievement.id)}
+                                  onClick={() => openDeleteDialog(achievement)}
                                 >
                                   <Trash className="h-4 w-4" />
                                 </Button>
@@ -960,7 +969,7 @@ const AdminTeachers = () => {
                                 <Button
                                   size="sm"
                                   variant="destructive"
-                                  onClick={() => handleDeleteAchievement(achievement.id)}
+                                  onClick={() => openDeleteDialog(achievement)}
                                 >
                                   <Trash className="h-4 w-4" />
                                 </Button>
@@ -1018,6 +1027,25 @@ const AdminTeachers = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          <p>This achievement is deleting. We can't undo this action. Are you sure to delete this achievement like this?</p>
+          <div className="mt-4 flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={async () => {
+              if (achievementToDelete) {
+                await handleDeleteAchievement(achievementToDelete.id);
+                setDeleteDialogOpen(false);
+              }
+            }}>Delete</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
