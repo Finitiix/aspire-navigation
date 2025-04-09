@@ -92,7 +92,6 @@ const AdminAuth = () => {
             className="mt-4 w-full"
             onClick={() => setIsSignIn(!isSignIn)}
           >
-            {isSignIn ? "Don't have an account? Register" : 'Already have an account? Sign In'}
           </Button>
         </CardContent>
       </Card>
