@@ -5,27 +5,6 @@ import { Link } from "react-router-dom";
 import { Award, Target, Users, Trophy } from "lucide-react";
 
 const About = () => {
-  const team = [
-    {
-      name: "Dr. Emily Johnson",
-      role: "Founder & CEO",
-      bio: "Former education professor with over 15 years of experience in educational technology.",
-      image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&auto=format&fit=crop"
-    },
-    {
-      name: "Marcus Chen",
-      role: "Chief Technology Officer",
-      bio: "Tech innovator with a passion for creating tools that transform the educational landscape.",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&auto=format&fit=crop"
-    },
-    {
-      name: "Priya Patel",
-      role: "Head of Educational Content",
-      bio: "Curriculum specialist focused on creating engaging and effective learning materials.",
-      image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&auto=format&fit=crop"
-    }
-  ];
-
   const values = [
     {
       icon: Award,
@@ -110,30 +89,6 @@ const About = () => {
                 <value.icon className="h-12 w-12 text-primary mb-4" />
                 <h3 className="text-xl font-semibold mb-3">{value.title}</h3>
                 <p className="text-gray-600">{value.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Our Team */}
-      <section className="py-16 px-6 bg-white">
-        <div className="container mx-auto">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Our Leadership Team</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {team.map((member, index) => (
-              <div key={index} className="text-center">
-                <div className="relative inline-block mb-4">
-                  <div className="absolute inset-0 rounded-full bg-primary/20 transform scale-110"></div>
-                  <img 
-                    src={member.image} 
-                    alt={member.name} 
-                    className="w-48 h-48 object-cover rounded-full relative z-10" 
-                  />
-                </div>
-                <h3 className="text-xl font-semibold mb-1">{member.name}</h3>
-                <p className="text-primary font-medium mb-3">{member.role}</p>
-                <p className="text-gray-600">{member.bio}</p>
               </div>
             ))}
           </div>
