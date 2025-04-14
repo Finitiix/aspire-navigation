@@ -17,6 +17,8 @@ const Admin = () => {
   const [adminData, setAdminData] = useState<any>(null);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [newPassword, setNewPassword] = useState('');
+  const [adminDepartments, setAdminDepartments] = useState<string[]>([]);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -40,6 +42,18 @@ const Admin = () => {
       if (profile?.role !== 'admin') {
         navigate('/');
         return;
+      }
+
+      // Get admin's department access
+      const { data: adminDeptData } = await supabase
+        .from('admin_departments')
+        .select('department_id, is_super_admin')
+        .eq('admin_id', user.id);
+      
+      if (adminDeptData) {
+        const superAdmin = adminDeptData.some(item => item.is_super_admin);
+        setIsSuperAdmin(superAdmin);
+        setAdminDepartments(adminDeptData.map(item => item.department_id));
       }
 
       setAdminData({
@@ -101,6 +115,11 @@ const Admin = () => {
                   <UserCircle2 className="w-5 h-5" />
                 </div>
                 <span>Welcome, {adminData?.name}!</span>
+                {isSuperAdmin && (
+                  <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    Super Admin
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex items-center space-x-2">
