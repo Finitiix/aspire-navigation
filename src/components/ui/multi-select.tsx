@@ -90,17 +90,20 @@ export function MultiSelect({
             </Badge>
           );
         })}
-        <CommandPrimitive onKeyDown={handleKeyDown}>
-          <input
-            ref={inputRef}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            className="placeholder:text-muted-foreground bg-white outline-none flex-1 min-w-32 ml-1"
-            placeholder={selected && selected.length === 0 ? placeholder : ""}
-            onFocus={() => setOpen(true)}
-            onBlur={() => setOpen(false)}
-          />
-        </CommandPrimitive>
+        {/* Use a div wrapper around CommandPrimitive to ensure it never receives null children */}
+        <div className="flex-1">
+          <CommandPrimitive onKeyDown={handleKeyDown}>
+            <input
+              ref={inputRef}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              className="placeholder:text-muted-foreground bg-white outline-none w-full min-w-32 ml-1"
+              placeholder={selected && selected.length === 0 ? placeholder : ""}
+              onFocus={() => setOpen(true)}
+              onBlur={() => setOpen(false)}
+            />
+          </CommandPrimitive>
+        </div>
       </div>
       <div className="relative mt-2">
         <Command
