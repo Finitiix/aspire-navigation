@@ -53,9 +53,9 @@ type DetailedAchievement = {
   date_achieved: string;
   status: string;
   document_url: string;
-  // Additional fields for statistics
+  // Updated q_ranking type to allow string or specific values
+  q_ranking?: string;
   indexed_in?: string[];
-  q_ranking?: "Q1" | "Q2" | "Q3" | "Q4";
   [key: string]: any;
 };
 
