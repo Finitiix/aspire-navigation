@@ -9,6 +9,48 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_departments: {
+        Row: {
+          admin_id: string
+          created_at: string | null
+          department_id: string
+          id: string
+          is_super_admin: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string | null
+          department_id: string
+          id?: string
+          is_super_admin?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string | null
+          department_id?: string
+          id?: string
+          is_super_admin?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_departments_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_departments_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departments: {
         Row: {
           created_at: string | null

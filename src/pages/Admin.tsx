@@ -10,6 +10,13 @@ import { LogOut, UserCircle2, Home, Users, Settings, MessageSquare } from "lucid
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
+// Define TypeScript interfaces for admin departments
+interface AdminDepartment {
+  admin_id: string;
+  department_id: string;
+  is_super_admin: boolean;
+}
+
 const Admin = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -50,7 +57,7 @@ const Admin = () => {
         .select('department_id, is_super_admin')
         .eq('admin_id', user.id);
       
-      if (adminDeptData) {
+      if (adminDeptData && Array.isArray(adminDeptData)) {
         const superAdmin = adminDeptData.some(item => item.is_super_admin);
         setIsSuperAdmin(superAdmin);
         setAdminDepartments(adminDeptData.map(item => item.department_id));

@@ -5,12 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Command, CommandGroup, CommandItem } from "@/components/ui/command";
 import { Command as CommandPrimitive } from "cmdk";
 
-type Option = {
+export type Option = {
   label: string;
   value: string;
 };
 
-type MultiSelectProps = {
+export type MultiSelectProps = {
   options: Option[];
   selected: string[];
   onChange: (selected: string[]) => void;

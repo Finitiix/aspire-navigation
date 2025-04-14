@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,14 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { MultiSelect } from "@/components/ui/multi-select";
+import { MultiSelect, Option } from "@/components/ui/multi-select";
+
+// Define interface for admin_departments table
+interface AdminDepartment {
+  admin_id: string;
+  department_id: string;
+  is_super_admin: boolean;
+}
 
 const AdminSettings = () => {
   const [adminEmail, setAdminEmail] = useState("");
@@ -47,13 +55,14 @@ const AdminSettings = () => {
       if (user) {
         setAdminUser(user);
         
-        const { data: adminData } = await supabase
+        const { data: adminDepts } = await supabase
           .from('admin_departments')
           .select('is_super_admin')
-          .eq('admin_id', user.id)
-          .single();
+          .eq('admin_id', user.id);
         
-        setIsSuperAdmin(adminData?.is_super_admin || false);
+        if (adminDepts && Array.isArray(adminDepts) && adminDepts.length > 0) {
+          setIsSuperAdmin(adminDepts.some(dept => dept.is_super_admin));
+        }
       }
     } catch (error) {
       console.error('Error fetching admin details:', error);
@@ -107,23 +116,24 @@ const AdminSettings = () => {
       if (error) throw error;
 
       if (data.user) {
-        const adminDeptEntries = selectedDepartments.map(deptId => ({
-          admin_id: data.user!.id,
-          department_id: deptId,
-          is_super_admin: false
-        }));
+        // Create entries in admin_departments for each selected department
+        for (const deptId of selectedDepartments) {
+          const { error: deptError } = await supabase
+            .from('admin_departments')
+            .insert({
+              admin_id: data.user.id,
+              department_id: deptId,
+              is_super_admin: false
+            });
 
-        const { error: deptError } = await supabase
-          .from('admin_departments')
-          .insert(adminDeptEntries);
+          if (deptError) throw deptError;
+        }
 
-        if (deptError) throw deptError;
+        toast.success('Department admin created successfully. Check email for confirmation.');
+        setAdminEmail('');
+        setAdminPassword('');
+        setSelectedDepartments([]);
       }
-
-      toast.success('Department admin created successfully. Check email for confirmation.');
-      setAdminEmail('');
-      setAdminPassword('');
-      setSelectedDepartments([]);
     } catch (error: any) {
       console.error('Error creating admin:', error);
       toast.error(error.message || 'Failed to create admin');
