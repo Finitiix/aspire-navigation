@@ -19,8 +19,8 @@ export type MultiSelectProps = {
 };
 
 export function MultiSelect({
-  options = [], // Default to empty array
-  selected = [], // Default to empty array
+  options = [],
+  selected = [],
   onChange,
   placeholder = "Select items...",
   className,
@@ -29,30 +29,13 @@ export function MultiSelect({
   const [open, setOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState("");
 
-  // Safe selected array - ensures we always work with an array
-  const safeSelected = React.useMemo(() => {
-    return Array.isArray(selected) ? selected : [];
-  }, [selected]);
+  // Ensure we always work with arrays
+  const safeOptions = Array.isArray(options) ? options : [];
+  const safeSelected = Array.isArray(selected) ? selected : [];
 
-  // Safe options array - ensures we always work with an array
-  const safeOptions = React.useMemo(() => {
-    return Array.isArray(options) ? options : [];
-  }, [options]);
-
-  // Safely compute selectable items
-  const selectableItems = React.useMemo(() => {
-    return safeOptions.filter((option) => 
-      !safeSelected.includes(option.value)
-    );
-  }, [safeOptions, safeSelected]);
-
-  const handleUnselect = (item: string) => {
-    if (!Array.isArray(selected)) {
-      onChange([]);
-      return;
-    }
-    onChange(selected.filter((i) => i !== item));
-  };
+  const handleUnselect = React.useCallback((item: string) => {
+    onChange(safeSelected.filter((i) => i !== item));
+  }, [safeSelected, onChange]);
 
   const handleKeyDown = React.useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     const input = inputRef.current;
@@ -70,9 +53,16 @@ export function MultiSelect({
     }
   }, [safeSelected, onChange]);
 
+  // Compute selectable items (filtering out already selected ones)
+  const selectableItems = React.useMemo(() => {
+    return safeOptions.filter((option) => 
+      !safeSelected.includes(option.value)
+    );
+  }, [safeOptions, safeSelected]);
+
   return (
     <div
-      className={`bg-white flex min-h-10 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ${className || ""}`}
+      className={`relative bg-white flex min-h-10 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ${className || ""}`}
       onClick={() => {
         inputRef.current?.focus();
       }}
@@ -107,53 +97,56 @@ export function MultiSelect({
           );
         })}
         
-        <div className="flex-1">
-          <div className="cmdk-input-wrapper">
-            <CommandPrimitive onKeyDown={handleKeyDown}>
-              <input
-                ref={inputRef}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                className="placeholder:text-muted-foreground bg-white outline-none w-full min-w-[60px] ml-1"
-                placeholder={safeSelected.length === 0 ? placeholder : ""}
-                onFocus={() => setOpen(true)}
-                onBlur={() => {
-                  setOpen(false);
-                  // Reset input value when focus is lost
-                  setInputValue("");
-                }}
-              />
-            </CommandPrimitive>
-          </div>
+        <div className="flex-1 relative">
+          <CommandPrimitive onKeyDown={handleKeyDown}>
+            <input
+              ref={inputRef}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              className="outline-none bg-transparent w-full placeholder:text-muted-foreground"
+              placeholder={safeSelected.length === 0 ? placeholder : ""}
+              onFocus={() => setOpen(true)}
+              onBlur={() => {
+                setOpen(false);
+                setInputValue("");
+              }}
+            />
+          </CommandPrimitive>
         </div>
       </div>
       
-      {open && (
-        <div className="absolute left-0 top-full mt-2 w-full z-10">
+      {open && selectableItems.length > 0 && (
+        <div className="absolute left-0 top-full z-10 w-full mt-2">
           <Command className="rounded-md border shadow-md w-full bg-white overflow-auto max-h-52">
             <CommandGroup>
-              {selectableItems.length > 0 ? (
-                selectableItems.map((option) => (
-                  <CommandItem
-                    key={option.value}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    onSelect={() => {
-                      onChange([...safeSelected, option.value]);
-                      setInputValue("");
-                    }}
-                    className="cursor-pointer"
-                  >
-                    {option.label}
-                  </CommandItem>
-                ))
-              ) : (
-                <div className="py-2 px-1 text-sm text-center text-muted-foreground">
-                  {safeOptions.length === 0 ? "No items available." : "No more items to select."}
-                </div>
-              )}
+              {selectableItems.map((option) => (
+                <CommandItem
+                  key={option.value}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onSelect={() => {
+                    onChange([...safeSelected, option.value]);
+                    setInputValue("");
+                  }}
+                  className="cursor-pointer"
+                >
+                  {option.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </Command>
+        </div>
+      )}
+
+      {open && selectableItems.length === 0 && (
+        <div className="absolute left-0 top-full z-10 w-full mt-2">
+          <Command className="rounded-md border shadow-md w-full bg-white overflow-auto">
+            <CommandGroup>
+              <div className="py-2 px-1 text-sm text-center text-muted-foreground">
+                {safeOptions.length === 0 ? "No items available." : "No more items to select."}
+              </div>
             </CommandGroup>
           </Command>
         </div>
