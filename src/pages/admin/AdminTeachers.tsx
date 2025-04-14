@@ -1,27 +1,100 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import jsPDF from "jspdf";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Search, X, Eye, ExternalLink, FileText, Trash } from "lucide-react";
+import { Search, X, Eye, ExternalLink, FileText, Trash, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format as dateFormat } from "date-fns";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  PieChart, 
-  Pie, 
-  Cell, 
-  Legend, 
-  ResponsiveContainer 
+import { format as dateFormat } from "date-fns";
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
 } from "recharts";
+
+// -----------------------
+// TYPE DEFINITIONS
+// -----------------------
+type DetailedAchievement = {
+  id: string;
+  category: string;
+  title: string;
+  date_achieved: string;
+  remarks?: string;
+  document_url?: string;
+  status: string;
+  // Teacher details (auto-populated in achievement record)
+  teacher_name: string;
+  teacher_eid: string;
+  teacher_designation: string;
+  teacher_mobile: string;
+  teacher_department: string;
+  // Journal Articles
+  journal_name?: string;
+  issn?: string;
+  doi?: string;
+  publisher?: string;
+  indexed_in?: string[];
+  q_ranking?: string;
+  journal_link?: string;
+  // Conference Papers
+  conference_name?: string;
+  conference_date?: string;
+  proceedings_publisher?: string;
+  isbn?: string;
+  paper_link?: string;
+  // Books & Book Chapters
+  book_title?: string;
+  chapter_title?: string;
+  year_of_publication?: string;
+  book_drive_link?: string;
+  // Patents
+  patent_number?: string;
+  patent_office?: string;
+  filing_date?: string;
+  grant_date?: string;
+  patent_status?: string;
+  patent_link?: string;
+  // Research Collaborations
+  partner_institutions?: string;
+  research_area?: string;
+  collaboration_details?: string;
+  // Awards & Recognitions
+  award_name?: string;
+  awarding_body?: string;
+  award_type?: string;
+  certificate_link?: string;
+  // Consultancy & Funded Projects
+  client_organization?: string;
+  project_title?: string;
+  funding_agency?: string;
+  funding_amount?: number;
+  project_duration_start?: string;
+  project_duration_end?: string;
+  project_status?: string;
+  project_details_link?: string;
+  // Startups & Centers of Excellence
+  startup_center_name?: string;
+  domain?: string;
+  funding_details?: string;
+  website_link?: string;
+  // Others
+  description?: string;
+  organization?: string;
+  proof_link?: string;
+  created_at?: string;
+};
 
 type Teacher = {
   id: string;
@@ -32,7 +105,7 @@ type Teacher = {
   mobile_number: string;
   eid: string;
   profile_pic_url: string | null;
-  // Additional teacher details as per the teacher_details table
+  // Additional teacher details
   gender?: string;
   date_of_joining?: string;
   highest_qualification?: string;
@@ -46,18 +119,9 @@ type Teacher = {
   [key: string]: any;
 };
 
-type DetailedAchievement = {
-  id: string;
-  category: string;
-  title: string;
-  date_achieved: string;
-  status: string;
-  document_url: string;
-  // Updated q_ranking type to allow string or specific values
-  q_ranking?: string;
-  indexed_in?: string[];
-  [key: string]: any;
-};
+// -----------------------
+// UTILITY FUNCTIONS
+// -----------------------
 
 // Compute aggregated statistics for a teacher's achievements
 const computeTeacherStats = (achievements: DetailedAchievement[]) => {
@@ -96,24 +160,19 @@ const computeTeacherStats = (achievements: DetailedAchievement[]) => {
       Q4: 0,
     },
   };
-
   achievements.forEach((achievement) => {
-    // Category breakdown
     if (achievement.category && stats.categories[achievement.category] !== undefined) {
       stats.categories[achievement.category]++;
     }
-    // Yearly breakdown based on date_achieved
     if (achievement.date_achieved) {
       const year = new Date(achievement.date_achieved).getFullYear();
       if ([2022, 2023, 2024, 2025].includes(year)) {
         stats.yearly[year]++;
       }
     }
-    // Quality ranking breakdown
     if (achievement.q_ranking && stats.quality[achievement.q_ranking] !== undefined) {
       stats.quality[achievement.q_ranking]++;
     }
-    // Indexed documents breakdown using indexed_in array
     if (achievement.indexed_in && Array.isArray(achievement.indexed_in)) {
       achievement.indexed_in.forEach((index: string) => {
         if (stats.indexed[index] !== undefined) {
@@ -122,18 +181,22 @@ const computeTeacherStats = (achievements: DetailedAchievement[]) => {
       });
     }
   });
-
   return stats;
 };
 
-// Helper function to extract the file path from the document URL.
-// Assumes URL format: https://<project-ref>.supabase.co/storage/v1/object/public/teacher_proofs/<file-path>
-const extractFilePath = (url: string): string | null => {
-  const regex = /teacher_proofs\/(.+)$/;
-  const match = url.match(regex);
-  return match ? match[1] : null;
+// Ensure URLs include a protocol.
+const ensureValidUrl = (url: string) => {
+  if (!url) return "";
+  const trimmed = url.trim();
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+  return trimmed;
 };
 
+// -----------------------
+// MAIN COMPONENT
+// -----------------------
 const AdminTeachers = () => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [filteredTeachers, setFilteredTeachers] = useState<Teacher[]>([]);
@@ -141,9 +204,12 @@ const AdminTeachers = () => {
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [viewDocumentUrl, setViewDocumentUrl] = useState<string | null>(null);
-  // New state for delete confirmation dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [achievementToDelete, setAchievementToDelete] = useState<DetailedAchievement | null>(null);
+
+  // Modal state for Teacher Document Statistics (interactive filtering)
+  const [teacherStatModalOpen, setTeacherStatModalOpen] = useState(false);
+  const [teacherStatModalFilter, setTeacherStatModalFilter] = useState<{ filterType: string; filterValue: any } | null>(null);
 
   useEffect(() => {
     fetchTeachers();
@@ -170,9 +236,7 @@ const AdminTeachers = () => {
         .from("teacher_details")
         .select("*")
         .order("full_name");
-
       if (error) throw error;
-
       if (teachersData) {
         const teachersWithAchievements = await Promise.all(
           teachersData.map(async (teacher) => {
@@ -183,7 +247,6 @@ const AdminTeachers = () => {
             return { ...teacher, achievements: achievements || [] };
           })
         );
-
         setTeachers(teachersWithAchievements);
         setFilteredTeachers(teachersWithAchievements);
       }
@@ -204,12 +267,11 @@ const AdminTeachers = () => {
 
   const renderFieldValue = (value: any, isLink = false) => {
     if (!value) return <span className="text-gray-400">Not provided</span>;
-    
     if (isLink && typeof value === "string" && value.startsWith("http")) {
       return (
-        <a 
-          href={value} 
-          target="_blank" 
+        <a
+          href={value}
+          target="_blank"
           rel="noopener noreferrer"
           className="text-blue-600 hover:underline flex items-center"
         >
@@ -217,7 +279,6 @@ const AdminTeachers = () => {
         </a>
       );
     }
-    
     return value;
   };
 
@@ -227,35 +288,23 @@ const AdminTeachers = () => {
         .from("detailed_achievements")
         .update({ status: newStatus })
         .eq("id", achievementId);
-
       if (error) throw error;
-
       if (selectedTeacher) {
         const updatedAchievements = selectedTeacher.achievements?.map((a) =>
           a.id === achievementId ? { ...a, status: newStatus } : a
         );
-        
-        setSelectedTeacher({
-          ...selectedTeacher,
-          achievements: updatedAchievements,
-        });
-
-        const updatedTeachers = teachers.map((t) =>
-          t.id === selectedTeacher.id
-            ? { ...t, achievements: updatedAchievements }
-            : t
+        setSelectedTeacher({ ...selectedTeacher, achievements: updatedAchievements });
+        setTeachers(
+          teachers.map((t) =>
+            t.id === selectedTeacher.id ? { ...t, achievements: updatedAchievements } : t
+          )
         );
-        
-        setTeachers(updatedTeachers);
         setFilteredTeachers(
           filteredTeachers.map((t) =>
-            t.id === selectedTeacher.id
-              ? { ...t, achievements: updatedAchievements }
-              : t
+            t.id === selectedTeacher.id ? { ...t, achievements: updatedAchievements } : t
           )
         );
       }
-
       toast.success(`Achievement marked as ${newStatus}`);
     } catch (error) {
       console.error("Error updating achievement status:", error);
@@ -263,19 +312,18 @@ const AdminTeachers = () => {
     }
   };
 
-  // New function to open delete confirmation dialog
   const openDeleteDialog = (achievement: DetailedAchievement) => {
     setAchievementToDelete(achievement);
     setDeleteDialogOpen(true);
   };
 
-  // Existing function to delete an achievement along with its associated file in the bucket
   const handleDeleteAchievement = async (achievementId: string) => {
     try {
-      // Find the achievement to delete
       const achievement = selectedTeacher?.achievements.find((a) => a.id === achievementId);
       if (achievement && achievement.document_url) {
-        const filePath = extractFilePath(achievement.document_url);
+        const regex = /teacher_proofs\/(.+)$/;
+        const match = achievement.document_url.match(regex);
+        const filePath = match ? match[1] : null;
         if (filePath) {
           const { error: storageError } = await supabase
             .storage
@@ -288,22 +336,16 @@ const AdminTeachers = () => {
           }
         }
       }
-
-      // Delete the achievement record
-      const { error } = await supabase
-        .from("detailed_achievements")
-        .delete()
-        .eq("id", achievementId);
+      const { error } = await supabase.from("detailed_achievements").delete().eq("id", achievementId);
       if (error) throw error;
-
       if (selectedTeacher) {
         const updatedAchievements = selectedTeacher.achievements.filter((a) => a.id !== achievementId);
         setSelectedTeacher({ ...selectedTeacher, achievements: updatedAchievements });
-
-        const updatedTeachers = teachers.map((t) =>
-          t.id === selectedTeacher.id ? { ...t, achievements: updatedAchievements } : t
+        setTeachers(
+          teachers.map((t) =>
+            t.id === selectedTeacher.id ? { ...t, achievements: updatedAchievements } : t
+          )
         );
-        setTeachers(updatedTeachers);
         setFilteredTeachers(
           filteredTeachers.map((t) =>
             t.id === selectedTeacher.id ? { ...t, achievements: updatedAchievements } : t
@@ -317,126 +359,117 @@ const AdminTeachers = () => {
     }
   };
 
-  // Export teacher details as PDF
-  const exportPDF = () => {
-    if (!selectedTeacher) return;
-    const teacher = selectedTeacher;
-    const doc = new jsPDF();
-
-    doc.setFontSize(18);
-    doc.text("Teacher Details", 14, 22);
-
-    doc.setFontSize(12);
-    let y = 30;
-    doc.text(`Name: ${teacher.full_name}`, 14, y);
-    y += 7;
-    doc.text(`EID: ${teacher.eid}`, 14, y);
-    y += 7;
-    doc.text(`Email: ${teacher.email_id}`, 14, y);
-    y += 7;
-    doc.text(`Department: ${teacher.department}`, 14, y);
-    y += 7;
-    doc.text(`Designation: ${teacher.designation}`, 14, y);
-    y += 10;
-
-    // Additional details
-    doc.text("Additional Details:", 14, y);
-    y += 7;
-    doc.text(`Date of Joining: ${teacher.date_of_joining || "Not provided"}`, 14, y);
-    y += 7;
-    doc.text(`Highest Qualification: ${teacher.highest_qualification || "Not provided"}`, 14, y);
-    y += 7;
-    doc.text(`Skills: ${teacher.skills ? teacher.skills.join(", ") : "Not provided"}`, 14, y);
-    y += 7;
-    doc.text(`Address: ${teacher.address || "Not provided"}`, 14, y);
-    y += 7;
-    doc.text(`Cabin No: ${teacher.cabin_no || "Not provided"}`, 14, y);
-    y += 7;
-    doc.text(`Block: ${teacher.block || "Not provided"}`, 14, y);
-    y += 10;
-
-    // Teacher Document Statistics
-    const stats = computeTeacherStats(teacher.achievements || []);
-    doc.text("Teacher Document Statistics:", 14, y);
-    y += 7;
-    doc.text(`Total Documents: ${stats.totalDocuments}`, 14, y);
-    y += 7;
-    Object.entries(stats.indexed).forEach(([key, value]) => {
-      doc.text(`${key}: ${value}`, 14, y);
-      y += 7;
-    });
-    y += 10;
-
-    // Achievements details
-    doc.text("Achievements:", 14, y);
-    y += 7;
-    teacher.achievements?.forEach((achievement, index) => {
-      doc.text(`${index + 1}. ${achievement.title} (${achievement.category}) - ${achievement.status}`, 14, y);
-      y += 7;
-      doc.text(`Date Achieved: ${new Date(achievement.date_achieved).toLocaleDateString()}`, 14, y);
-      y += 7;
-      if (achievement.document_url) {
-        doc.text(`Document URL: ${achievement.document_url}`, 14, y);
-        y += 7;
-      }
-      y += 5;
-      if (y > 270) {
-        doc.addPage();
-        y = 20;
-      }
-    });
-
-    doc.save(`${teacher.full_name}_details.pdf`);
-  };
-
-  // Export teacher details as CSV
+  // Only Export CSV remains (removing export PDF)
   const exportCSV = () => {
-    if (!selectedTeacher) return;
-    const teacher = selectedTeacher;
-    const headers = [
-      "Full Name", "EID", "Email", "Department", "Designation", "Date of Joining",
-      "Highest Qualification", "Skills", "Address", "Cabin No", "Block",
-      "Achievement Title", "Achievement Category", "Date Achieved", "Status", "Document URL"
-    ];
-    const rows = [];
-    teacher.achievements?.forEach((achievement) => {
-      rows.push([
-        teacher.full_name,
-        teacher.eid,
-        teacher.email_id,
-        teacher.department,
-        teacher.designation,
-        teacher.date_of_joining || "",
-        teacher.highest_qualification || "",
-        teacher.skills ? teacher.skills.join(", ") : "",
-        teacher.address || "",
-        teacher.cabin_no || "",
-        teacher.block || "",
-        achievement.title,
-        achievement.category,
-        new Date(achievement.date_achieved).toLocaleDateString(),
-        achievement.status,
-        achievement.document_url || ""
-      ]);
-    });
-    const csvContent = [headers.join(","), ...rows.map((r) => r.map((v) => `"${v}"`).join(","))].join("\n");
+    let achievementsToExport: DetailedAchievement[] = [];
+  
+    if (teacherStatModalOpen && teacherStatModalFilter && selectedTeacher) {
+      // Export based on filtered achievements
+      achievementsToExport = getFilteredTeacherAchievements();
+    } else if (selectedTeacher) {
+      // Export all achievements
+      achievementsToExport = selectedTeacher.achievements || [];
+    }
+  
+    if (!achievementsToExport.length) {
+      toast.error("No data available to export.");
+      return;
+    }
+  
+    const headers = Object.keys(achievementsToExport[0]);
+    const rows = achievementsToExport.map((achievement) =>
+      headers.map((field) => `"${achievement[field] ?? ""}"`).join(",")
+    );
+    const csvContent = [headers.join(","), ...rows].join("\n");
+  
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `${selectedTeacher.full_name}_details.csv`);
+    link.setAttribute("download", "filtered_teacher_data.csv");
     link.click();
   };
+  
 
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case "Approved":
-        return "bg-green-100 text-green-800";
-      case "Rejected":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-yellow-100 text-yellow-800";
+  // ---------------------------
+  // TEACHER DOCUMENT STATISTICS MODAL FUNCTIONALITY
+  // ---------------------------
+  const openTeacherStatModal = (filterType: string, filterValue: any) => {
+    setTeacherStatModalFilter({ filterType, filterValue });
+    setTeacherStatModalOpen(true);
+  };
+
+  const getFilteredTeacherAchievements = (): DetailedAchievement[] => {
+    if (!teacherStatModalFilter || !selectedTeacher) return [];
+    const { filterType, filterValue } = teacherStatModalFilter;
+    if (filterType === "all") {
+      return selectedTeacher.achievements || [];
+    } else if (filterType === "indexed") {
+      return (selectedTeacher.achievements || []).filter(
+        (achievement) =>
+          achievement.indexed_in && achievement.indexed_in.includes(filterValue)
+      );
+    } else if (filterType === "categories") {
+      return (selectedTeacher.achievements || []).filter(
+        (achievement) => achievement.category === filterValue
+      );
+    } else if (filterType === "yearly") {
+      return (selectedTeacher.achievements || []).filter(
+        (achievement) => new Date(achievement.date_achieved).getFullYear() === filterValue
+      );
+    } else if (filterType === "quality") {
+      return (selectedTeacher.achievements || []).filter(
+        (achievement) => achievement.q_ranking === filterValue
+      );
     }
+    return [];
+  };
+
+  // Export summary for teacher document statistics as CSV
+  const exportTeacherSummary = () => {
+    if (!selectedTeacher) return;
+    const teacherStats = computeTeacherStats(selectedTeacher.achievements || []);
+    const summaryRows = [
+      ["Section", "Metric", "Value"],
+      ["General", "Total Documents", teacherStats.totalDocuments],
+      ["Indexed", "SCI", teacherStats.indexed.SCI],
+      ["Indexed", "Scopus", teacherStats.indexed.Scopus],
+      ["Indexed", "UGC Approved", teacherStats.indexed["UGC Approved"]],
+      ["Indexed", "WOS", teacherStats.indexed.WOS],
+      ["Indexed", "IEEE Xplore", teacherStats.indexed["IEEE Xplore"]],
+      ["Indexed", "Springer", teacherStats.indexed.Springer],
+      ["Indexed", "Elsevier", teacherStats.indexed.Elsevier],
+      [],
+      ["Yearly", "2022", teacherStats.yearly[2022]],
+      ["Yearly", "2023", teacherStats.yearly[2023]],
+      ["Yearly", "2024", teacherStats.yearly[2024]],
+      ["Yearly", "2025", teacherStats.yearly[2025]],
+      [],
+      ["Quality", "Q1", teacherStats.quality.Q1],
+      ["Quality", "Q2", teacherStats.quality.Q2],
+      ["Quality", "Q3", teacherStats.quality.Q3],
+      ["Quality", "Q4", teacherStats.quality.Q4],
+      [],
+      ["Categories", "Journal Articles", teacherStats.categories["Journal Articles"]],
+      ["Categories", "Conference Papers", teacherStats.categories["Conference Papers"]],
+      ["Categories", "Books & Book Chapters", teacherStats.categories["Books & Book Chapters"]],
+      ["Categories", "Patents", teacherStats.categories["Patents"]],
+      ["Categories", "Research Collaborations", teacherStats.categories["Research Collaborations"]],
+      ["Categories", "Awards & Recognitions", teacherStats.categories["Awards & Recognitions"]],
+      ["Categories", "Consultancy & Funded Projects", teacherStats.categories["Consultancy & Funded Projects"]],
+      ["Categories", "Startups & Centers of Excellence", teacherStats.categories["Startups & Centers of Excellence"]],
+      ["Categories", "Others", teacherStats.categories["Others"]],
+    ];
+    const csv = summaryRows.map((row) => row.join(",")).join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "teacher_documents_summary.csv");
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -485,8 +518,8 @@ const AdminTeachers = () => {
                     <tr key={teacher.id} className="border-t">
                       <td className="p-3">
                         <div className="flex items-center gap-3">
-                          <img 
-                            src={teacher.profile_pic_url || "/placeholder.svg"} 
+                          <img
+                            src={teacher.profile_pic_url || "/placeholder.svg"}
                             alt={teacher.full_name}
                             className="w-8 h-8 rounded-full object-cover"
                           />
@@ -539,18 +572,12 @@ const AdminTeachers = () => {
           <DialogHeader>
             <div className="flex items-center justify-between w-full">
               <DialogTitle>Teacher Details</DialogTitle>
-              {/* Export Buttons */}
-              <div className="flex space-x-2">
-                <Button onClick={exportPDF} variant="outline" size="sm">
-                  Export PDF
-                </Button>
-                <Button onClick={exportCSV} variant="outline" size="sm">
-                  Export CSV
-                </Button>
-              </div>
+              <Button onClick={exportCSV} variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-1" />
+                Export CSV
+              </Button>
             </div>
           </DialogHeader>
-
           {selectedTeacher && (
             <div className="space-y-6">
               {/* Basic Details */}
@@ -592,7 +619,11 @@ const AdminTeachers = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <h4 className="font-medium">Date of Joining</h4>
-                    <p>{selectedTeacher.date_of_joining ? dateFormat(new Date(selectedTeacher.date_of_joining), "PPP") : "Not provided"}</p>
+                    <p>
+                      {selectedTeacher.date_of_joining
+                        ? dateFormat(new Date(selectedTeacher.date_of_joining), "PPP")
+                        : "Not provided"}
+                    </p>
                   </div>
                   <div>
                     <h4 className="font-medium">Highest Qualification</h4>
@@ -624,103 +655,180 @@ const AdminTeachers = () => {
                   return (
                     <Card className="bg-white shadow-lg rounded-xl overflow-hidden">
                       <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-500 p-4">
-                        <CardTitle className="text-2xl font-bold text-white">Teacher Document Statistics</CardTitle>
+                        <CardTitle className="text-2xl font-bold text-white">
+                          Teacher Document Statistics
+                        </CardTitle>
+                        <div className="mt-2">
+                          <Button variant="outline" size="sm" onClick={exportTeacherSummary}>
+                            <Download className="w-4 h-4 mr-1" />
+                            Export Summary
+                          </Button>
+                        </div>
                       </CardHeader>
                       <CardContent className="p-6">
-                        {/* Top Stats Row */}
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                          <div className="bg-gray-50 p-4 rounded-lg border">
-                            <h3 className="text-lg font-semibold text-gray-700">Total Documents Uploaded</h3>
-                            <p className="text-3xl font-bold text-blue-600 mt-2">{teacherStats.totalDocuments}</p>
-                          </div>
-                          <div className="bg-gray-50 p-4 rounded-lg border">
-                            <h3 className="text-lg font-semibold text-gray-700">Indexed Documents</h3>
-                            <ul className="mt-2 space-y-1">
-                              {Object.entries(teacherStats.indexed).map(([key, value]) => (
-                                <li key={key} className="flex justify-between">
-                                  <span>{key}</span>
-                                  <span className="font-semibold text-blue-600">{value}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                          <div className="bg-gray-50 p-4 rounded-lg border">
-                            <h3 className="text-lg font-semibold text-gray-700">Yearly Uploads</h3>
-                            <ul className="mt-2 space-y-1">
-                              {Object.entries(teacherStats.yearly).map(([year, count]) => (
-                                <li key={year} className="flex justify-between">
-                                  <span>{year}</span>
-                                  <span className="font-semibold text-blue-600">{count}</span>
-                                </li>
-                              ))}
-                            </ul>
+                        {/* Total Documents */}
+                        <div className="grid grid-cols-1 gap-4 mb-6">
+                          <div
+                            className="bg-gray-50 p-4 rounded-lg border cursor-pointer"
+                            onClick={() => openTeacherStatModal("all", "all")}
+                          >
+                            <h3 className="text-lg font-semibold text-gray-700 text-center">
+                              Total Documents Uploaded
+                            </h3>
+                            <p className="text-3xl font-bold text-blue-600 text-center mt-2">
+                              {teacherStats.totalDocuments}
+                            </p>
                           </div>
                         </div>
-                        {/* Charts Section */}
+                        {/* Indexed Documents */}
+                        <div className="grid grid-cols-1 gap-4 mb-6">
+                          <div className="bg-gray-50 p-4 rounded-lg border">
+                            <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                              Indexed Documents
+                            </h3>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                              {Object.entries(teacherStats.indexed).map(([key, value]) => (
+                                <Button
+                                  key={key}
+                                  variant="ghost"
+                                  className="text-sm text-gray-700 underline"
+                                  onClick={() => openTeacherStatModal("indexed", key)}
+                                >
+                                  {key}: {value}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        {/* Yearly Uploads */}
+                        <div className="grid grid-cols-1 gap-4 mb-6">
+                          <div className="bg-gray-50 p-4 rounded-lg border">
+                            <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                              Yearly Uploads
+                            </h3>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                              {Object.entries(teacherStats.yearly).map(([year, count]) => (
+                                <Button
+                                  key={year}
+                                  variant="ghost"
+                                  className="text-sm text-gray-700 underline"
+                                  onClick={() => openTeacherStatModal("yearly", Number(year))}
+                                >
+                                  {year}: {count}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        {/* Category Breakdown and Quality Ranking */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                           {/* Category Breakdown */}
                           <div className="bg-gray-50 p-4 rounded-lg border">
-                            <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Category Breakdown</h3>
+                            <h3 className="text-lg font-semibold text-gray-700 mb-2 text-center">
+                              Category Breakdown (Pie Chart)
+                            </h3>
+                            <ResponsiveContainer width="100%" height={250}>
+                              <PieChart>
+                                <Pie
+                                  data={Object.entries(teacherStats.categories).map(([name, value]) => ({
+                                    name,
+                                    value,
+                                  }))}
+                                  dataKey="value"
+                                  nameKey="name"
+                                  cx="50%"
+                                  cy="50%"
+                                  outerRadius={80}
+                                  fill="#8884d8"
+                                  label
+                                >
+                                  {Object.entries(teacherStats.categories).map((entry, index) => {
+                                    const colors = [
+                                      "#0088FE",
+                                      "#00C49F",
+                                      "#FFBB28",
+                                      "#FF8042",
+                                      "#AA336A",
+                                      "#33AA77",
+                                      "#7755AA",
+                                      "#AA5577",
+                                      "#55AA77",
+                                    ];
+                                    return (
+                                      <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                                    );
+                                  })}
+                                </Pie>
+                                <Tooltip />
+                                <Legend />
+                              </PieChart>
+                            </ResponsiveContainer>
                             <div className="mt-4">
                               <h3 className="text-md font-semibold text-gray-700">Category Details</h3>
                               <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {Object.entries(teacherStats.categories).map(([cat, count]) => (
-                                  <div key={cat} className="flex justify-between items-center p-2 border rounded bg-white">
+                                  <Button
+                                    key={cat}
+                                    variant="ghost"
+                                    className="flex justify-between items-center p-2 border rounded bg-white text-sm text-gray-700 underline"
+                                    onClick={() => openTeacherStatModal("categories", cat)}
+                                  >
                                     <span>{cat}</span>
                                     <span className="font-bold text-blue-600">{count}</span>
-                                  </div>
+                                  </Button>
                                 ))}
                               </div>
                             </div>
                           </div>
-                          {/* Yearly Uploads Bar Chart */}
+                          {/* Quality Ranking */}
                           <div className="bg-gray-50 p-4 rounded-lg border">
-                            <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Yearly Uploads</h3>
+                            <h3 className="text-lg font-semibold text-gray-700 mb-2 text-center">
+                              Quality Ranking (Q1 - Q4)
+                            </h3>
                             <ResponsiveContainer width="100%" height={250}>
                               <BarChart data={[
-                                { year: "2022", count: teacherStats.yearly[2022] },
-                                { year: "2023", count: teacherStats.yearly[2023] },
-                                { year: "2024", count: teacherStats.yearly[2024] },
-                                { year: "2025", count: teacherStats.yearly[2025] },
+                                { quality: "Q1", count: teacherStats.quality["Q1"] },
+                                { quality: "Q2", count: teacherStats.quality["Q2"] },
+                                { quality: "Q3", count: teacherStats.quality["Q3"] },
+                                { quality: "Q4", count: teacherStats.quality["Q4"] },
                               ]}>
-                                <XAxis dataKey="year" stroke="#333" />
+                                <XAxis dataKey="quality" stroke="#333" />
                                 <YAxis stroke="#333" />
                                 <Tooltip />
-                                <Bar dataKey="count" fill="#82ca9d" />
+                                <Bar dataKey="count" fill="#8884d8" />
                               </BarChart>
                             </ResponsiveContainer>
+                            <div className="mt-4">
+                              <h3 className="text-md font-semibold text-gray-700">Quality Details</h3>
+                              <div className="mt-2 grid grid-cols-2 gap-2">
+                                {["Q1", "Q2", "Q3", "Q4"].map((q) => (
+                                  <Button
+                                    key={q}
+                                    variant="ghost"
+                                    className="flex justify-between items-center p-2 border rounded bg-white text-sm text-gray-700 underline"
+                                    onClick={() => openTeacherStatModal("quality", q)}
+                                  >
+                                    <span>{q}</span>
+                                    <span className="font-bold">
+                                      {teacherStats.quality[q as keyof typeof teacherStats.quality]}
+                                    </span>
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        {/* Quality Ranking Chart */}
-                        <div className="mt-6 bg-gray-50 p-4 rounded-lg border">
-                          <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Quality Ranking (Q1 - Q4)</h3>
-                          <ResponsiveContainer width="100%" height={250}>
-                            <BarChart data={[
-                              { quality: "Q1", count: teacherStats.quality["Q1"] },
-                              { quality: "Q2", count: teacherStats.quality["Q2"] },
-                              { quality: "Q3", count: teacherStats.quality["Q3"] },
-                              { quality: "Q4", count: teacherStats.quality["Q4"] },
-                            ]}>
-                              <XAxis dataKey="quality" stroke="#333" />
-                              <YAxis stroke="#333" />
-                              <Tooltip />
-                              <Bar dataKey="count" fill="#8884d8" />
-                            </BarChart>
-                          </ResponsiveContainer>
                         </div>
                       </CardContent>
                     </Card>
                   );
                 })()
               )}
-
               <Tabs defaultValue="all" className="mt-6">
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="all">All Achievements</TabsTrigger>
                   <TabsTrigger value="pending">Pending</TabsTrigger>
                   <TabsTrigger value="approved">Approved</TabsTrigger>
                 </TabsList>
-
                 <TabsContent value="all" className="mt-4">
                   {selectedTeacher.achievements && selectedTeacher.achievements.length > 0 ? (
                     <div className="space-y-3">
@@ -732,10 +840,9 @@ const AdminTeachers = () => {
                               <div className="text-sm text-gray-600">
                                 {achievement.category} | {new Date(achievement.date_achieved).toLocaleDateString()}
                               </div>
-                              
                               {achievement.document_url && (
-                                <Button 
-                                  variant="outline" 
+                                <Button
+                                  variant="outline"
                                   size="sm"
                                   className="mt-2 flex items-center gap-1 text-blue-600"
                                   onClick={() => handleViewDocument(achievement.document_url)}
@@ -744,39 +851,43 @@ const AdminTeachers = () => {
                                   View Uploaded Proof
                                 </Button>
                               )}
-                              
                               <Accordion type="single" collapsible className="w-full mt-2">
                                 <AccordionItem value="details">
-                                  <AccordionTrigger className="text-sm py-2">View Achievement Details</AccordionTrigger>
+                                  <AccordionTrigger className="text-sm py-2">
+                                    View Achievement Details
+                                  </AccordionTrigger>
                                   <AccordionContent>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 mt-2">
-                                      {achievement.category === 'Journal Articles' && (
-                                        <>
-                                          <div>
-                                            <p className="text-sm font-medium">Journal Name:</p>
-                                            <p className="text-sm">{renderFieldValue(achievement.journal_name)}</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                                      {Object.entries(achievement).map(([key, value]) => {
+                                        const excludedKeys = [
+                                          "id",
+                                          "teacher_id",
+                                          "created_at",
+                                          "status",
+                                          "document_url",
+                                          "teacher_name",
+                                          "teacher_eid",
+                                          "teacher_designation",
+                                          "teacher_mobile",
+                                          "teacher_department",
+                                        ];
+                                        if (excludedKeys.includes(key) || !value) return null;
+                                        return (
+                                          <div key={key}>
+                                            <p className="text-sm font-medium capitalize">
+                                              {key.replaceAll("_", " ")}:
+                                            </p>
+                                            <p className="text-sm">{String(value)}</p>
                                           </div>
-                                          <div>
-                                            <p className="text-sm font-medium">ISSN:</p>
-                                            <p className="text-sm">{renderFieldValue(achievement.issn)}</p>
-                                          </div>
-                                          <div>
-                                            <p className="text-sm font-medium">DOI:</p>
-                                            <p className="text-sm">{renderFieldValue(achievement.doi)}</p>
-                                          </div>
-                                          <div>
-                                            <p className="text-sm font-medium">Journal Link:</p>
-                                            <p className="text-sm">{renderFieldValue(achievement.journal_link, true)}</p>
-                                          </div>
-                                        </>
-                                      )}
+                                        );
+                                      })}
                                     </div>
                                   </AccordionContent>
                                 </AccordionItem>
                               </Accordion>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadgeClass(achievement.status)}`}>
+                              <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
                                 {achievement.status}
                               </span>
                               {achievement.status === "Pending Approval" && (
@@ -815,7 +926,6 @@ const AdminTeachers = () => {
                     <div className="text-center py-4 text-gray-500">No achievements found</div>
                   )}
                 </TabsContent>
-
                 <TabsContent value="pending" className="mt-4">
                   {selectedTeacher.achievements && selectedTeacher.achievements.filter(a => a.status === "Pending Approval").length > 0 ? (
                     <div className="space-y-3">
@@ -829,10 +939,9 @@ const AdminTeachers = () => {
                                 <div className="text-sm text-gray-600">
                                   {achievement.category} | {new Date(achievement.date_achieved).toLocaleDateString()}
                                 </div>
-                                
                                 {achievement.document_url && (
-                                  <Button 
-                                    variant="outline" 
+                                  <Button
+                                    variant="outline"
                                     size="sm"
                                     className="mt-2 flex items-center gap-1 text-blue-600"
                                     onClick={() => handleViewDocument(achievement.document_url)}
@@ -841,32 +950,36 @@ const AdminTeachers = () => {
                                     View Uploaded Proof
                                   </Button>
                                 )}
-                                
                                 <Accordion type="single" collapsible className="w-full mt-2">
                                   <AccordionItem value="details">
-                                    <AccordionTrigger className="text-sm py-2">View Achievement Details</AccordionTrigger>
+                                    <AccordionTrigger className="text-sm py-2">
+                                      View Achievement Details
+                                    </AccordionTrigger>
                                     <AccordionContent>
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 mt-2">
-                                        {achievement.category === 'Journal Articles' && (
-                                          <>
-                                            <div>
-                                              <p className="text-sm font-medium">Journal Name:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.journal_name)}</p>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                                        {Object.entries(achievement).map(([key, value]) => {
+                                          const excludedKeys = [
+                                            "id",
+                                            "teacher_id",
+                                            "created_at",
+                                            "status",
+                                            "document_url",
+                                            "teacher_name",
+                                            "teacher_eid",
+                                            "teacher_designation",
+                                            "teacher_mobile",
+                                            "teacher_department",
+                                          ];
+                                          if (excludedKeys.includes(key) || !value) return null;
+                                          return (
+                                            <div key={key}>
+                                              <p className="text-sm font-medium capitalize">
+                                                {key.replaceAll("_", " ")}:
+                                              </p>
+                                              <p className="text-sm">{String(value)}</p>
                                             </div>
-                                            <div>
-                                              <p className="text-sm font-medium">ISSN:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.issn)}</p>
-                                            </div>
-                                            <div>
-                                              <p className="text-sm font-medium">DOI:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.doi)}</p>
-                                            </div>
-                                            <div>
-                                              <p className="text-sm font-medium">Journal Link:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.journal_link, true)}</p>
-                                            </div>
-                                          </>
-                                        )}
+                                          );
+                                        })}
                                       </div>
                                     </AccordionContent>
                                   </AccordionItem>
@@ -905,7 +1018,6 @@ const AdminTeachers = () => {
                     <div className="text-center py-4 text-gray-500">No pending achievements</div>
                   )}
                 </TabsContent>
-
                 <TabsContent value="approved" className="mt-4">
                   {selectedTeacher.achievements && selectedTeacher.achievements.filter(a => a.status === "Approved").length > 0 ? (
                     <div className="space-y-3">
@@ -919,10 +1031,9 @@ const AdminTeachers = () => {
                                 <div className="text-sm text-gray-600">
                                   {achievement.category} | {new Date(achievement.date_achieved).toLocaleDateString()}
                                 </div>
-                                
                                 {achievement.document_url && (
-                                  <Button 
-                                    variant="outline" 
+                                  <Button
+                                    variant="outline"
                                     size="sm"
                                     className="mt-2 flex items-center gap-1 text-blue-600"
                                     onClick={() => handleViewDocument(achievement.document_url)}
@@ -931,32 +1042,36 @@ const AdminTeachers = () => {
                                     View Uploaded Proof
                                   </Button>
                                 )}
-                                
                                 <Accordion type="single" collapsible className="w-full mt-2">
                                   <AccordionItem value="details">
-                                    <AccordionTrigger className="text-sm py-2">View Achievement Details</AccordionTrigger>
+                                    <AccordionTrigger className="text-sm py-2">
+                                      View Achievement Details
+                                    </AccordionTrigger>
                                     <AccordionContent>
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 mt-2">
-                                        {achievement.category === 'Journal Articles' && (
-                                          <>
-                                            <div>
-                                              <p className="text-sm font-medium">Journal Name:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.journal_name)}</p>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                                        {Object.entries(achievement).map(([key, value]) => {
+                                          const excludedKeys = [
+                                            "id",
+                                            "teacher_id",
+                                            "created_at",
+                                            "status",
+                                            "document_url",
+                                            "teacher_name",
+                                            "teacher_eid",
+                                            "teacher_designation",
+                                            "teacher_mobile",
+                                            "teacher_department",
+                                          ];
+                                          if (excludedKeys.includes(key) || !value) return null;
+                                          return (
+                                            <div key={key}>
+                                              <p className="text-sm font-medium capitalize">
+                                                {key.replaceAll("_", " ")}:
+                                              </p>
+                                              <p className="text-sm">{String(value)}</p>
                                             </div>
-                                            <div>
-                                              <p className="text-sm font-medium">ISSN:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.issn)}</p>
-                                            </div>
-                                            <div>
-                                              <p className="text-sm font-medium">DOI:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.doi)}</p>
-                                            </div>
-                                            <div>
-                                              <p className="text-sm font-medium">Journal Link:</p>
-                                              <p className="text-sm">{renderFieldValue(achievement.journal_link, true)}</p>
-                                            </div>
-                                          </>
-                                        )}
+                                          );
+                                        })}
                                       </div>
                                     </AccordionContent>
                                   </AccordionItem>
@@ -988,6 +1103,65 @@ const AdminTeachers = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Teacher Document Statistics Modal */}
+      {teacherStatModalOpen && teacherStatModalFilter && selectedTeacher && (
+        <Dialog open={teacherStatModalOpen} onOpenChange={setTeacherStatModalOpen}>
+          {/* Increased max width for better UI */}
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-auto">
+            <div className="flex justify-between items-center border-b pb-2 mb-4">
+              <h3 className="text-xl font-bold">
+                {teacherStatModalFilter.filterType === "all"
+                  ? "All Documents"
+                  : `${teacherStatModalFilter.filterType} : ${teacherStatModalFilter.filterValue}`}
+              </h3>
+              <div className="flex items-center space-x-2">
+                <Button variant="outline" size="sm" onClick={() => exportCSV()}>
+                  <Download className="w-4 h-4 mr-1" />
+                  Export CSV
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setTeacherStatModalOpen(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="overflow-auto">
+              {getFilteredTeacherAchievements().length > 0 ? (
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left">Teacher Name</th>
+                      <th className="px-4 py-2 text-left">EID</th>
+                      <th className="px-4 py-2 text-left">Designation</th>
+                      <th className="px-4 py-2 text-left">Mobile</th>
+                      <th className="px-4 py-2 text-left">Department</th>
+                      <th className="px-4 py-2 text-left">Title</th>
+                      <th className="px-4 py-2 text-left">Category</th>
+                      <th className="px-4 py-2 text-left">Date Achieved</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {getFilteredTeacherAchievements().map((ach) => (
+                      <tr key={ach.id}>
+                        <td className="px-4 py-2">{ach.teacher_name}</td>
+                        <td className="px-4 py-2">{ach.teacher_eid}</td>
+                        <td className="px-4 py-2">{ach.teacher_designation}</td>
+                        <td className="px-4 py-2">{ach.teacher_mobile}</td>
+                        <td className="px-4 py-2">{ach.teacher_department}</td>
+                        <td className="px-4 py-2">{ach.title}</td>
+                        <td className="px-4 py-2">{ach.category}</td>
+                        <td className="px-4 py-2">{new Date(ach.date_achieved).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-center text-gray-500">No records found.</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Document Viewer Dialog */}
       {viewDocumentUrl && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1000,22 +1174,15 @@ const AdminTeachers = () => {
             >
               <X className="h-4 w-4" />
             </Button>
-            
             <div className="flex flex-col items-center">
               <h3 className="text-lg font-medium mb-4">Achievement Proof Document</h3>
-              
               <div className="w-full h-[70vh] border border-gray-300 rounded">
-                <iframe 
-                  src={viewDocumentUrl} 
-                  title="Document Preview"
-                  className="w-full h-full"
-                />
+                <iframe src={viewDocumentUrl} title="Document Preview" className="w-full h-full" />
               </div>
-              
               <div className="mt-4">
-                <a 
-                  href={viewDocumentUrl} 
-                  target="_blank" 
+                <a
+                  href={viewDocumentUrl}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-blue-600 hover:underline"
                 >
@@ -1034,15 +1201,22 @@ const AdminTeachers = () => {
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
           </DialogHeader>
-          <p>This achievement is deleting. We can't undo this action. Are you sure to delete this achievement like this?</p>
+          <p>This achievement is being deleted. This action cannot be undone. Are you sure?</p>
           <div className="mt-4 flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={async () => {
-              if (achievementToDelete) {
-                await handleDeleteAchievement(achievementToDelete.id);
-                setDeleteDialogOpen(false);
-              }
-            }}>Delete</Button>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (achievementToDelete) {
+                  await handleDeleteAchievement(achievementToDelete.id);
+                  setDeleteDialogOpen(false);
+                }
+              }}
+            >
+              Delete
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
