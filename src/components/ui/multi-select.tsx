@@ -19,8 +19,8 @@ export type MultiSelectProps = {
 };
 
 export function MultiSelect({
-  options,
-  selected,
+  options = [], // Set default empty array to prevent undefined errors
+  selected = [], // Set default empty array to prevent undefined errors
   onChange,
   placeholder = "Select items...",
   className,
@@ -50,7 +50,10 @@ export function MultiSelect({
     }
   }, [selected, onChange]);
 
-  const selectables = options.filter((item) => !selected.includes(item.value));
+  // Ensure selectables is always an array, even if options or selected are undefined
+  const selectables = Array.isArray(options) && Array.isArray(selected) 
+    ? options.filter((item) => !selected.includes(item.value))
+    : [];
 
   return (
     <div
@@ -60,15 +63,15 @@ export function MultiSelect({
       }}
     >
       <div className="flex flex-wrap gap-1">
-        {selected.map((item) => {
-          const option = options.find((o) => o.value === item);
+        {Array.isArray(selected) && selected.map((item) => {
+          const option = Array.isArray(options) ? options.find((o) => o.value === item) : undefined;
           return (
             <Badge
               key={item}
               variant="secondary"
               className="rounded flex items-center gap-1 pr-0.5"
             >
-              <span>{option?.label}</span>
+              <span>{option?.label || item}</span>
               <button
                 className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 onKeyDown={(e) => {
@@ -93,7 +96,7 @@ export function MultiSelect({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             className="placeholder:text-muted-foreground bg-white outline-none flex-1 min-w-32 ml-1"
-            placeholder={selected.length === 0 ? placeholder : ""}
+            placeholder={selected && selected.length === 0 ? placeholder : ""}
             onFocus={() => setOpen(true)}
             onBlur={() => setOpen(false)}
           />
