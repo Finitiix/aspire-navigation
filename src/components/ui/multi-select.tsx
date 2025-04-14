@@ -29,7 +29,7 @@ export function MultiSelect({
   const [open, setOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState("");
 
-  // Ensure we always work with arrays
+  // Ensure we're working with arrays, not undefined or null
   const safeOptions = Array.isArray(options) ? options : [];
   const safeSelected = Array.isArray(selected) ? selected : [];
 
@@ -53,16 +53,14 @@ export function MultiSelect({
     }
   }, [safeSelected, onChange]);
 
-  // Compute selectable items (filtering out already selected ones)
+  // Filter out already selected items
   const selectableItems = React.useMemo(() => {
-    return safeOptions.filter((option) => 
-      !safeSelected.includes(option.value)
-    );
+    return safeOptions.filter((option) => !safeSelected.includes(option.value));
   }, [safeOptions, safeSelected]);
 
   return (
     <div
-      className={`relative bg-white flex min-h-10 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ${className || ""}`}
+      className={`relative bg-white flex flex-wrap min-h-10 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ${className || ""}`}
       onClick={() => {
         inputRef.current?.focus();
       }}
@@ -97,21 +95,22 @@ export function MultiSelect({
           );
         })}
         
-        <div className="flex-1 relative">
-          <CommandPrimitive onKeyDown={handleKeyDown}>
-            <input
-              ref={inputRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              className="outline-none bg-transparent w-full placeholder:text-muted-foreground"
-              placeholder={safeSelected.length === 0 ? placeholder : ""}
-              onFocus={() => setOpen(true)}
-              onBlur={() => {
+        <div className="flex-1">
+          <input
+            ref={inputRef}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="outline-none bg-transparent w-full placeholder:text-muted-foreground"
+            placeholder={safeSelected.length === 0 ? placeholder : ""}
+            onFocus={() => setOpen(true)}
+            onBlur={() => {
+              setTimeout(() => {
                 setOpen(false);
                 setInputValue("");
-              }}
-            />
-          </CommandPrimitive>
+              }, 200);
+            }}
+          />
         </div>
       </div>
       
