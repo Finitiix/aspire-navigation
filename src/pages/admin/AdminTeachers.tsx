@@ -1,397 +1,1252 @@
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-} from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { toast } from "sonner";
-import {
-  ColumnDef,
-  ColumnFiltersState,
-  SortingState,
-  VisibilityState,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Copy, Edit, Trash2, FileDown, Upload } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { useDebounce } from "@/hooks/use-debounce";
-import { useNavigate } from "react-router-dom";
-import { useOutletContext } from "react-router-dom";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { useEffect, useState } from "react";
+import jsPDF from "jspdf";
 import { supabase } from "@/integrations/supabase/client";
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
-import { useToast } from "@/components/ui/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { Search, X, Eye, ExternalLink, FileText, Trash, Download } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { format as dateFormat } from "date-fns";
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { z } from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { DatePicker } from "@/components/ui/date-picker"
-import { CalendarIcon } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { format } from "date-fns"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { DepartmentSelect } from "@/components/ui/department-select";
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+} from "recharts";
 
-// Define a schema for the form.
-const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
-  }),
-  eid: z.string().regex(/^E\d{5}$/, {
-    message: "Teacher ID must be in format EXXXXX (E followed by 5 digits)",
-  }),
-  email: z.string().email({
-    message: "Please enter a valid email.",
-  }),
-  department: z.string().min(2, {
-    message: "Department must be at least 2 characters.",
-  }),
-  designation: z.string().min(2, {
-    message: "Designation must be at least 2 characters.",
-  }),
-  joining_date: z.date({
-    required_error: "A date of joining is required.",
-  }),
-  phone_number: z.string().regex(/^(\+?\d{1,4}?)?\d{6,14}$/, {
-    message: "Please enter a valid phone number.",
-  }),
-  profile_picture: z.string().url({
-    message: "Please enter a valid URL for the profile picture.",
-  }).optional(),
-  certificates: z.array(z.object({
-    name: z.string().min(2, {
-      message: "Certificate name must be at least 2 characters.",
-    }),
-    url: z.string().url({
-      message: "Please enter a valid URL for the certificate.",
-    }),
-  })).optional(),
-})
-
-interface Teacher {
+// -----------------------
+// TYPE DEFINITIONS
+// -----------------------
+type DetailedAchievement = {
   id: string;
-  created_at: string;
-  name: string;
-  eid: string;
-  email: string;
+  category: string;
+  title: string;
+  date_achieved: string;
+  remarks?: string;
+  document_url?: string;
+  status: string;
+  // Teacher details (auto-populated in achievement record)
+  teacher_name: string;
+  teacher_eid: string;
+  teacher_designation: string;
+  teacher_mobile: string;
+  teacher_department: string;
+  // Journal Articles
+  journal_name?: string;
+  issn?: string;
+  doi?: string;
+  publisher?: string;
+  indexed_in?: string[];
+  q_ranking?: string;
+  journal_link?: string;
+  // Conference Papers
+  conference_name?: string;
+  conference_date?: string;
+  proceedings_publisher?: string;
+  isbn?: string;
+  paper_link?: string;
+  // Books & Book Chapters
+  book_title?: string;
+  chapter_title?: string;
+  year_of_publication?: string;
+  book_drive_link?: string;
+  // Patents
+  patent_number?: string;
+  patent_office?: string;
+  filing_date?: string;
+  grant_date?: string;
+  patent_status?: string;
+  patent_link?: string;
+  // Research Collaborations
+  partner_institutions?: string;
+  research_area?: string;
+  collaboration_details?: string;
+  // Awards & Recognitions
+  award_name?: string;
+  awarding_body?: string;
+  award_type?: string;
+  certificate_link?: string;
+  // Consultancy & Funded Projects
+  client_organization?: string;
+  project_title?: string;
+  funding_agency?: string;
+  funding_amount?: number;
+  project_duration_start?: string;
+  project_duration_end?: string;
+  project_status?: string;
+  project_details_link?: string;
+  // Startups & Centers of Excellence
+  startup_center_name?: string;
+  domain?: string;
+  funding_details?: string;
+  website_link?: string;
+  // Others
+  description?: string;
+  organization?: string;
+  proof_link?: string;
+  created_at?: string;
+};
+
+type Teacher = {
+  id: string;
+  full_name: string;
+  email_id: string;
   department: string;
   designation: string;
-  joining_date: string;
-  phone_number: string;
-  profile_picture: string | null;
-  certificates: { name: string; url: string; }[] | null;
-}
+  mobile_number: string;
+  eid: string;
+  profile_pic_url: string | null;
+  // Additional teacher details
+  gender?: string;
+  date_of_joining?: string;
+  highest_qualification?: string;
+  skills?: string[];
+  address?: string;
+  cabin_no?: string;
+  block?: string;
+  created_at?: string;
+  updated_at?: string;
+  achievements?: DetailedAchievement[];
+  [key: string]: any;
+};
 
-interface Certificate {
-  id: string;
-  teacher_id: string;
-  name: string;
-  url: string;
-}
+// -----------------------
+// UTILITY FUNCTIONS
+// -----------------------
 
+// Helper function to replace all occurrences of a string
+const replaceAll = (str: string, find: string, replace: string) => {
+  return str.split(find).join(replace);
+};
+
+// Clean EID by removing spaces and '@' symbol
+const cleanEid = (eid: string) => {
+  return eid.replace(/\s+/g, '').replace(/@.*$/, '');
+};
+
+// Format email by cleaning EID and appending '@achievementhub.com'
+const formatEmail = (eid: string) => {
+  return `${cleanEid(eid).toLowerCase()}@achievementhub.com`;
+};
+
+// Format website URL
+const formatWebsiteUrl = (url: string): string => {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+    return `https://${trimmed}`;
+  }
+  return trimmed;
+};
+
+// Compute aggregated statistics for a teacher's achievements
+const computeTeacherStats = (achievements: DetailedAchievement[]) => {
+  const stats = {
+    totalDocuments: achievements.length,
+    indexed: {
+      SCI: 0,
+      Scopus: 0,
+      "UGC Approved": 0,
+      WOS: 0,
+      "IEEE Xplore": 0,
+      Springer: 0,
+      Elsevier: 0,
+    },
+    categories: {
+      "Journal Articles": 0,
+      "Conference Papers": 0,
+      "Books & Book Chapters": 0,
+      "Patents": 0,
+      "Research Collaborations": 0,
+      "Awards & Recognitions": 0,
+      "Consultancy & Funded Projects": 0,
+      "Startups & Centers of Excellence": 0,
+      "Others": 0,
+    },
+    yearly: {
+      2022: 0,
+      2023: 0,
+      2024: 0,
+      2025: 0,
+    },
+    quality: {
+      Q1: 0,
+      Q2: 0,
+      Q3: 0,
+      Q4: 0,
+    },
+  };
+  achievements.forEach((achievement) => {
+    if (achievement.category && stats.categories[achievement.category] !== undefined) {
+      stats.categories[achievement.category]++;
+    }
+    if (achievement.date_achieved) {
+      const year = new Date(achievement.date_achieved).getFullYear();
+      if ([2022, 2023, 2024, 2025].includes(year)) {
+        stats.yearly[year]++;
+      }
+    }
+    if (achievement.q_ranking && stats.quality[achievement.q_ranking] !== undefined) {
+      stats.quality[achievement.q_ranking]++;
+    }
+    if (achievement.indexed_in && Array.isArray(achievement.indexed_in)) {
+      achievement.indexed_in.forEach((index: string) => {
+        if (stats.indexed[index] !== undefined) {
+          stats.indexed[index]++;
+        }
+      });
+    }
+  });
+  return stats;
+};
+
+// Ensure URLs include a protocol.
+const ensureValidUrl = (url: string) => {
+  if (!url) return "";
+  const trimmed = url.trim();
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+  return trimmed;
+};
+
+// -----------------------
+// MAIN COMPONENT
+// -----------------------
 const AdminTeachers = () => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = useState({});
-  const [isCreateTeacherDialogOpen, setIsCreateTeacherDialogOpen] = useState(false);
-  const [isEditTeacherDialogOpen, setIsEditTeacherDialogOpen] = useState(false);
+  const [filteredTeachers, setFilteredTeachers] = useState<Teacher[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
-  const [isDeleteTeacherDialogOpen, setIsDeleteTeacherDialogOpen] = useState(false);
-  const [debouncedValue, setDebouncedValue] = useState("");
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [importedData, setImportedData] = useState<any[]>([]);
-  const [isAddingMultiple, setIsAddingMultiple] = useState(false);
-  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
-  const [isAddingToDepartments, setIsAddingToDepartments] = useState(false);
-  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportType, setExportType] = useState<'xlsx' | 'csv'>('xlsx');
-  const [isDeletingMultiple, setIsDeletingMultiple] = useState(false);
-  const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]);
-  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
-  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-  const [isBulkAddToDepartmentDialogOpen, setIsBulkAddToDepartmentDialogOpen] = useState(false);
-  const [isBulkAddingToDepartment, setIsBulkAddingToDepartment] = useState(false);
-  const [isBulkEditDialogOpen, setIsBulkEditDialogOpen] = useState(false);
-  const [isBulkEditing, setIsBulkEditing] = useState(false);
-  const [bulkEditDepartment, setBulkEditDepartment] = useState<string>("");
-  const [isBulkEditDepartmentDialogOpen, setIsBulkEditDepartmentDialogOpen] = useState(false);
-  const [isBulkEditDepartmentLoading, setIsBulkEditDepartmentLoading] = useState(false);
-  const [isBulkEditDesignationDialogOpen, setIsBulkEditDesignationDialogOpen] = useState(false);
-  const [isBulkEditDesignationLoading, setIsBulkEditDesignationLoading] = useState(false);
-  const [bulkEditDesignation, setBulkEditDesignation] = useState<string>("");
-  const [isBulkEditDesignationOpen, setIsBulkEditDesignationOpen] = useState(false);
-  const [isBulkEditJoiningDateDialogOpen, setIsBulkEditJoiningDateDialogOpen] = useState(false);
-  const [isBulkEditJoiningDateLoading, setIsBulkEditJoiningDateLoading] = useState(false);
-  const [bulkEditJoiningDate, setBulkEditJoiningDate] = useState<Date | undefined>(undefined);
-  const [isBulkEditJoiningDateOpen, setIsBulkEditJoiningDateOpen] = useState(false);
-  const [isBulkEditProfilePictureDialogOpen, setIsBulkEditProfilePictureDialogOpen] = useState(false);
-  const [isBulkEditProfilePictureLoading, setIsBulkEditProfilePictureLoading] = useState(false);
-  const [bulkEditProfilePicture, setBulkEditProfilePicture] = useState<string>("");
-  const [isBulkEditProfilePictureOpen, setIsBulkEditProfilePictureOpen] = useState(false);
-  const [isBulkEditCertificatesDialogOpen, setIsBulkEditCertificatesDialogOpen] = useState(false);
-  const [isBulkEditCertificatesLoading, setIsBulkEditCertificatesLoading] = useState(false);
-  const [bulkEditCertificates, setBulkEditCertificates] = useState<any[]>([]);
-  const [isBulkEditCertificatesOpen, setIsBulkEditCertificatesOpen] = useState(false);
-  const [isBulkEditNameDialogOpen, setIsBulkEditNameDialogOpen] = useState(false);
-  const [isBulkEditNameLoading, setIsBulkEditNameLoading] = useState(false);
-  const [bulkEditName, setBulkEditName] = useState<string>("");
-  const [isBulkEditNameOpen, setIsBulkEditNameOpen] = useState(false);
-  const [isBulkEditEidDialogOpen, setIsBulkEditEidDialogOpen] = useState(false);
-  const [isBulkEditEidLoading, setIsBulkEditEidLoading] = useState(false);
-  const [bulkEditEid, setBulkEditEid] = useState<string>("");
-  const [isBulkEditEidOpen, setIsBulkEditEidOpen] = useState(false);
-  const [isBulkEditEmailDialogOpen, setIsBulkEditEmailDialogOpen] = useState(false);
-  const [isBulkEditEmailLoading, setIsBulkEditEmailLoading] = useState(false);
-  const [bulkEditEmail, setBulkEditEmail] = useState<string>("");
-  const [isBulkEditEmailOpen, setIsBulkEditEmailOpen] = useState(false);
-  const [isBulkEditPhoneNumberDialogOpen, setIsBulkEditPhoneNumberDialogOpen] = useState(false);
-  const [isBulkEditPhoneNumberLoading, setIsBulkEditPhoneNumberLoading] = useState(false);
-  const [bulkEditPhoneNumber, setBulkEditPhoneNumber] = useState<string>("");
-  const [isBulkEditPhoneNumberOpen, setIsBulkEditPhoneNumberOpen] = useState(false);
-  const [isBulkEditCertificatesAddDialogOpen, setIsBulkEditCertificatesAddDialogOpen] = useState(false);
-  const [isBulkEditCertificatesAddLoading, setIsBulkEditCertificatesAddLoading] = useState(false);
-  const [bulkEditCertificatesAdd, setBulkEditCertificatesAdd] = useState<any[]>([]);
-  const [isBulkEditCertificatesAddOpen, setIsBulkEditCertificatesAddOpen] = useState(false);
-  const [isBulkEditCertificatesRemoveDialogOpen, setIsBulkEditCertificatesRemoveDialogOpen] = useState(false);
-  const [isBulkEditCertificatesRemoveLoading, setIsBulkEditCertificatesRemoveLoading] = useState(false);
-  const [bulkEditCertificatesRemove, setBulkEditCertificatesRemove] = useState<any[]>([]);
-  const [isBulkEditCertificatesRemoveOpen, setIsBulkEditCertificatesRemoveOpen] = useState(false);
-  const [isBulkEditCertificatesEditDialogOpen, setIsBulkEditCertificatesEditDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditLoading, setIsBulkEditCertificatesEditLoading] = useState(false);
-  const [bulkEditCertificatesEdit, setBulkEditCertificatesEdit] = useState<any[]>([]);
-  const [isBulkEditCertificatesEditOpen, setIsBulkEditCertificatesEditOpen] = useState(false);
-  const [isBulkEditCertificatesEditNameDialogOpen, setIsBulkEditCertificatesEditNameDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditNameLoading, setIsBulkEditCertificatesEditNameLoading] = useState(false);
-  const [bulkEditCertificatesEditName, setBulkEditCertificatesEditName] = useState<string>("");
-  const [isBulkEditCertificatesEditNameOpen, setIsBulkEditCertificatesEditNameOpen] = useState(false);
-  const [isBulkEditCertificatesEditUrlDialogOpen, setIsBulkEditCertificatesEditUrlDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditUrlLoading, setIsBulkEditCertificatesEditUrlLoading] = useState(false);
-  const [bulkEditCertificatesEditUrl, setBulkEditCertificatesEditUrl] = useState<string>("");
-  const [isBulkEditCertificatesEditUrlOpen, setIsBulkEditCertificatesEditUrlOpen] = useState(false);
-  const [isBulkEditCertificatesRemoveAllDialogOpen, setIsBulkEditCertificatesRemoveAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesRemoveAllLoading, setIsBulkEditCertificatesRemoveAllLoading] = useState(false);
-  const [bulkEditCertificatesRemoveAll, setBulkEditCertificatesRemoveAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesRemoveAllOpen, setIsBulkEditCertificatesRemoveAllOpen] = useState(false);
-  const [isBulkEditCertificatesAddAllDialogOpen, setIsBulkEditCertificatesAddAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesAddAllLoading, setIsBulkEditCertificatesAddAllLoading] = useState(false);
-  const [bulkEditCertificatesAddAll, setBulkEditCertificatesAddAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesAddAllOpen, setIsBulkEditCertificatesAddAllOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllDialogOpen, setIsBulkEditCertificatesEditAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllLoading, setIsBulkEditCertificatesEditAllLoading] = useState(false);
-  const [bulkEditCertificatesEditAll, setBulkEditCertificatesEditAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesEditAllOpen, setIsBulkEditCertificatesEditAllOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllNameDialogOpen, setIsBulkEditCertificatesEditAllNameDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllNameLoading, setIsBulkEditCertificatesEditAllNameLoading] = useState(false);
-  const [bulkEditCertificatesEditAllName, setBulkEditCertificatesEditAllName] = useState<string>("");
-  const [isBulkEditCertificatesEditAllNameOpen, setIsBulkEditCertificatesEditAllNameOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllUrlDialogOpen, setIsBulkEditCertificatesEditAllUrlDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllUrlLoading, setIsBulkEditCertificatesEditAllUrlLoading] = useState(false);
-  const [bulkEditCertificatesEditAllUrl, setBulkEditCertificatesEditAllUrl] = useState<string>("");
-  const [isBulkEditCertificatesEditAllUrlOpen, setIsBulkEditCertificatesEditAllUrlOpen] = useState(false);
-  const [isBulkEditCertificatesRemoveAllAllDialogOpen, setIsBulkEditCertificatesRemoveAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesRemoveAllAllLoading, setIsBulkEditCertificatesRemoveAllAllLoading] = useState(false);
-  const [bulkEditCertificatesRemoveAllAll, setBulkEditCertificatesRemoveAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesRemoveAllAllOpen, setIsBulkEditCertificatesRemoveAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesAddAllAllDialogOpen, setIsBulkEditCertificatesAddAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesAddAllAllLoading, setIsBulkEditCertificatesAddAllAllLoading] = useState(false);
-  const [bulkEditCertificatesAddAllAll, setBulkEditCertificatesAddAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesAddAllAllOpen, setIsBulkEditCertificatesAddAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllDialogOpen, setIsBulkEditCertificatesEditAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllLoading, setIsBulkEditCertificatesEditAllAllLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAll, setBulkEditCertificatesEditAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesEditAllAllOpen, setIsBulkEditCertificatesEditAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllNameDialogOpen, setIsBulkEditCertificatesEditAllAllNameDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllNameLoading, setIsBulkEditCertificatesEditAllAllNameLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAllName, setBulkEditCertificatesEditAllAllName] = useState<string>("");
-  const [isBulkEditCertificatesEditAllAllNameOpen, setIsBulkEditCertificatesEditAllAllNameOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllUrlDialogOpen, setIsBulkEditCertificatesEditAllAllUrlDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllUrlLoading, setIsBulkEditCertificatesEditAllAllUrlLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAllUrl, setBulkEditCertificatesEditAllAllUrl] = useState<string>("");
-  const [isBulkEditCertificatesEditAllAllUrlOpen, setIsBulkEditCertificatesEditAllAllUrlOpen] = useState(false);
-  const [isBulkEditCertificatesRemoveAllAllAllDialogOpen, setIsBulkEditCertificatesRemoveAllAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesRemoveAllAllAllLoading, setIsBulkEditCertificatesRemoveAllAllAllLoading] = useState(false);
-  const [bulkEditCertificatesRemoveAllAllAll, setBulkEditCertificatesRemoveAllAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesRemoveAllAllAllOpen, setIsBulkEditCertificatesRemoveAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesAddAllAllAllDialogOpen, setIsBulkEditCertificatesAddAllAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesAddAllAllAllLoading, setIsBulkEditCertificatesAddAllAllAllLoading] = useState(false);
-  const [bulkEditCertificatesAddAllAllAll, setBulkEditCertificatesAddAllAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesAddAllAllAllOpen, setIsBulkEditCertificatesAddAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllDialogOpen, setIsBulkEditCertificatesEditAllAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllLoading, setIsBulkEditCertificatesEditAllAllAllLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAllAll, setBulkEditCertificatesEditAllAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesEditAllAllAllOpen, setIsBulkEditCertificatesEditAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllNameDialogOpen, setIsBulkEditCertificatesEditAllAllAllNameDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllNameLoading, setIsBulkEditCertificatesEditAllAllAllNameLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAllAllName, setBulkEditCertificatesEditAllAllAllName] = useState<string>("");
-  const [isBulkEditCertificatesEditAllAllAllNameOpen, setIsBulkEditCertificatesEditAllAllAllNameOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllUrlDialogOpen, setIsBulkEditCertificatesEditAllAllAllUrlDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllUrlLoading, setIsBulkEditCertificatesEditAllAllAllUrlLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAllAllUrl, setBulkEditCertificatesEditAllAllAllUrl] = useState<string>("");
-  const [isBulkEditCertificatesEditAllAllAllUrlOpen, setIsBulkEditCertificatesEditAllAllAllUrlOpen] = useState(false);
-  const [isBulkEditCertificatesRemoveAllAllAllAllDialogOpen, setIsBulkEditCertificatesRemoveAllAllAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesRemoveAllAllAllAllLoading, setIsBulkEditCertificatesRemoveAllAllAllAllLoading] = useState(false);
-  const [bulkEditCertificatesRemoveAllAllAllAll, setBulkEditCertificatesRemoveAllAllAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesRemoveAllAllAllAllOpen, setIsBulkEditCertificatesRemoveAllAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesAddAllAllAllAllDialogOpen, setIsBulkEditCertificatesAddAllAllAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesAddAllAllAllAllLoading, setIsBulkEditCertificatesAddAllAllAllAllLoading] = useState(false);
-  const [bulkEditCertificatesAddAllAllAllAll, setBulkEditCertificatesAddAllAllAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesAddAllAllAllAllOpen, setIsBulkEditCertificatesAddAllAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllDialogOpen, setIsBulkEditCertificatesEditAllAllAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllLoading, setIsBulkEditCertificatesEditAllAllAllAllLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAllAllAll, setBulkEditCertificatesEditAllAllAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesEditAllAllAllAllOpen, setIsBulkEditCertificatesEditAllAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllNameDialogOpen, setIsBulkEditCertificatesEditAllAllAllAllNameDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllNameLoading, setIsBulkEditCertificatesEditAllAllAllAllNameLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAllAllAllName, setBulkEditCertificatesEditAllAllAllAllName] = useState<string>("");
-  const [isBulkEditCertificatesEditAllAllAllAllNameOpen, setIsBulkEditCertificatesEditAllAllAllAllNameOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllUrlDialogOpen, setIsBulkEditCertificatesEditAllAllAllAllUrlDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllUrlLoading, setIsBulkEditCertificatesEditAllAllAllAllUrlLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAllAllAllUrl, setBulkEditCertificatesEditAllAllAllAllUrl] = useState<string>("");
-  const [isBulkEditCertificatesEditAllAllAllAllUrlOpen, setIsBulkEditCertificatesEditAllAllAllAllUrlOpen] = useState(false);
-  const [isBulkEditCertificatesRemoveAllAllAllAllAllDialogOpen, setIsBulkEditCertificatesRemoveAllAllAllAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesRemoveAllAllAllAllAllLoading, setIsBulkEditCertificatesRemoveAllAllAllAllAllLoading] = useState(false);
-  const [bulkEditCertificatesRemoveAllAllAllAllAll, setBulkEditCertificatesRemoveAllAllAllAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesRemoveAllAllAllAllAllOpen, setIsBulkEditCertificatesRemoveAllAllAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesAddAllAllAllAllAllDialogOpen, setIsBulkEditCertificatesAddAllAllAllAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesAddAllAllAllAllAllLoading, setIsBulkEditCertificatesAddAllAllAllAllAllLoading] = useState(false);
-  const [bulkEditCertificatesAddAllAllAllAllAll, setBulkEditCertificatesAddAllAllAllAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesAddAllAllAllAllAllOpen, setIsBulkEditCertificatesAddAllAllAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllDialogOpen, setIsBulkEditCertificatesEditAllAllAllAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllLoading, setIsBulkEditCertificatesEditAllAllAllAllAllLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAllAllAllAll, setBulkEditCertificatesEditAllAllAllAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesEditAllAllAllAllAllOpen, setIsBulkEditCertificatesEditAllAllAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllNameDialogOpen, setIsBulkEditCertificatesEditAllAllAllAllAllNameDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllNameLoading, setIsBulkEditCertificatesEditAllAllAllAllAllNameLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAllAllAllAllName, setBulkEditCertificatesEditAllAllAllAllAllName] = useState<string>("");
-  const [isBulkEditCertificatesEditAllAllAllAllAllNameOpen, setIsBulkEditCertificatesEditAllAllAllAllAllNameOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllUrlDialogOpen, setIsBulkEditCertificatesEditAllAllAllAllAllUrlDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllUrlLoading, setIsBulkEditCertificatesEditAllAllAllAllAllUrlLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAllAllAllAllUrl, setBulkEditCertificatesEditAllAllAllAllAllUrl] = useState<string>("");
-  const [isBulkEditCertificatesEditAllAllAllAllAllUrlOpen, setIsBulkEditCertificatesEditAllAllAllAllAllUrlOpen] = useState(false);
-  const [isBulkEditCertificatesRemoveAllAllAllAllAllAllDialogOpen, setIsBulkEditCertificatesRemoveAllAllAllAllAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesRemoveAllAllAllAllAllAllLoading, setIsBulkEditCertificatesRemoveAllAllAllAllAllAllLoading] = useState(false);
-  const [bulkEditCertificatesRemoveAllAllAllAllAllAll, setBulkEditCertificatesRemoveAllAllAllAllAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesRemoveAllAllAllAllAllAllOpen, setIsBulkEditCertificatesRemoveAllAllAllAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesAddAllAllAllAllAllAllDialogOpen, setIsBulkEditCertificatesAddAllAllAllAllAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesAddAllAllAllAllAllAllLoading, setIsBulkEditCertificatesAddAllAllAllAllAllAllLoading] = useState(false);
-  const [bulkEditCertificatesAddAllAllAllAllAllAll, setBulkEditCertificatesAddAllAllAllAllAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesAddAllAllAllAllAllAllOpen, setIsBulkEditCertificatesAddAllAllAllAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllDialogOpen, setIsBulkEditCertificatesEditAllAllAllAllAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllLoading, setIsBulkEditCertificatesEditAllAllAllAllAllAllLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAllAllAllAllAll, setBulkEditCertificatesEditAllAllAllAllAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllOpen, setIsBulkEditCertificatesEditAllAllAllAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllNameDialogOpen, setIsBulkEditCertificatesEditAllAllAllAllAllAllNameDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllNameLoading, setIsBulkEditCertificatesEditAllAllAllAllAllAllNameLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAllAllAllAllAllName, setBulkEditCertificatesEditAllAllAllAllAllAllName] = useState<string>("");
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllNameOpen, setIsBulkEditCertificatesEditAllAllAllAllAllAllNameOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllUrlDialogOpen, setIsBulkEditCertificatesEditAllAllAllAllAllAllUrlDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllUrlLoading, setIsBulkEditCertificatesEditAllAllAllAllAllAllUrlLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAllAllAllAllAllUrl, setBulkEditCertificatesEditAllAllAllAllAllAllUrl] = useState<string>("");
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllUrlOpen, setIsBulkEditCertificatesEditAllAllAllAllAllAllUrlOpen] = useState(false);
-  const [isBulkEditCertificatesRemoveAllAllAllAllAllAllAllDialogOpen, setIsBulkEditCertificatesRemoveAllAllAllAllAllAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesRemoveAllAllAllAllAllAllAllLoading, setIsBulkEditCertificatesRemoveAllAllAllAllAllAllAllLoading] = useState(false);
-  const [bulkEditCertificatesRemoveAllAllAllAllAllAllAll, setBulkEditCertificatesRemoveAllAllAllAllAllAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesRemoveAllAllAllAllAllAllAllOpen, setIsBulkEditCertificatesRemoveAllAllAllAllAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesAddAllAllAllAllAllAllAllDialogOpen, setIsBulkEditCertificatesAddAllAllAllAllAllAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesAddAllAllAllAllAllAllAllLoading, setIsBulkEditCertificatesAddAllAllAllAllAllAllAllLoading] = useState(false);
-  const [bulkEditCertificatesAddAllAllAllAllAllAllAll, setBulkEditCertificatesAddAllAllAllAllAllAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesAddAllAllAllAllAllAllAllOpen, setIsBulkEditCertificatesAddAllAllAllAllAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllAllDialogOpen, setIsBulkEditCertificatesEditAllAllAllAllAllAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllAllLoading, setIsBulkEditCertificatesEditAllAllAllAllAllAllAllLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAllAllAllAllAllAll, setBulkEditCertificatesEditAllAllAllAllAllAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllAllOpen, setIsBulkEditCertificatesEditAllAllAllAllAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllAllNameDialogOpen, setIsBulkEditCertificatesEditAllAllAllAllAllAllAllNameDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllAllNameLoading, setIsBulkEditCertificatesEditAllAllAllAllAllAllAllNameLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAllAllAllAllAllAllName, setBulkEditCertificatesEditAllAllAllAllAllAllAllName] = useState<string>("");
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllAllNameOpen, setIsBulkEditCertificatesEditAllAllAllAllAllAllAllNameOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllAllUrlDialogOpen, setIsBulkEditCertificatesEditAllAllAllAllAllAllAllUrlDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllAllUrlLoading, setIsBulkEditCertificatesEditAllAllAllAllAllAllAllUrlLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAllAllAllAllAllAllUrl, setBulkEditCertificatesEditAllAllAllAllAllAllAllUrl] = useState<string>("");
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllAllUrlOpen, setIsBulkEditCertificatesEditAllAllAllAllAllAllAllUrlOpen] = useState(false);
-  const [isBulkEditCertificatesRemoveAllAllAllAllAllAllAllAllDialogOpen, setIsBulkEditCertificatesRemoveAllAllAllAllAllAllAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesRemoveAllAllAllAllAllAllAllAllLoading, setIsBulkEditCertificatesRemoveAllAllAllAllAllAllAllAllLoading] = useState(false);
-  const [bulkEditCertificatesRemoveAllAllAllAllAllAllAllAll, setBulkEditCertificatesRemoveAllAllAllAllAllAllAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesRemoveAllAllAllAllAllAllAllAllOpen, setIsBulkEditCertificatesRemoveAllAllAllAllAllAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesAddAllAllAllAllAllAllAllAllDialogOpen, setIsBulkEditCertificatesAddAllAllAllAllAllAllAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesAddAllAllAllAllAllAllAllAllLoading, setIsBulkEditCertificatesAddAllAllAllAllAllAllAllAllLoading] = useState(false);
-  const [bulkEditCertificatesAddAllAllAllAllAllAllAllAll, setBulkEditCertificatesAddAllAllAllAllAllAllAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesAddAllAllAllAllAllAllAllAllOpen, setIsBulkEditCertificatesAddAllAllAllAllAllAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllAllAllDialogOpen, setIsBulkEditCertificatesEditAllAllAllAllAllAllAllAllDialogOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllAllAllLoading, setIsBulkEditCertificatesEditAllAllAllAllAllAllAllAllLoading] = useState(false);
-  const [bulkEditCertificatesEditAllAllAllAllAllAllAllAll, setBulkEditCertificatesEditAllAllAllAllAllAllAllAll] = useState<any[]>([]);
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllAllAllOpen, setIsBulkEditCertificatesEditAllAllAllAllAllAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesEditAllAllAllAllAllAllAll
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [viewDocumentUrl, setViewDocumentUrl] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [achievementToDelete, setAchievementToDelete] = useState<DetailedAchievement | null>(null);
+
+  // Modal state for Teacher Document Statistics (interactive filtering)
+  const [teacherStatModalOpen, setTeacherStatModalOpen] = useState(false);
+  const [teacherStatModalFilter, setTeacherStatModalFilter] = useState<{ filterType: string; filterValue: any } | null>(null);
+
+  useEffect(() => {
+    fetchTeachers();
+  }, []);
+
+  useEffect(() => {
+    if (searchQuery) {
+      const filtered = teachers.filter(
+        (teacher) =>
+          teacher.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          teacher.email_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          teacher.eid.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          teacher.department.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredTeachers(filtered);
+    } else {
+      setFilteredTeachers(teachers);
+    }
+  }, [searchQuery, teachers]);
+
+  const fetchTeachers = async () => {
+    try {
+      const { data: teachersData, error } = await supabase
+        .from("teacher_details")
+        .select("*")
+        .order("full_name");
+      if (error) throw error;
+      if (teachersData) {
+        const teachersWithAchievements = await Promise.all(
+          teachersData.map(async (teacher) => {
+            const { data: achievements } = await supabase
+              .from("detailed_achievements")
+              .select("*")
+              .eq("teacher_id", teacher.id);
+            return { ...teacher, achievements: achievements || [] };
+          })
+        );
+        setTeachers(teachersWithAchievements);
+        setFilteredTeachers(teachersWithAchievements);
+      }
+    } catch (error) {
+      console.error("Error fetching teachers:", error);
+      toast.error("Failed to fetch teachers data");
+    }
+  };
+
+  const handleViewDetails = (teacher: Teacher) => {
+    setSelectedTeacher(teacher);
+    setIsDetailsOpen(true);
+  };
+
+  const handleViewDocument = (url: string) => {
+    setViewDocumentUrl(url);
+  };
+
+  const renderFieldValue = (value: any, isLink = false) => {
+    if (!value) return <span className="text-gray-400">Not provided</span>;
+    if (isLink && typeof value === "string" && value.startsWith("http")) {
+      return (
+        <a
+          href={value}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline flex items-center"
+        >
+          {value} <ExternalLink className="h-3 w-3 ml-1" />
+        </a>
+      );
+    }
+    return value;
+  };
+
+  const handleUpdateAchievementStatus = async (achievementId: string, newStatus: "Approved" | "Rejected") => {
+    try {
+      const { error } = await supabase
+        .from("detailed_achievements")
+        .update({ status: newStatus })
+        .eq("id", achievementId);
+      if (error) throw error;
+      if (selectedTeacher) {
+        const updatedAchievements = selectedTeacher.achievements?.map((a) =>
+          a.id === achievementId ? { ...a, status: newStatus } : a
+        );
+        setSelectedTeacher({ ...selectedTeacher, achievements: updatedAchievements });
+        setTeachers(
+          teachers.map((t) =>
+            t.id === selectedTeacher.id ? { ...t, achievements: updatedAchievements } : t
+          )
+        );
+        setFilteredTeachers(
+          filteredTeachers.map((t) =>
+            t.id === selectedTeacher.id ? { ...t, achievements: updatedAchievements } : t
+          )
+        );
+      }
+      toast.success(`Achievement marked as ${newStatus}`);
+    } catch (error) {
+      console.error("Error updating achievement status:", error);
+      toast.error("Failed to update achievement status");
+    }
+  };
+
+  const openDeleteDialog = (achievement: DetailedAchievement) => {
+    setAchievementToDelete(achievement);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteAchievement = async (achievementId: string) => {
+    try {
+      const achievement = selectedTeacher?.achievements.find((a) => a.id === achievementId);
+      if (achievement && achievement.document_url) {
+        const regex = /teacher_proofs\/(.+)$/;
+        const match = achievement.document_url.match(regex);
+        const filePath = match ? match[1] : null;
+        if (filePath) {
+          const { error: storageError } = await supabase
+            .storage
+            .from("teacher_proofs")
+            .remove([filePath]);
+          if (storageError) {
+            console.error("Error deleting file from bucket:", storageError);
+            toast.error("Failed to delete file from storage");
+            return;
+          }
+        }
+      }
+      const { error } = await supabase.from("detailed_achievements").delete().eq("id", achievementId);
+      if (error) throw error;
+      if (selectedTeacher) {
+        const updatedAchievements = selectedTeacher.achievements.filter((a) => a.id !== achievementId);
+        setSelectedTeacher({ ...selectedTeacher, achievements: updatedAchievements });
+        setTeachers(
+          teachers.map((t) =>
+            t.id === selectedTeacher.id ? { ...t, achievements: updatedAchievements } : t
+          )
+        );
+        setFilteredTeachers(
+          filteredTeachers.map((t) =>
+            t.id === selectedTeacher.id ? { ...t, achievements: updatedAchievements } : t
+          )
+        );
+      }
+      toast.success("Achievement and file deleted successfully");
+    } catch (error) {
+      console.error("Error deleting achievement:", error);
+      toast.error("Failed to delete achievement");
+    }
+  };
+
+  // Only Export CSV remains (removing export PDF)
+  const exportCSV = () => {
+    let achievementsToExport: DetailedAchievement[] = [];
+  
+    if (teacherStatModalOpen && teacherStatModalFilter && selectedTeacher) {
+      // Export based on filtered achievements
+      achievementsToExport = getFilteredTeacherAchievements();
+    } else if (selectedTeacher) {
+      // Export all achievements
+      achievementsToExport = selectedTeacher.achievements || [];
+    }
+  
+    if (!achievementsToExport.length) {
+      toast.error("No data available to export.");
+      return;
+    }
+  
+    const headers = Object.keys(achievementsToExport[0]);
+    const rows = achievementsToExport.map((achievement) =>
+      headers.map((field) => `"${achievement[field] ?? ""}"`).join(",")
+    );
+    const csvContent = [headers.join(","), ...rows].join("\n");
+  
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "filtered_teacher_data.csv");
+    link.click();
+  };
+  
+
+  // ---------------------------
+  // TEACHER DOCUMENT STATISTICS MODAL FUNCTIONALITY
+  // ---------------------------
+  const openTeacherStatModal = (filterType: string, filterValue: any) => {
+    setTeacherStatModalFilter({ filterType, filterValue });
+    setTeacherStatModalOpen(true);
+  };
+
+  const getFilteredTeacherAchievements = (): DetailedAchievement[] => {
+    if (!teacherStatModalFilter || !selectedTeacher) return [];
+    const { filterType, filterValue } = teacherStatModalFilter;
+    if (filterType === "all") {
+      return selectedTeacher.achievements || [];
+    } else if (filterType === "indexed") {
+      return (selectedTeacher.achievements || []).filter(
+        (achievement) =>
+          achievement.indexed_in && achievement.indexed_in.includes(filterValue)
+      );
+    } else if (filterType === "categories") {
+      return (selectedTeacher.achievements || []).filter(
+        (achievement) => achievement.category === filterValue
+      );
+    } else if (filterType === "yearly") {
+      return (selectedTeacher.achievements || []).filter(
+        (achievement) => new Date(achievement.date_achieved).getFullYear() === filterValue
+      );
+    } else if (filterType === "quality") {
+      return (selectedTeacher.achievements || []).filter(
+        (achievement) => achievement.q_ranking === filterValue
+      );
+    }
+    return [];
+  };
+
+  // Export summary for teacher document statistics as CSV
+  const exportTeacherSummary = () => {
+    if (!selectedTeacher) return;
+    const teacherStats = computeTeacherStats(selectedTeacher.achievements || []);
+    const summaryRows = [
+      ["Section", "Metric", "Value"],
+      ["General", "Total Documents", teacherStats.totalDocuments],
+      ["Indexed", "SCI", teacherStats.indexed.SCI],
+      ["Indexed", "Scopus", teacherStats.indexed.Scopus],
+      ["Indexed", "UGC Approved", teacherStats.indexed["UGC Approved"]],
+      ["Indexed", "WOS", teacherStats.indexed.WOS],
+      ["Indexed", "IEEE Xplore", teacherStats.indexed["IEEE Xplore"]],
+      ["Indexed", "Springer", teacherStats.indexed.Springer],
+      ["Indexed", "Elsevier", teacherStats.indexed.Elsevier],
+      [],
+      ["Yearly", "2022", teacherStats.yearly[2022]],
+      ["Yearly", "2023", teacherStats.yearly[2023]],
+      ["Yearly", "2024", teacherStats.yearly[2024]],
+      ["Yearly", "2025", teacherStats.yearly[2025]],
+      [],
+      ["Quality", "Q1", teacherStats.quality.Q1],
+      ["Quality", "Q2", teacherStats.quality.Q2],
+      ["Quality", "Q3", teacherStats.quality.Q3],
+      ["Quality", "Q4", teacherStats.quality.Q4],
+      [],
+      ["Categories", "Journal Articles", teacherStats.categories["Journal Articles"]],
+      ["Categories", "Conference Papers", teacherStats.categories["Conference Papers"]],
+      ["Categories", "Books & Book Chapters", teacherStats.categories["Books & Book Chapters"]],
+      ["Categories", "Patents", teacherStats.categories["Patents"]],
+      ["Categories", "Research Collaborations", teacherStats.categories["Research Collaborations"]],
+      ["Categories", "Awards & Recognitions", teacherStats.categories["Awards & Recognitions"]],
+      ["Categories", "Consultancy & Funded Projects", teacherStats.categories["Consultancy & Funded Projects"]],
+      ["Categories", "Startups & Centers of Excellence", teacherStats.categories["Startups & Centers of Excellence"]],
+      ["Categories", "Others", teacherStats.categories["Others"]],
+    ];
+    const csv = summaryRows.map((row) => row.join(",")).join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "teacher_documents_summary.csv");
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Teacher Management</h1>
+      </div>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Search Teachers</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Input
+              placeholder="Search by name, email, EID, or department..."
+              className="pl-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Teachers List ({filteredTeachers.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="p-3 text-left">Name</th>
+                  <th className="p-3 text-left">EID</th>
+                  <th className="p-3 text-left">Department</th>
+                  <th className="p-3 text-left">Designation</th>
+                  <th className="p-3 text-left">Achievements</th>
+                  <th className="p-3 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTeachers.length > 0 ? (
+                  filteredTeachers.map((teacher) => (
+                    <tr key={teacher.id} className="border-t">
+                      <td className="p-3">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={teacher.profile_pic_url || "/placeholder.svg"}
+                            alt={teacher.full_name}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                          {teacher.full_name}
+                        </div>
+                      </td>
+                      <td className="p-3">{teacher.eid}</td>
+                      <td className="p-3">{teacher.department}</td>
+                      <td className="p-3">{teacher.designation}</td>
+                      <td className="p-3">
+                        <div className="flex items-center space-x-2">
+                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                            Total: {teacher.achievements?.length || 0}
+                          </span>
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                            Approved: {teacher.achievements?.filter(a => a.status === "Approved").length || 0}
+                          </span>
+                          <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">
+                            Pending: {teacher.achievements?.filter(a => a.status === "Pending Approval").length || 0}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="p-3 text-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDetails(teacher)}
+                        >
+                          <Eye className="h-4 w-4 mr-1" /> View Details
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="p-3 text-center text-gray-500">
+                      No teachers found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Teacher Details Dialog */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between w-full">
+              <DialogTitle>Teacher Details</DialogTitle>
+              <Button onClick={exportCSV} variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-1" />
+                Export CSV
+              </Button>
+            </div>
+          </DialogHeader>
+          {selectedTeacher && (
+            <div className="space-y-6">
+              {/* Basic Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex items-center gap-4">
+                  <img
+                    src={selectedTeacher.profile_pic_url || "/placeholder.svg"}
+                    alt={selectedTeacher.full_name}
+                    className="w-16 h-16 rounded-full object-cover"
+                  />
+                  <div>
+                    <h3 className="text-xl font-bold">{selectedTeacher.full_name}</h3>
+                    <p className="text-gray-600">{selectedTeacher.eid}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div>
+                    <h3 className="font-medium">Email</h3>
+                    <p>{selectedTeacher.email_id}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Mobile</h3>
+                    <p>{selectedTeacher.mobile_number}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Department</h3>
+                    <p>{selectedTeacher.department}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Designation</h3>
+                    <p>{selectedTeacher.designation}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Teacher Details */}
+              <div className="border-t pt-6">
+                <h3 className="text-xl font-bold mb-4">Additional Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-medium">Date of Joining</h4>
+                    <p>
+                      {selectedTeacher.date_of_joining
+                        ? dateFormat(new Date(selectedTeacher.date_of_joining), "PPP")
+                        : "Not provided"}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Highest Qualification</h4>
+                    <p>{selectedTeacher.highest_qualification || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Skills</h4>
+                    <p>{selectedTeacher.skills ? selectedTeacher.skills.join(", ") : "Not provided"}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Address</h4>
+                    <p>{selectedTeacher.address || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Cabin No</h4>
+                    <p>{selectedTeacher.cabin_no || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Block</h4>
+                    <p>{selectedTeacher.block || "Not provided"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Enhanced Teacher Document Statistics Section */}
+              {selectedTeacher && (
+                (() => {
+                  const teacherStats = computeTeacherStats(selectedTeacher.achievements || []);
+                  return (
+                    <Card className="bg-white shadow-lg rounded-xl overflow-hidden">
+                      <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-500 p-4">
+                        <CardTitle className="text-2xl font-bold text-white">
+                          Teacher Document Statistics
+                        </CardTitle>
+                        <div className="mt-2">
+                          <Button variant="outline" size="sm" onClick={exportTeacherSummary}>
+                            <Download className="w-4 h-4 mr-1" />
+                            Export Summary
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-6">
+                        {/* Total Documents */}
+                        <div className="grid grid-cols-1 gap-4 mb-6">
+                          <div
+                            className="bg-gray-50 p-4 rounded-lg border cursor-pointer"
+                            onClick={() => openTeacherStatModal("all", "all")}
+                          >
+                            <h3 className="text-lg font-semibold text-gray-700 text-center">
+                              Total Documents Uploaded
+                            </h3>
+                            <p className="text-3xl font-bold text-blue-600 text-center mt-2">
+                              {teacherStats.totalDocuments}
+                            </p>
+                          </div>
+                        </div>
+                        {/* Indexed Documents */}
+                        <div className="grid grid-cols-1 gap-4 mb-6">
+                          <div className="bg-gray-50 p-4 rounded-lg border">
+                            <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                              Indexed Documents
+                            </h3>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                              {Object.entries(teacherStats.indexed).map(([key, value]) => (
+                                <Button
+                                  key={key}
+                                  variant="ghost"
+                                  className="text-sm text-gray-700 underline"
+                                  onClick={() => openTeacherStatModal("indexed", key)}
+                                >
+                                  {key}: {value}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        {/* Yearly Uploads */}
+                        <div className="grid grid-cols-1 gap-4 mb-6">
+                          <div className="bg-gray-50 p-4 rounded-lg border">
+                            <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                              Yearly Uploads
+                            </h3>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                              {Object.entries(teacherStats.yearly).map(([year, count]) => (
+                                <Button
+                                  key={year}
+                                  variant="ghost"
+                                  className="text-sm text-gray-700 underline"
+                                  onClick={() => openTeacherStatModal("yearly", Number(year))}
+                                >
+                                  {year}: {count}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        {/* Category Breakdown and Quality Ranking */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          {/* Category Breakdown */}
+                          <div className="bg-gray-50 p-4 rounded-lg border">
+                            <h3 className="text-lg font-semibold text-gray-700 mb-2 text-center">
+                              Category Breakdown (Pie Chart)
+                            </h3>
+                            <ResponsiveContainer width="100%" height={250}>
+                              <PieChart>
+                                <Pie
+                                  data={Object.entries(teacherStats.categories).map(([name, value]) => ({
+                                    name,
+                                    value,
+                                  }))}
+                                  dataKey="value"
+                                  nameKey="name"
+                                  cx="50%"
+                                  cy="50%"
+                                  outerRadius={80}
+                                  fill="#8884d8"
+                                  label
+                                >
+                                  {Object.entries(teacherStats.categories).map((entry, index) => {
+                                    const colors = [
+                                      "#0088FE",
+                                      "#00C49F",
+                                      "#FFBB28",
+                                      "#FF8042",
+                                      "#AA336A",
+                                      "#33AA77",
+                                      "#7755AA",
+                                      "#AA5577",
+                                      "#55AA77",
+                                    ];
+                                    return (
+                                      <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                                    );
+                                  })}
+                                </Pie>
+                                <Tooltip />
+                                <Legend />
+                              </PieChart>
+                            </ResponsiveContainer>
+                            <div className="mt-4">
+                              <h3 className="text-md font-semibold text-gray-700">Category Details</h3>
+                              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {Object.entries(teacherStats.categories).map(([cat, count]) => (
+                                  <Button
+                                    key={cat}
+                                    variant="ghost"
+                                    className="flex justify-between items-center p-2 border rounded bg-white text-sm text-gray-700 underline"
+                                    onClick={() => openTeacherStatModal("categories", cat)}
+                                  >
+                                    <span>{cat}</span>
+                                    <span className="font-bold text-blue-600">{count}</span>
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          {/* Quality Ranking */}
+                          <div className="bg-gray-50 p-4 rounded-lg border">
+                            <h3 className="text-lg font-semibold text-gray-700 mb-2 text-center">
+                              Quality Ranking (Q1 - Q4)
+                            </h3>
+                            <ResponsiveContainer width="100%" height={250}>
+                              <BarChart data={[
+                                { quality: "Q1", count: teacherStats.quality["Q1"] },
+                                { quality: "Q2", count: teacherStats.quality["Q2"] },
+                                { quality: "Q3", count: teacherStats.quality["Q3"] },
+                                { quality: "Q4", count: teacherStats.quality["Q4"] },
+                              ]}>
+                                <XAxis dataKey="quality" stroke="#333" />
+                                <YAxis stroke="#333" />
+                                <Tooltip />
+                                <Bar dataKey="count" fill="#8884d8" />
+                              </BarChart>
+                            </ResponsiveContainer>
+                            <div className="mt-4">
+                              <h3 className="text-md font-semibold text-gray-700">Quality Details</h3>
+                              <div className="mt-2 grid grid-cols-2 gap-2">
+                                {["Q1", "Q2", "Q3", "Q4"].map((q) => (
+                                  <Button
+                                    key={q}
+                                    variant="ghost"
+                                    className="flex justify-between items-center p-2 border rounded bg-white text-sm text-gray-700 underline"
+                                    onClick={() => openTeacherStatModal("quality", q)}
+                                  >
+                                    <span>{q}</span>
+                                    <span className="font-bold">
+                                      {teacherStats.quality[q as keyof typeof teacherStats.quality]}
+                                    </span>
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })()
+              )}
+              <Tabs defaultValue="all" className="mt-6">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="all">All Achievements</TabsTrigger>
+                  <TabsTrigger value="pending">Pending</TabsTrigger>
+                  <TabsTrigger value="approved">Approved</TabsTrigger>
+                </TabsList>
+                <TabsContent value="all" className="mt-4">
+                  {selectedTeacher.achievements && selectedTeacher.achievements.length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedTeacher.achievements.map((achievement) => (
+                        <Card key={achievement.id} className="p-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="font-medium">{achievement.title}</div>
+                              <div className="text-sm text-gray-600">
+                                {achievement.category} | {new Date(achievement.date_achieved).toLocaleDateString()}
+                              </div>
+                              {achievement.document_url && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="mt-2 flex items-center gap-1 text-blue-600"
+                                  onClick={() => handleViewDocument(achievement.document_url)}
+                                >
+                                  <FileText className="h-4 w-4" />
+                                  View Uploaded Proof
+                                </Button>
+                              )}
+                              <Accordion type="single" collapsible className="w-full mt-2">
+                                <AccordionItem value="details">
+                                  <AccordionTrigger className="text-sm py-2">
+                                    View Achievement Details
+                                  </AccordionTrigger>
+                                  <AccordionContent>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                                      {Object.entries(achievement).map(([key, value]) => {
+                                        const excludedKeys = [
+                                          "id",
+                                          "teacher_id",
+                                          "created_at",
+                                          "status",
+                                          "document_url",
+                                          "teacher_name",
+                                          "teacher_eid",
+                                          "teacher_designation",
+                                          "teacher_mobile",
+                                          "teacher_department",
+                                        ];
+                                        if (excludedKeys.includes(key) || !value) return null;
+                                        return (
+                                          <div key={key}>
+                                            <p className="text-sm font-medium capitalize">
+                                              {key.replaceAll("_", " ")}:
+                                            </p>
+                                            <p className="text-sm">{String(value)}</p>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </AccordionContent>
+                                </AccordionItem>
+                              </Accordion>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
+                                {achievement.status}
+                              </span>
+                              {achievement.status === "Pending Approval" && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="bg-green-500 hover:bg-green-600 text-white"
+                                    onClick={() => handleUpdateAchievementStatus(achievement.id, "Approved")}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="bg-red-500 hover:bg-red-600 text-white"
+                                    onClick={() => handleUpdateAchievementStatus(achievement.id, "Rejected")}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => openDeleteDialog(achievement)}
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">No achievements found</div>
+                  )}
+                </TabsContent>
+                <TabsContent value="pending" className="mt-4">
+                  {selectedTeacher.achievements && selectedTeacher.achievements.filter(a => a.status === "Pending Approval").length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedTeacher.achievements
+                        .filter(a => a.status === "Pending Approval")
+                        .map((achievement) => (
+                          <Card key={achievement.id} className="p-3">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <div className="font-medium">{achievement.title}</div>
+                                <div className="text-sm text-gray-600">
+                                  {achievement.category} | {new Date(achievement.date_achieved).toLocaleDateString()}
+                                </div>
+                                {achievement.document_url && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-2 flex items-center gap-1 text-blue-600"
+                                    onClick={() => handleViewDocument(achievement.document_url)}
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                    View Uploaded Proof
+                                  </Button>
+                                )}
+                                <Accordion type="single" collapsible className="w-full mt-2">
+                                  <AccordionItem value="details">
+                                    <AccordionTrigger className="text-sm py-2">
+                                      View Achievement Details
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                                        {Object.entries(achievement).map(([key, value]) => {
+                                          const excludedKeys = [
+                                            "id",
+                                            "teacher_id",
+                                            "created_at",
+                                            "status",
+                                            "document_url",
+                                            "teacher_name",
+                                            "teacher_eid",
+                                            "teacher_designation",
+                                            "teacher_mobile",
+                                            "teacher_department",
+                                          ];
+                                          if (excludedKeys.includes(key) || !value) return null;
+                                          return (
+                                            <div key={key}>
+                                              <p className="text-sm font-medium capitalize">
+                                                {key.replaceAll("_", " ")}:
+                                              </p>
+                                              <p className="text-sm">{String(value)}</p>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                </Accordion>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="bg-green-500 hover:bg-green-600 text-white"
+                                  onClick={() => handleUpdateAchievementStatus(achievement.id, "Approved")}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="bg-red-500 hover:bg-red-600 text-white"
+                                  onClick={() => handleUpdateAchievementStatus(achievement.id, "Rejected")}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => openDeleteDialog(achievement)}
+                                >
+                                  <Trash className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">No pending achievements</div>
+                  )}
+                </TabsContent>
+                <TabsContent value="approved" className="mt-4">
+                  {selectedTeacher.achievements && selectedTeacher.achievements.filter(a => a.status === "Approved").length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedTeacher.achievements
+                        .filter(a => a.status === "Approved")
+                        .map((achievement) => (
+                          <Card key={achievement.id} className="p-3">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <div className="font-medium">{achievement.title}</div>
+                                <div className="text-sm text-gray-600">
+                                  {achievement.category} | {new Date(achievement.date_achieved).toLocaleDateString()}
+                                </div>
+                                {achievement.document_url && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-2 flex items-center gap-1 text-blue-600"
+                                    onClick={() => handleViewDocument(achievement.document_url)}
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                    View Uploaded Proof
+                                  </Button>
+                                )}
+                                <Accordion type="single" collapsible className="w-full mt-2">
+                                  <AccordionItem value="details">
+                                    <AccordionTrigger className="text-sm py-2">
+                                      View Achievement Details
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                                        {Object.entries(achievement).map(([key, value]) => {
+                                          const excludedKeys = [
+                                            "id",
+                                            "teacher_id",
+                                            "created_at",
+                                            "status",
+                                            "document_url",
+                                            "teacher_name",
+                                            "teacher_eid",
+                                            "teacher_designation",
+                                            "teacher_mobile",
+                                            "teacher_department",
+                                          ];
+                                          if (excludedKeys.includes(key) || !value) return null;
+                                          return (
+                                            <div key={key}>
+                                              <p className="text-sm font-medium capitalize">
+                                                {key.replaceAll("_", " ")}:
+                                              </p>
+                                              <p className="text-sm">{String(value)}</p>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                </Accordion>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                  Approved
+                                </span>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => openDeleteDialog(achievement)}
+                                >
+                                  <Trash className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">No approved achievements</div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Teacher Document Statistics Modal */}
+      {teacherStatModalOpen && teacherStatModalFilter && selectedTeacher && (
+        <Dialog open={teacherStatModalOpen} onOpenChange={setTeacherStatModalOpen}>
+          {/* Increased max width for better UI */}
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-auto">
+            <div className="flex justify-between items-center border-b pb-2 mb-4">
+              <h3 className="text-xl font-bold">
+                {teacherStatModalFilter.filterType === "all"
+                  ? "All Documents"
+                  : `${teacherStatModalFilter.filterType} : ${teacherStatModalFilter.filterValue}`}
+              </h3>
+              <div className="flex items-center space-x-2">
+                <Button variant="outline" size="sm" onClick={() => exportCSV()}>
+                  <Download className="w-4 h-4 mr-1" />
+                  Export CSV
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setTeacherStatModalOpen(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="overflow-auto">
+              {getFilteredTeacherAchievements().length > 0 ? (
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left">Teacher Name</th>
+                      <th className="px-4 py-2 text-left">EID</th>
+                      <th className="px-4 py-2 text-left">Designation</th>
+                      <th className="px-4 py-2 text-left">Mobile</th>
+                      <th className="px-4 py-2 text-left">Department</th>
+                      <th className="px-4 py-2 text-left">Title</th>
+                      <th className="px-4 py-2 text-left">Category</th>
+                      <th className="px-4 py-2 text-left">Date Achieved</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {getFilteredTeacherAchievements().map((ach) => (
+                      <tr key={ach.id}>
+                        <td className="px-4 py-2">{ach.teacher_name}</td>
+                        <td className="px-4 py-2">{ach.teacher_eid}</td>
+                        <td className="px-4 py-2">{ach.teacher_designation}</td>
+                        <td className="px-4 py-2">{ach.teacher_mobile}</td>
+                        <td className="px-4 py-2">{ach.teacher_department}</td>
+                        <td className="px-4 py-2">{ach.title}</td>
+                        <td className="px-4 py-2">{ach.category}</td>
+                        <td className="px-4 py-2">{new Date(ach.date_achieved).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-center text-gray-500">No records found.</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Document Viewer Dialog */}
+      {viewDocumentUrl && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="relative bg-white p-4 rounded-lg max-w-6xl max-h-[90vh] w-full overflow-auto">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-2 z-10"
+              onClick={() => setViewDocumentUrl(null)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <div className="flex flex-col items-center">
+              <h3 className="text-lg font-medium mb-4">Achievement Proof Document</h3>
+              <div className="w-full h-[70vh] border border-gray-300 rounded">
+                <iframe src={viewDocumentUrl} title="Document Preview" className="w-full h-full" />
+              </div>
+              <div className="mt-4">
+                <a
+                  href={viewDocumentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-blue-600 hover:underline"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Open in New Tab
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          <p>This achievement is being deleted. This action cannot be undone. Are you sure?</p>
+          <div className="mt-4 flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (achievementToDelete) {
+                  await handleDeleteAchievement(achievementToDelete.id);
+                  setDeleteDialogOpen(false);
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default AdminTeachers;
