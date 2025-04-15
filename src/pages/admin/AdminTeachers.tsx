@@ -194,6 +194,16 @@ const ensureValidUrl = (url: string) => {
   return trimmed;
 };
 
+// Clean EID by removing spaces and '@' symbol
+const cleanEid = (eid: string) => {
+  return eid.replace(/\s+/g, '').replace(/@.*$/, '');
+};
+
+// Format email by cleaning EID and appending '@achievementhub.com'
+const formatEmail = (eid: string) => {
+  return `${cleanEid(eid).toLowerCase()}@achievementhub.com`;
+};
+
 // -----------------------
 // MAIN COMPONENT
 // -----------------------
