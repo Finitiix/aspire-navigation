@@ -394,4 +394,4 @@ const AdminTeachers = () => {
   const [isBulkEditCertificatesEditAllAllAllAllAllAllAllAllLoading, setIsBulkEditCertificatesEditAllAllAllAllAllAllAllAllLoading] = useState(false);
   const [bulkEditCertificatesEditAllAllAllAllAllAllAllAll, setBulkEditCertificatesEditAllAllAllAllAllAllAllAll] = useState<any[]>([]);
   const [isBulkEditCertificatesEditAllAllAllAllAllAllAllAllOpen, setIsBulkEditCertificatesEditAllAllAllAllAllAllAllAllOpen] = useState(false);
-  const [isBulkEditCertificatesEditAll
+  const [isBulkEditCertificatesEditAllAllAllAllAllAllAll
