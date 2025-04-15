@@ -127,6 +127,11 @@ const Admin = () => {
                     Super Admin
                   </span>
                 )}
+                {!isSuperAdmin && adminDepartments.length > 0 && (
+                  <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    Department Admin
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex items-center space-x-2">
@@ -161,7 +166,11 @@ const Admin = () => {
       {/* Main Content - Added margin for gap */}
       <main className="pt-20 pb-20 px-4">
         <Card className="rounded-lg overflow-hidden shadow-md mt-4 mx-4">
-          <Outlet />
+          {/* Passing accessDepartments and superAdmin to the Outlet context */}
+          <Outlet context={{ 
+            departments: adminDepartments,
+            isSuperAdmin: isSuperAdmin
+          }} />
         </Card>
       </main>
 

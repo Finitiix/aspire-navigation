@@ -17,6 +17,8 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { MultiSelect, Option } from "@/components/ui/multi-select";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, User, UserCheck, ShieldAlert, Shield } from "lucide-react";
 
 // Define interface for admin_departments table
 interface AdminDepartment {
@@ -25,9 +27,46 @@ interface AdminDepartment {
   is_super_admin: boolean;
 }
 
+// Define interface for admin users
+interface AdminUser {
+  id: string;
+  email: string;
+  departments: string[];
+  is_super_admin: boolean;
+}
+
+const DEPARTMENT_LIST = [
+  { label: "1st Year", value: "1st Year" },
+  { label: "CSE 2nd Year", value: "CSE 2nd Year" },
+  { label: "CSE 3rd Year", value: "CSE 3rd Year" },
+  { label: "CSE 4th Year", value: "CSE 4th Year" },
+  { label: "UIC, BCA 1st Year", value: "UIC, BCA 1st Year" },
+  { label: "UIC, BCA 2nd Year", value: "UIC, BCA 2nd Year" },
+  { label: "UIC, BCA 3rd Year", value: "UIC, BCA 3rd Year" },
+  { label: "UIC, MCA 1st Year", value: "UIC, MCA 1st Year" },
+  { label: "UIC, MCA 2nd Year", value: "UIC, MCA 2nd Year" },
+  { label: "AIT CSE AI/ML 2nd Year", value: "AIT CSE AI/ML 2nd Year" },
+  { label: "AIT CSE AI/ML 3rd Year", value: "AIT CSE AI/ML 3rd Year" },
+  { label: "AIT CSE AI/ML 4th Year", value: "AIT CSE AI/ML 4th Year" },
+  { label: "AIT CSE NON AI/ML 2nd Year", value: "AIT CSE NON AI/ML 2nd Year" },
+  { label: "AIT CSE NON AI/ML 3rd Year", value: "AIT CSE NON AI/ML 3rd Year" },
+  { label: "AIT CSE NON AI/ML 4th Year", value: "AIT CSE NON AI/ML 4th Year" },
+  { label: "NON-CSE 2nd Year", value: "NON-CSE 2nd Year" },
+  { label: "NON-CSE 3rd Year", value: "NON-CSE 3rd Year" },
+  { label: "NON-CSE 4th Year", value: "NON-CSE 4th Year" },
+  { label: "ME-NON-CSE 1st Year", value: "ME-NON-CSE 1st Year" },
+  { label: "ME-NON-CSE 2nd Year", value: "ME-NON-CSE 2nd Year" },
+  { label: "ME CSE 1st Year", value: "ME CSE 1st Year" },
+  { label: "ME CSE 2nd Year", value: "ME CSE 2nd Year" },
+  { label: "PhD CSE", value: "PhD CSE" },
+  { label: "PhD NON-CSE", value: "PhD NON-CSE" }
+];
+
 const AdminSettings = () => {
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
+  const [superAdminEmail, setSuperAdminEmail] = useState("");
+  const [superAdminPassword, setSuperAdminPassword] = useState("");
   const [teacherEmail, setTeacherEmail] = useState("");
   const [teacherPassword, setTeacherPassword] = useState("");
   const [teacherEid, setTeacherEid] = useState("");
@@ -42,10 +81,12 @@ const AdminSettings = () => {
   const [departments, setDepartments] = useState<{id: string, name: string}[]>([]);
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [loadingAdmins, setLoadingAdmins] = useState(false);
 
   useEffect(() => {
     fetchAdminDetails();
-    fetchDepartments();
+    fetchAdminUsers();
   }, []);
 
   const fetchAdminDetails = async () => {
@@ -63,6 +104,12 @@ const AdminSettings = () => {
         if (adminDepts && Array.isArray(adminDepts) && adminDepts.length > 0) {
           setIsSuperAdmin(adminDepts.some(dept => dept.is_super_admin));
         }
+
+        // Add all departments to the departments state
+        setDepartments(DEPARTMENT_LIST.map(dept => ({ 
+          id: dept.value, 
+          name: dept.label 
+        })));
       }
     } catch (error) {
       console.error('Error fetching admin details:', error);
@@ -71,20 +118,56 @@ const AdminSettings = () => {
     }
   };
 
-  const fetchDepartments = async () => {
+  const fetchAdminUsers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('departments')
-        .select('id, name')
-        .order('name');
+      setLoadingAdmins(true);
       
-      if (error) throw error;
-      if (data) {
-        setDepartments(data);
+      // Fetch all users with admin role
+      const { data: adminProfiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, role')
+        .eq('role', 'admin');
+      
+      if (profilesError) throw profilesError;
+
+      if (adminProfiles && adminProfiles.length > 0) {
+        const admins: AdminUser[] = [];
+        
+        // Get user data for each admin
+        for (const profile of adminProfiles) {
+          const { data: userData, error: userError } = await supabase
+            .from('auth_users_view')
+            .select('email')
+            .eq('id', profile.id)
+            .single();
+          
+          if (userError) console.error('Error fetching admin user data:', userError);
+          
+          // Get department access for admin
+          const { data: deptData, error: deptError } = await supabase
+            .from('admin_departments')
+            .select('department_id, is_super_admin')
+            .eq('admin_id', profile.id);
+          
+          if (deptError) console.error('Error fetching admin departments:', deptError);
+          
+          const isSuperAdmin = deptData ? deptData.some(dept => dept.is_super_admin) : false;
+          const departments = deptData ? deptData.map(dept => dept.department_id) : [];
+          
+          admins.push({
+            id: profile.id,
+            email: userData?.email || 'Unknown email',
+            departments,
+            is_super_admin: isSuperAdmin
+          });
+        }
+        
+        setAdminUsers(admins);
       }
     } catch (error) {
-      console.error('Error fetching departments:', error);
-      toast.error('Failed to load departments');
+      console.error('Error fetching admin users:', error);
+    } finally {
+      setLoadingAdmins(false);
     }
   };
 
@@ -133,10 +216,57 @@ const AdminSettings = () => {
         setAdminEmail('');
         setAdminPassword('');
         setSelectedDepartments([]);
+        fetchAdminUsers(); // Refresh admin list
       }
     } catch (error: any) {
       console.error('Error creating admin:', error);
       toast.error(error.message || 'Failed to create admin');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  const handleCreateSuperAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoadingAction(true);
+    
+    try {
+      const superAdminEmailWithDomain = superAdminEmail.includes('@') 
+        ? superAdminEmail 
+        : `${superAdminEmail}@achievementhub.com`;
+        
+      const { data, error } = await supabase.auth.signUp({
+        email: superAdminEmailWithDomain,
+        password: superAdminPassword,
+        options: {
+          data: {
+            role: 'admin'
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        // Create an entry in admin_departments with is_super_admin=true
+        const { error: deptError } = await supabase
+          .from('admin_departments')
+          .insert({
+            admin_id: data.user.id,
+            department_id: 'all', // placeholder for super admin
+            is_super_admin: true
+          });
+
+        if (deptError) throw deptError;
+
+        toast.success('Super admin created successfully. Check email for confirmation.');
+        setSuperAdminEmail('');
+        setSuperAdminPassword('');
+        fetchAdminUsers(); // Refresh admin list
+      }
+    } catch (error: any) {
+      console.error('Error creating super admin:', error);
+      toast.error(error.message || 'Failed to create super admin');
     } finally {
       setLoadingAction(false);
     }
@@ -238,6 +368,18 @@ const AdminSettings = () => {
 
   const validateTeacherEid = (value: string): boolean => {
     return /^E\d{5}$/.test(value);
+  };
+
+  const getDepartmentNames = (departmentIds: string[]): string => {
+    if (!departmentIds || departmentIds.length === 0) return 'None';
+    if (departmentIds.includes('all')) return 'All Departments';
+    
+    const deptNames = departmentIds.map(id => {
+      const dept = DEPARTMENT_LIST.find(d => d.value === id);
+      return dept ? dept.label : id;
+    });
+    
+    return deptNames.join(', ');
   };
 
   if (!loadingUser && !isSuperAdmin) {
@@ -426,6 +568,7 @@ const AdminSettings = () => {
           <TabsTrigger value="admin-details">Admin Details</TabsTrigger>
           <TabsTrigger value="user-management">User Management</TabsTrigger>
           <TabsTrigger value="password-management">Password Management</TabsTrigger>
+          <TabsTrigger value="admin-list">Admin List</TabsTrigger>
         </TabsList>
         
         <TabsContent value="admin-details">
@@ -504,13 +647,10 @@ const AdminSettings = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="admin-departments">Department Access</Label>
-                    {departments.length > 0 ? (
+                    {DEPARTMENT_LIST.length > 0 ? (
                       <div className="pt-1">
                         <MultiSelect
-                          options={departments.map(dept => ({
-                            label: dept.name,
-                            value: dept.id
-                          }))}
+                          options={DEPARTMENT_LIST}
                           selected={selectedDepartments}
                           onChange={setSelectedDepartments}
                           placeholder="Select departments..."
@@ -534,53 +674,101 @@ const AdminSettings = () => {
               </CardContent>
             </Card>
             
-            <Card>
-              <CardHeader>
-                <CardTitle>Create Teacher User</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleCreateTeacher} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="teacher-eid">Teacher ID (EID)</Label>
-                    <Input
-                      id="teacher-eid"
-                      type="text"
-                      value={teacherEid}
-                      onChange={(e) => setTeacherEid(e.target.value)}
-                      placeholder="EXXXXX"
-                      required
-                      disabled={loadingAction}
-                    />
-                    {teacherEid && !validateTeacherEid(teacherEid) && (
-                      <p className="text-red-500 text-sm">
-                        Teacher ID must be in format EXXXXX (E followed by 5 digits)
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Create Super Admin</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleCreateSuperAdmin} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="super-admin-email">Username or Email</Label>
+                      <Input
+                        id="super-admin-email"
+                        type="text"
+                        value={superAdminEmail}
+                        onChange={(e) => setSuperAdminEmail(e.target.value)}
+                        placeholder="admin-username or full email"
+                        required
+                        disabled={loadingAction}
+                      />
+                      <p className="text-xs text-gray-500">
+                        If no @ is provided, @achievementhub.com will be added automatically
                       </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="teacher-password">Password</Label>
-                    <Input
-                      id="teacher-password"
-                      type="password"
-                      value={teacherPassword}
-                      onChange={(e) => setTeacherPassword(e.target.value)}
-                      required
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="super-admin-password">Password</Label>
+                      <Input
+                        id="super-admin-password"
+                        type="password"
+                        value={superAdminPassword}
+                        onChange={(e) => setSuperAdminPassword(e.target.value)}
+                        required
+                        disabled={loadingAction}
+                      />
+                    </div>
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
                       disabled={loadingAction}
-                    />
-                  </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    disabled={loadingAction || (teacherEid && !validateTeacherEid(teacherEid))}
-                  >
-                    Create Teacher
-                  </Button>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Email will be automatically created as: {teacherEid.toLowerCase()}@achievementhub.com
-                  </p>
-                </form>
-              </CardContent>
-            </Card>
+                    >
+                      Create Super Admin
+                    </Button>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Super Admins have access to all departments and system settings
+                    </p>
+                  </form>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Create Teacher User</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleCreateTeacher} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="teacher-eid">Teacher ID (EID)</Label>
+                      <Input
+                        id="teacher-eid"
+                        type="text"
+                        value={teacherEid}
+                        onChange={(e) => setTeacherEid(e.target.value)}
+                        placeholder="EXXXXX"
+                        required
+                        disabled={loadingAction}
+                      />
+                      {teacherEid && !validateTeacherEid(teacherEid) && (
+                        <p className="text-red-500 text-sm">
+                          Teacher ID must be in format EXXXXX (E followed by 5 digits)
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="teacher-password">Password</Label>
+                      <Input
+                        id="teacher-password"
+                        type="password"
+                        value={teacherPassword}
+                        onChange={(e) => setTeacherPassword(e.target.value)}
+                        required
+                        disabled={loadingAction}
+                      />
+                    </div>
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={loadingAction || (teacherEid && !validateTeacherEid(teacherEid))}
+                    >
+                      Create Teacher
+                    </Button>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Email will be automatically created as: {teacherEid.toLowerCase()}@achievementhub.com
+                    </p>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </TabsContent>
         
@@ -657,6 +845,58 @@ const AdminSettings = () => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="admin-list">
+          <Card>
+            <CardHeader>
+              <CardTitle>Admin Users</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingAdmins ? (
+                <p>Loading admin users...</p>
+              ) : adminUsers.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="px-4 py-2 text-left">Email</th>
+                        <th className="px-4 py-2 text-left">Access Level</th>
+                        <th className="px-4 py-2 text-left">Departments</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adminUsers.map((admin) => (
+                        <tr key={admin.id} className="border-b hover:bg-gray-50">
+                          <td className="px-4 py-2">{admin.email}</td>
+                          <td className="px-4 py-2">
+                            {admin.is_super_admin ? (
+                              <span className="inline-flex items-center text-green-600">
+                                <ShieldAlert className="w-4 h-4 mr-1" />
+                                Super Admin
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center text-blue-600">
+                                <Shield className="w-4 h-4 mr-1" />
+                                Department Admin
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2">
+                            <div className="max-w-md truncate">
+                              {getDepartmentNames(admin.departments)}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p>No admin users found</p>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

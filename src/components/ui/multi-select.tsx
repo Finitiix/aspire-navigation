@@ -3,7 +3,6 @@ import * as React from "react";
 import { X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Command, CommandGroup, CommandItem } from "@/components/ui/command";
-import { Command as CommandPrimitive } from "cmdk";
 
 export type Option = {
   label: string;
@@ -29,7 +28,7 @@ export function MultiSelect({
   const [open, setOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState("");
 
-  // Ensure we're working with arrays, not undefined or null
+  // Ensure we're working with arrays, not undefined
   const safeOptions = Array.isArray(options) ? options : [];
   const safeSelected = Array.isArray(selected) ? selected : [];
 
@@ -49,6 +48,7 @@ export function MultiSelect({
       }
       if (e.key === "Escape") {
         input.blur();
+        setOpen(false);
       }
     }
   }, [safeSelected, onChange]);
@@ -60,7 +60,7 @@ export function MultiSelect({
 
   return (
     <div
-      className={`relative bg-white flex flex-wrap min-h-10 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ${className || ""}`}
+      className={`relative flex flex-wrap min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ${className || ""}`}
       onClick={() => {
         inputRef.current?.focus();
       }}
