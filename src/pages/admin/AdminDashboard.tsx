@@ -98,6 +98,10 @@ type DetailedAchievement = {
 };
 
 const AdminDashboard = () => {
+  // Get department info from local storage
+  const department = localStorage.getItem("admin_department");
+  const isSuper = localStorage.getItem("is_super_admin") === "true";
+
   // General states
   const [feedback, setFeedback] = useState<any[]>([]);
   const [pendingAchievements, setPendingAchievements] = useState<DetailedAchievement[]>([]);
@@ -173,14 +177,24 @@ const AdminDashboard = () => {
         .select("name, message, created_at")
         .order("created_at", { ascending: false });
 
-      const { count: teacherCount } = await supabase
+      // When fetching teacher count, filter by department if user is NOT a super admin
+      let teacherQuery = supabase
         .from("teacher_details")
         .select("*", { count: "exact" });
+      if (!isSuper && department) {
+        teacherQuery = teacherQuery.eq("department", department);
+      }
+      const { count: teacherCount } = await teacherQuery;
 
-      const { count: pendingCount } = await supabase
+      // Fetch pending achievements with a similar filter for teacher_department
+      let pendingQuery = supabase
         .from("detailed_achievements")
         .select("*", { count: "exact" })
         .eq("status", "Pending Approval");
+      if (!isSuper && department) {
+        pendingQuery = pendingQuery.eq("teacher_department", department);
+      }
+      const { count: pendingCount } = await pendingQuery;
 
       const { count: feedbackCount } = await supabase
         .from("feedback")
@@ -201,11 +215,15 @@ const AdminDashboard = () => {
   // Fetch pending achievements (for approval)
   const fetchPendingAchievements = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("detailed_achievements")
         .select("*")
         .eq("status", "Pending Approval")
         .order("created_at", { ascending: false });
+      if (!isSuper && department) {
+        query = query.eq("teacher_department", department);
+      }
+      const { data, error } = await query;
       
       if (error) {
         console.error("Error fetching achievements:", error);
@@ -222,7 +240,11 @@ const AdminDashboard = () => {
   // Fetch ALL achievements (for statistics and export)
   const fetchAllDocStats = async () => {
     try {
-      const { data, error } = await supabase.from("detailed_achievements").select("*");
+      let query = supabase.from("detailed_achievements").select("*");
+      if (!isSuper && department) {
+        query = query.eq("teacher_department", department);
+      }
+      const { data, error } = await query;
       if (error) {
         console.error("Error fetching doc stats:", error);
         toast.error("Error loading document stats");
