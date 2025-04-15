@@ -7,6 +7,33 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Upload } from "lucide-react";
 
+const departments = [
+  "1st Year",
+  "2nd Year CSE",
+  "3rd Year CSE",
+  "4th Year CSE",
+  "UIC, BCA 1st Year",
+  "UIC, BCA 2nd Year",
+  "UIC, BCA 3rd Year",
+  "UIC, MCA 1st Year",
+  "UIC, MCA 2nd Year",
+  "AIT CSE AI/ML 2nd Year",
+  "AIT CSE AI/ML 3rd Year",
+  "AIT CSE AI/ML 4th Year",
+  "AIT CSE NON AI/ML 2nd Year",
+  "AIT CSE NON AI/ML 3rd Year",
+  "AIT CSE NON AI/ML 4th Year",
+  "NON-CSE 2nd Year",
+  "NON-CSE 3rd Year",
+  "NON-CSE 4th Year",
+  "ME-NON-CSE 1st Year",
+  "ME-NON-CSE 2nd Year",
+  "ME CSE 1st Year",
+  "ME CSE 2nd Year",
+  "PhD CSE",
+  "PhD NON-CSE",
+];
+
 export const TeacherDetailsForm = () => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -224,13 +251,23 @@ export const TeacherDetailsForm = () => {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Department *</label>
-                <Input
+                <Select
                   name="department"
                   value={formData.department}
-                  onChange={handleChange}
-                  placeholder="e.g. Computer Science"
+                  onValueChange={(value) => handleSelectChange("department", value)}
                   required
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept, idx) => (
+                      <SelectItem key={idx} value={dept}>
+                        {dept}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Mobile Number *</label>
@@ -247,12 +284,11 @@ export const TeacherDetailsForm = () => {
                 <label className="text-sm font-medium">Email ID *</label>
                 <Input
                   name="email_id"
-                  value={formData.email_id}
-                  onChange={handleChange}
+                  
                   placeholder="Enter your email address"
                   required
                   type="email"
-                  disabled
+                  
                 />
               </div>
               <div className="space-y-2">
