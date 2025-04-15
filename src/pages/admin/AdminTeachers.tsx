@@ -123,6 +123,31 @@ type Teacher = {
 // UTILITY FUNCTIONS
 // -----------------------
 
+// Helper function to replace all occurrences of a string
+const replaceAll = (str: string, find: string, replace: string) => {
+  return str.split(find).join(replace);
+};
+
+// Clean EID by removing spaces and '@' symbol
+const cleanEid = (eid: string) => {
+  return eid.replace(/\s+/g, '').replace(/@.*$/, '');
+};
+
+// Format email by cleaning EID and appending '@achievementhub.com'
+const formatEmail = (eid: string) => {
+  return `${cleanEid(eid).toLowerCase()}@achievementhub.com`;
+};
+
+// Format website URL
+const formatWebsiteUrl = (url: string): string => {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+    return `https://${trimmed}`;
+  }
+  return trimmed;
+};
+
 // Compute aggregated statistics for a teacher's achievements
 const computeTeacherStats = (achievements: DetailedAchievement[]) => {
   const stats = {
@@ -192,16 +217,6 @@ const ensureValidUrl = (url: string) => {
     return `https://${trimmed}`;
   }
   return trimmed;
-};
-
-// Clean EID by removing spaces and '@' symbol
-const cleanEid = (eid: string) => {
-  return eid.replace(/\s+/g, '').replace(/@.*$/, '');
-};
-
-// Format email by cleaning EID and appending '@achievementhub.com'
-const formatEmail = (eid: string) => {
-  return `${cleanEid(eid).toLowerCase()}@achievementhub.com`;
 };
 
 // -----------------------

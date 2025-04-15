@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { MultiSelect } from "@/components/ui/multi-select";
+import { DepartmentSelect } from "@/components/ui/department-select";
 import { 
   DropdownMenu, 
   DropdownMenuTrigger, 
@@ -650,21 +649,23 @@ const AdminSettings = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="admin-departments">Department Access</Label>
-                    {DEPARTMENT_LIST.length > 0 ? (
-                      <div className="pt-1">
-                        <MultiSelect
-                          options={DEPARTMENT_LIST}
-                          selected={selectedDepartments}
-                          onChange={setSelectedDepartments}
-                          placeholder="Select departments..."
-                        />
+                    <div className="pt-1">
+                      <DepartmentSelect
+                        options={DEPARTMENT_LIST}
+                        selected={selectedDepartments}
+                        onChange={setSelectedDepartments}
+                        placeholder="Select departments..."
+                      />
+                      {isSuperAdmin ? (
+                        <p className="text-xs text-gray-500 mt-1">
+                          As super admin, you can assign any departments to this admin
+                        </p>
+                      ) : (
                         <p className="text-xs text-gray-500 mt-1">
                           Admin will only have access to selected departments
                         </p>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-amber-600">Loading departments...</p>
-                    )}
+                      )}
+                    </div>
                   </div>
                   <Button 
                     type="submit" 
