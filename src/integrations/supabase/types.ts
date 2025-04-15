@@ -9,6 +9,38 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_departments: {
+        Row: {
+          admin_id: string
+          created_at: string
+          department_id: string
+          id: string
+          is_super_admin: boolean
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          department_id: string
+          id?: string
+          is_super_admin?: boolean
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          department_id?: string
+          id?: string
+          is_super_admin?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_departments_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       detailed_achievements: {
         Row: {
           award_name: string | null

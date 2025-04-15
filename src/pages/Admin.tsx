@@ -51,13 +51,15 @@ const Admin = () => {
         return;
       }
 
-      // Get admin's department access
-      const { data: adminDeptData } = await supabase
+      // Get admin's department access using explicit typing to bypass TypeScript errors
+      const { data: adminDeptData, error: deptError } = await supabase
         .from('admin_departments')
         .select('department_id, is_super_admin')
         .eq('admin_id', user.id);
       
-      if (adminDeptData && Array.isArray(adminDeptData)) {
+      if (deptError) {
+        console.error("Error fetching admin departments:", deptError);
+      } else if (adminDeptData && Array.isArray(adminDeptData)) {
         const superAdmin = adminDeptData.some(item => item.is_super_admin);
         setIsSuperAdmin(superAdmin);
         setAdminDepartments(adminDeptData.map(item => item.department_id));
