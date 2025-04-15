@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -32,6 +31,33 @@ type TeacherProfileData = {
   block: string;
   timetable_url: string;
 };
+
+const departments = [
+  "1st Year",
+  "2nd Year CSE",
+  "3rd Year CSE",
+  "4th Year CSE",
+  "UIC, BCA 1st Year",
+  "UIC, BCA 2nd Year",
+  "UIC, BCA 3rd Year",
+  "UIC, MCA 1st Year",
+  "UIC, MCA 2nd Year",
+  "AIT CSE AI/ML 2nd Year",
+  "AIT CSE AI/ML 3rd Year",
+  "AIT CSE AI/ML 4th Year",
+  "AIT CSE NON AI/ML 2nd Year",
+  "AIT CSE NON AI/ML 3rd Year",
+  "AIT CSE NON AI/ML 4th Year",
+  "NON-CSE 2nd Year",
+  "NON-CSE 3rd Year",
+  "NON-CSE 4th Year",
+  "ME-NON-CSE 1st Year",
+  "ME-NON-CSE 2nd Year",
+  "ME CSE 1st Year",
+  "ME CSE 2nd Year",
+  "PhD CSE",
+  "PhD NON-CSE",
+];
 
 export const TeacherProfile = () => {
   const [teacherDetails, setTeacherDetails] = useState<any>(null);
@@ -285,12 +311,23 @@ export const TeacherProfile = () => {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Department *</label>
-                  <Input
+                  <Select
                     required
                     name="department"
                     value={formData.department}
-                    onChange={handleChange}
-                  />
+                    onValueChange={(value) => handleSelectChange("department", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept, index) => (
+                        <SelectItem key={index} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Mobile Number *</label>
