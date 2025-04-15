@@ -257,18 +257,32 @@ const AdminTeachers = () => {
 
   const fetchTeachers = async () => {
     try {
-      const { data: teachersData, error } = await supabase
-        .from("teacher_details")
-        .select("*")
-        .order("full_name");
+      // Retrieve the admin's department and super admin status from localStorage.
+      const department = localStorage.getItem("admin_department");
+      const isSuperAdmin = localStorage.getItem("is_super_admin");
+      
+      // Build the teacher_details query
+      let teacherQuery = supabase.from("teacher_details").select("*");
+      // If the admin is not a super admin, filter by department.
+      if (!(isSuperAdmin && isSuperAdmin === "true")) {
+        teacherQuery = teacherQuery.eq("department", department);
+      }
+      // Order the results.
+      const { data: teachersData, error } = await teacherQuery.order("full_name");
       if (error) throw error;
       if (teachersData) {
         const teachersWithAchievements = await Promise.all(
           teachersData.map(async (teacher) => {
-            const { data: achievements } = await supabase
+            // Build the detailed_achievements query for each teacher.
+            let achievementQuery = supabase
               .from("detailed_achievements")
               .select("*")
               .eq("teacher_id", teacher.id);
+            // If the admin is not a super admin, further filter achievements by teacher_department.
+            if (!(isSuperAdmin && isSuperAdmin === "true")) {
+              achievementQuery = achievementQuery.eq("teacher_department", department);
+            }
+            const { data: achievements } = await achievementQuery;
             return { ...teacher, achievements: achievements || [] };
           })
         );
@@ -415,7 +429,6 @@ const AdminTeachers = () => {
     link.click();
   };
   
-
   // ---------------------------
   // TEACHER DOCUMENT STATISTICS MODAL FUNCTIONALITY
   // ---------------------------
@@ -497,6 +510,94 @@ const AdminTeachers = () => {
     document.body.removeChild(link);
   };
 
+  // ---------------------------
+  // NEW FUNCTION: Export Teachers Summary CSV
+  // ---------------------------
+  const exportTeachersSummary = () => {
+    if (!teachers.length) {
+      toast.error("No teacher data available to export.");
+      return;
+    }
+    // Prepare headers as defined.
+    const headers = [
+      "EID",
+      "Full Name",
+      "Designation",
+      "Department",
+      "Total Documents",
+      "Approved Documents",
+      "SCI",
+      "Scopus",
+      "UGC Approved",
+      "WOS",
+      "IEEE Xplore",
+      "Springer",
+      "Elsevier",
+      "2022",
+      "2023",
+      "2024",
+      "2025",
+      "Q1",
+      "Q2",
+      "Q3",
+      "Q4",
+      "Journal Articles",
+      "Conference Papers",
+      "Books & Book Chapters",
+      "Patents",
+      "Research Collaborations",
+      "Awards & Recognitions",
+      "Consultancy & Funded Projects",
+      "Startups & Centers of Excellence",
+      "Others",
+    ];
+    const rows = [headers];
+    teachers.forEach((teacher) => {
+      const teacherStats = computeTeacherStats(teacher.achievements || []);
+      const approvedCount = (teacher.achievements || []).filter(a => a.status === "Approved").length;
+      const row = [
+        teacher.eid,
+        teacher.full_name,
+        teacher.designation,
+        teacher.department,
+        teacherStats.totalDocuments,
+        approvedCount,
+        teacherStats.indexed.SCI,
+        teacherStats.indexed.Scopus,
+        teacherStats.indexed["UGC Approved"],
+        teacherStats.indexed.WOS,
+        teacherStats.indexed["IEEE Xplore"],
+        teacherStats.indexed.Springer,
+        teacherStats.indexed.Elsevier,
+        teacherStats.yearly[2022],
+        teacherStats.yearly[2023],
+        teacherStats.yearly[2024],
+        teacherStats.yearly[2025],
+        teacherStats.quality.Q1,
+        teacherStats.quality.Q2,
+        teacherStats.quality.Q3,
+        teacherStats.quality.Q4,
+        teacherStats.categories["Journal Articles"],
+        teacherStats.categories["Conference Papers"],
+        teacherStats.categories["Books & Book Chapters"],
+        teacherStats.categories["Patents"],
+        teacherStats.categories["Research Collaborations"],
+        teacherStats.categories["Awards & Recognitions"],
+        teacherStats.categories["Consultancy & Funded Projects"],
+        teacherStats.categories["Startups & Centers of Excellence"],
+        teacherStats.categories["Others"],
+      ];
+      rows.push(row);
+    });
+    const csvContent = rows.map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "teachers_summary.csv");
+    link.click();
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -505,24 +606,13 @@ const AdminTeachers = () => {
 
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Search Teachers</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <Input
-              placeholder="Search by name, email, EID, or department..."
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <div className="flex items-center justify-between w-full">
+            <CardTitle>Teachers List ({filteredTeachers.length})</CardTitle>
+            {/* New Export Summary Button for Teachers List */}
+            <Button onClick={exportTeachersSummary} variant="outline" size="sm">
+              Export Summary
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Teachers List ({filteredTeachers.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
