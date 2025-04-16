@@ -21,15 +21,14 @@ import {
   DropdownMenuItem 
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, User, UserCheck, ShieldAlert, Shield } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
-// Define interface for admin_departments table
 interface AdminDepartment {
   admin_id: string;
   department_id: string;
   is_super_admin: boolean;
 }
 
-// Define interface for admin users
 interface AdminUser {
   id: string;
   email: string;
@@ -85,6 +84,13 @@ const AdminSettings = () => {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [loadingAdmins, setLoadingAdmins] = useState(false);
+  const [messageText, setMessageText] = useState("");
+  const [messageForDepartment, setMessageForDepartment] = useState<string>("all");
+  const [detailText, setDetailText] = useState("");
+  const [detailForDepartment, setDetailForDepartment] = useState<string>("all");
+  const [messages, setMessages] = useState<any[]>([]);
+  const [details, setDetails] = useState<any[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
 
   useEffect(() => {
     fetchAdminDetails();
@@ -107,7 +113,6 @@ const AdminSettings = () => {
           setIsSuperAdmin(adminDepts.some(dept => dept.is_super_admin));
         }
 
-        // Add all departments to the departments state
         setDepartments(DEPARTMENT_LIST.map(dept => ({ 
           id: dept.value, 
           name: dept.label 
@@ -124,7 +129,6 @@ const AdminSettings = () => {
     try {
       setLoadingAdmins(true);
       
-      // Fetch all users with admin role
       const { data: adminProfiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, role')
@@ -135,7 +139,6 @@ const AdminSettings = () => {
       if (adminProfiles && adminProfiles.length > 0) {
         const admins: AdminUser[] = [];
         
-        // Get user data for each admin
         for (const profile of adminProfiles) {
           const { data: userData, error: userError } = await supabase
             .from('auth_users_view')
@@ -145,7 +148,6 @@ const AdminSettings = () => {
           
           if (userError) console.error('Error fetching admin user data:', userError);
           
-          // Get department access for admin
           const { data: deptData, error: deptError } = await supabase
             .from('admin_departments')
             .select('department_id, is_super_admin')
@@ -201,7 +203,6 @@ const AdminSettings = () => {
       if (error) throw error;
 
       if (data.user) {
-        // Create entries in admin_departments for each selected department
         for (const deptId of selectedDepartments) {
           const { error: deptError } = await supabase
             .from('admin_departments')
@@ -218,7 +219,7 @@ const AdminSettings = () => {
         setAdminEmail('');
         setAdminPassword('');
         setSelectedDepartments([]);
-        fetchAdminUsers(); // Refresh admin list
+        fetchAdminUsers();
       }
     } catch (error: any) {
       console.error('Error creating admin:', error);
@@ -250,12 +251,11 @@ const AdminSettings = () => {
       if (error) throw error;
 
       if (data.user) {
-        // Create an entry in admin_departments with is_super_admin=true
         const { error: deptError } = await supabase
           .from('admin_departments')
           .insert({
             admin_id: data.user.id,
-            department_id: 'all', // placeholder for super admin
+            department_id: 'all',
             is_super_admin: true
           });
 
@@ -264,7 +264,7 @@ const AdminSettings = () => {
         toast.success('Super admin created successfully. Check email for confirmation.');
         setSuperAdminEmail('');
         setSuperAdminPassword('');
-        fetchAdminUsers(); // Refresh admin list
+        fetchAdminUsers();
       }
     } catch (error: any) {
       console.error('Error creating super admin:', error);
@@ -384,6 +384,139 @@ const AdminSettings = () => {
     return deptNames.join(', ');
   };
 
+  const fetchMessages = async () => {
+    try {
+      setLoadingMessages(true);
+      const { data, error } = await supabase
+        .from('important_messages')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      setMessages(data || []);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      toast.error('Failed to load messages');
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const fetchDetails = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('important_details')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      setDetails(data || []);
+    } catch (error) {
+      console.error('Error fetching details:', error);
+      toast.error('Failed to load details');
+    }
+  };
+
+  const handleAddMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setLoadingAction(true);
+      
+      const newMessage = {
+        message: messageText,
+        department: messageForDepartment === "all" ? null : messageForDepartment
+      };
+      
+      const { error } = await supabase
+        .from('important_messages')
+        .insert(newMessage);
+        
+      if (error) throw error;
+      
+      toast.success('Message added successfully');
+      setMessageText('');
+      setMessageForDepartment('all');
+      fetchMessages();
+    } catch (error) {
+      console.error('Error adding message:', error);
+      toast.error('Failed to add message');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  const handleAddDetail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setLoadingAction(true);
+      
+      const newDetail = {
+        detail: detailText,
+        department: detailForDepartment === "all" ? null : detailForDepartment
+      };
+      
+      const { error } = await supabase
+        .from('important_details')
+        .insert(newDetail);
+        
+      if (error) throw error;
+      
+      toast.success('Detail added successfully');
+      setDetailText('');
+      setDetailForDepartment('all');
+      fetchDetails();
+    } catch (error) {
+      console.error('Error adding detail:', error);
+      toast.error('Failed to add detail');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  const handleDeleteMessage = async (id: string) => {
+    try {
+      setLoadingAction(true);
+      
+      const { error } = await supabase
+        .from('important_messages')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      toast.success('Message deleted successfully');
+      fetchMessages();
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      toast.error('Failed to delete message');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  const handleDeleteDetail = async (id: string) => {
+    try {
+      setLoadingAction(true);
+      
+      const { error } = await supabase
+        .from('important_details')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      toast.success('Detail deleted successfully');
+      fetchDetails();
+    } catch (error) {
+      console.error('Error deleting detail:', error);
+      toast.error('Failed to delete detail');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
   if (!loadingUser && !isSuperAdmin) {
     return (
       <div className="p-6">
@@ -392,6 +525,7 @@ const AdminSettings = () => {
             <TabsTrigger value="admin-details">Admin Details</TabsTrigger>
             <TabsTrigger value="user-management">User Management</TabsTrigger>
             <TabsTrigger value="password-management">Password Management</TabsTrigger>
+            <TabsTrigger value="message-management">Message Management</TabsTrigger>
           </TabsList>
           
           <TabsContent value="admin-details">
@@ -423,7 +557,7 @@ const AdminSettings = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium">Access Level</p>
-                        <p className="text-lg">Department Admin</p>
+                        <p className="text-lg text-green-600 font-medium">Department Admin</p>
                       </div>
                     </div>
                   </div>
@@ -558,9 +692,155 @@ const AdminSettings = () => {
               </Card>
             </div>
           </TabsContent>
+          
+          <TabsContent value="message-management">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Important Messages</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleAddMessage} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="message-text">Message</Label>
+                      <Input
+                        id="message-text"
+                        value={messageText}
+                        onChange={(e) => setMessageText(e.target.value)}
+                        placeholder="Enter important message"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="message-department">Department</Label>
+                      <Select
+                        value={messageForDepartment}
+                        onValueChange={setMessageForDepartment}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Departments</SelectItem>
+                          {DEPARTMENT_LIST.map((dept) => (
+                            <SelectItem key={dept.value} value={dept.value}>
+                              {dept.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button type="submit" disabled={loadingAction}>
+                      {loadingAction ? "Adding..." : "Add Message"}
+                    </Button>
+                  </form>
+                  
+                  <div className="mt-6">
+                    <h3 className="font-semibold mb-3">Current Messages</h3>
+                    {loadingMessages ? (
+                      <p>Loading messages...</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {messages.length > 0 ? (
+                          messages.map((msg) => (
+                            <div key={msg.id} className="p-3 border rounded-md flex justify-between items-start">
+                              <div>
+                                <p className="text-sm font-medium">{msg.message}</p>
+                                <p className="text-xs text-gray-500">
+                                  Department: {msg.department || 'All Departments'}
+                                </p>
+                              </div>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleDeleteMessage(msg.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-gray-500">No messages available</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Important Details</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleAddDetail} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="detail-text">Detail</Label>
+                      <Input
+                        id="detail-text"
+                        value={detailText}
+                        onChange={(e) => setDetailText(e.target.value)}
+                        placeholder="Enter important detail"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="detail-department">Department</Label>
+                      <Select
+                        value={detailForDepartment}
+                        onValueChange={setDetailForDepartment}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Departments</SelectItem>
+                          {DEPARTMENT_LIST.map((dept) => (
+                            <SelectItem key={dept.value} value={dept.value}>
+                              {dept.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button type="submit" disabled={loadingAction}>
+                      {loadingAction ? "Adding..." : "Add Detail"}
+                    </Button>
+                  </form>
+                  
+                  <div className="mt-6">
+                    <h3 className="font-semibold mb-3">Current Details</h3>
+                    <div className="space-y-3">
+                      {details.length > 0 ? (
+                        details.map((detail) => (
+                          <div key={detail.id} className="p-3 border rounded-md flex justify-between items-start">
+                            <div>
+                              <p className="text-sm font-medium">{detail.detail}</p>
+                              <p className="text-xs text-gray-500">
+                                Department: {detail.department || 'All Departments'}
+                              </p>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleDeleteDetail(detail.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-gray-500">No details available</p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
-    )
+    );
   }
 
   return (
@@ -571,6 +851,7 @@ const AdminSettings = () => {
           <TabsTrigger value="user-management">User Management</TabsTrigger>
           <TabsTrigger value="password-management">Password Management</TabsTrigger>
           <TabsTrigger value="admin-list">Admin List</TabsTrigger>
+          <TabsTrigger value="message-management">Message Management</TabsTrigger>
         </TabsList>
         
         <TabsContent value="admin-details">
@@ -901,6 +1182,152 @@ const AdminSettings = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="message-management">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Important Messages</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleAddMessage} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="message-text">Message</Label>
+                    <Input
+                      id="message-text"
+                      value={messageText}
+                      onChange={(e) => setMessageText(e.target.value)}
+                      placeholder="Enter important message"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="message-department">Department</Label>
+                    <Select
+                      value={messageForDepartment}
+                      onValueChange={setMessageForDepartment}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Departments</SelectItem>
+                        {DEPARTMENT_LIST.map((dept) => (
+                          <SelectItem key={dept.value} value={dept.value}>
+                            {dept.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button type="submit" disabled={loadingAction}>
+                    {loadingAction ? "Adding..." : "Add Message"}
+                  </Button>
+                </form>
+                
+                <div className="mt-6">
+                  <h3 className="font-semibold mb-3">Current Messages</h3>
+                  {loadingMessages ? (
+                    <p>Loading messages...</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {messages.length > 0 ? (
+                        messages.map((msg) => (
+                          <div key={msg.id} className="p-3 border rounded-md flex justify-between items-start">
+                            <div>
+                              <p className="text-sm font-medium">{msg.message}</p>
+                              <p className="text-xs text-gray-500">
+                                Department: {msg.department || 'All Departments'}
+                              </p>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleDeleteMessage(msg.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-gray-500">No messages available</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Important Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleAddDetail} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="detail-text">Detail</Label>
+                    <Input
+                      id="detail-text"
+                      value={detailText}
+                      onChange={(e) => setDetailText(e.target.value)}
+                      placeholder="Enter important detail"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="detail-department">Department</Label>
+                    <Select
+                      value={detailForDepartment}
+                      onValueChange={setDetailForDepartment}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Departments</SelectItem>
+                        {DEPARTMENT_LIST.map((dept) => (
+                          <SelectItem key={dept.value} value={dept.value}>
+                            {dept.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button type="submit" disabled={loadingAction}>
+                    {loadingAction ? "Adding..." : "Add Detail"}
+                  </Button>
+                </form>
+                
+                <div className="mt-6">
+                  <h3 className="font-semibold mb-3">Current Details</h3>
+                  <div className="space-y-3">
+                    {details.length > 0 ? (
+                      details.map((detail) => (
+                        <div key={detail.id} className="p-3 border rounded-md flex justify-between items-start">
+                          <div>
+                            <p className="text-sm font-medium">{detail.detail}</p>
+                            <p className="text-xs text-gray-500">
+                              Department: {detail.department || 'All Departments'}
+                            </p>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleDeleteDetail(detail.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-500">No details available</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

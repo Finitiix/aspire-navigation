@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,24 +14,51 @@ type TeacherDetail = {
   cabin_no: string | null;
   block: string | null;
   timetable_url: string | null;
+  department: string;
 };
 
 const TeacherDetails = () => {
   const [teachers, setTeachers] = useState<TeacherDetail[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTimetable, setSelectedTimetable] = useState<string | null>(null);
+  const [currentTeacherDepartment, setCurrentTeacherDepartment] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchTeachers = async () => {
-      const { data } = await supabase
-        .from('teacher_details')
-        .select('profile_pic_url, full_name, eid, designation, cabin_no, block, timetable_url');
-      
-      if (data) setTeachers(data);
+    const getCurrentTeacher = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: teacherData } = await supabase
+            .from('teacher_details')
+            .select('department')
+            .eq('id', user.id)
+            .single();
+
+          if (teacherData) {
+            setCurrentTeacherDepartment(teacherData.department);
+            fetchTeachersFromSameDepartment(teacherData.department);
+          }
+        }
+      } catch (error) {
+        console.error("Error getting current teacher:", error);
+      }
     };
 
-    fetchTeachers();
+    getCurrentTeacher();
   }, []);
+
+  const fetchTeachersFromSameDepartment = async (department: string) => {
+    try {
+      const { data } = await supabase
+        .from('teacher_details')
+        .select('profile_pic_url, full_name, eid, designation, cabin_no, block, timetable_url, department')
+        .eq('department', department);
+      
+      if (data) setTeachers(data);
+    } catch (error) {
+      console.error("Error fetching teachers:", error);
+    }
+  };
 
   const filteredTeachers = teachers.filter((teacher) =>
     teacher.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -42,9 +70,15 @@ const TeacherDetails = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {currentTeacherDepartment && (
+        <h2 className="text-xl font-semibold text-center mb-4">
+          Teachers in {currentTeacherDepartment} Department
+        </h2>
+      )}
+      
       {/* Search Box */}
       <div className="mb-6 flex justify-center">
-        <div className="relative w-full max-w-lg"> {/* Responsive Width */}
+        <div className="relative w-full max-w-lg">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
           <Input
             type="text"

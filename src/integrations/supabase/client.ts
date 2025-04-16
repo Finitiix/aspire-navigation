@@ -19,9 +19,9 @@ const initializeStorage = async () => {
     }
     
     // Check for "Teacher Information" bucket
-    if (!buckets.find(bucket => bucket.name === "Teacher Information")) {
+    if (!buckets.find(bucket => bucket.name === "teacher_information")) {
       const { error: createError } = await supabase.storage.createBucket(
-        "Teacher Information", 
+        "teacher_information", 
         { public: true }
       );
       

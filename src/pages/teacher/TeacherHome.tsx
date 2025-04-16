@@ -51,30 +51,14 @@ const TeacherHome = () => {
   const [overallAchievements, setOverallAchievements] = useState<DetailedAchievement[]>([]);
 
   useEffect(() => {
-    fetchMessages();
-    fetchTeacherDetails();
-    fetchRecentAchievements();
-    fetchOverallAchievements();
-  }, []);
-
-  const fetchMessages = async () => {
-    try {
-      const { data: messagesData, error } = await supabase.from("important_messages").select("*");
-      const { data: detailsData, error: detailsError } = await supabase.from("important_details").select("*");
-
-      if (error || detailsError) {
-        console.error("Error fetching messages:", error || detailsError);
-        return;
+    fetchTeacherDetails().then(details => {
+      if (details) {
+        fetchMessages(details.department);
+        fetchRecentAchievements();
+        fetchOverallAchievements();
       }
-
-      setMessages({
-        important_messages: messagesData || [],
-        important_details: detailsData || [],
-      });
-    } catch (error) {
-      console.error("Error fetching messages:", error);
-    }
-  };
+    });
+  }, []);
 
   const fetchTeacherDetails = async () => {
     try {
@@ -88,10 +72,39 @@ const TeacherHome = () => {
 
         if (data) {
           setTeacherDetails(data);
+          return data;
         }
       }
+      return null;
     } catch (error) {
       console.error("Error fetching teacher details:", error);
+      return null;
+    }
+  };
+
+  const fetchMessages = async (department: string) => {
+    try {
+      const { data: messagesData, error } = await supabase
+        .from("important_messages")
+        .select("*")
+        .or(`department.eq.${department},department.is.null`);
+
+      const { data: detailsData, error: detailsError } = await supabase
+        .from("important_details")
+        .select("*")
+        .or(`department.eq.${department},department.is.null`);
+
+      if (error || detailsError) {
+        console.error("Error fetching messages:", error || detailsError);
+        return;
+      }
+
+      setMessages({
+        important_messages: messagesData || [],
+        important_details: detailsData || [],
+      });
+    } catch (error) {
+      console.error("Error fetching messages:", error);
     }
   };
 

@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 const Teacher = () => {
   const [session, setSession] = useState<any>(null);
   const [isNewUser, setIsNewUser] = useState(false);
+  const [teacherDepartment, setTeacherDepartment] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -31,11 +32,16 @@ const Teacher = () => {
   const checkTeacherDetails = async (userId: string) => {
     const { data } = await supabase
       .from('teacher_details')
-      .select('id')
+      .select('id, department')
       .eq('id', userId)
       .single();
     
-    setIsNewUser(!data);
+    if (data) {
+      setTeacherDepartment(data.department);
+      setIsNewUser(false);
+    } else {
+      setIsNewUser(true);
+    }
   };
 
   if (!session) {
@@ -52,7 +58,7 @@ const Teacher = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pt-16 pb-16">
-      <TeacherNavbar />
+      <TeacherNavbar department={teacherDepartment} />
       {/* Content will be added here based on routes */}
       <TeacherBottomNav />
     </div>
