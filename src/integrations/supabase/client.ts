@@ -19,9 +19,9 @@ const initializeStorage = async () => {
     }
     
     // Check for "Teacher Information" bucket
-    if (!buckets.find(bucket => bucket.name === "teacher_information")) {
+    if (!buckets.find(bucket => bucket.name === "Teacher Information")) {
       const { error: createError } = await supabase.storage.createBucket(
-        "teacher_information", 
+        "Teacher Information", 
         { public: true }
       );
       
@@ -48,12 +48,6 @@ const initializeStorage = async () => {
   } catch (error) {
     console.error("Storage initialization error:", error);
   }
-};
-
-// Helper function for cross-browser string replacement
-export const safeReplace = (str: string, search: string | RegExp, replacement: string): string => {
-  if (typeof str !== 'string') return '';
-  return str.replace(new RegExp(search instanceof RegExp ? search : search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), replacement);
 };
 
 // Call the initialization function
