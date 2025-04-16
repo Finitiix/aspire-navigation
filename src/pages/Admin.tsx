@@ -189,15 +189,20 @@ const Admin = () => {
               <Home className="h-5 w-5" />
               <span className="text-xs mt-1">Home</span>
             </Link>
-            <Link
-              to="/admin-dashboard/departments"
-              className={`flex flex-col items-center ${
-                location.pathname === '/admin-dashboard/departments' ? 'text-white font-bold' : 'text-gray-100'
-              }`}
-            >
-              <LayoutGrid className="h-5 w-5" />
-              <span className="text-xs mt-1">Departments</span>
-            </Link>
+            
+            {/* Only show Departments tab for super admins */}
+            {isSuperAdmin && (
+              <Link
+                to="/admin-dashboard/departments"
+                className={`flex flex-col items-center ${
+                  location.pathname === '/admin-dashboard/departments' ? 'text-white font-bold' : 'text-gray-100'
+                }`}
+              >
+                <LayoutGrid className="h-5 w-5" />
+                <span className="text-xs mt-1">Departments</span>
+              </Link>
+            )}
+            
             <Link
               to="/admin-dashboard/teachers"
               className={`flex flex-col items-center ${

@@ -88,8 +88,11 @@ const AdminDepartments = () => {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
   
   useEffect(() => {
-    fetchDepartments();
-  }, []);
+    // Only fetch if the user is a super admin
+    if (isSuperAdmin) {
+      fetchDepartments();
+    }
+  }, [isSuperAdmin]);
   
   useEffect(() => {
     if (departments.length > 0 && !selectedDepartment) {
@@ -104,6 +107,18 @@ const AdminDepartments = () => {
   const fetchDepartments = async () => {
     try {
       setLoading(true);
+      
+      // First, get all departments that the admin has access to through the admin_departments table
+      const { data: adminDeptData, error: adminDeptError } = await supabase
+        .from('admin_departments')
+        .select('department_id, is_super_admin');
+      
+      if (adminDeptError) throw adminDeptError;
+      
+      // Extract department IDs
+      const departmentIds = adminDeptData?.map(item => item.department_id) || [];
+      
+      // Fetch department details
       const { data: departmentsData, error: departmentsError } = await supabase
         .from('departments')
         .select('*');
@@ -210,11 +225,28 @@ const AdminDepartments = () => {
         return;
       }
       
+      // First add to departments table
       const { error } = await supabase
         .from('departments')
         .insert({ id: newDepartmentId.trim(), name: newDepartmentName.trim() });
         
       if (error) throw error;
+      
+      // Get current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Add admin's access to this department
+        const { error: adminDeptError } = await supabase
+          .from('admin_departments')
+          .insert({ 
+            admin_id: user.id, 
+            department_id: newDepartmentId.trim(),
+            is_super_admin: true 
+          });
+          
+        if (adminDeptError) throw adminDeptError;
+      }
       
       toast.success('Department added successfully');
       setIsAddDialogOpen(false);
@@ -242,6 +274,15 @@ const AdminDepartments = () => {
         return;
       }
       
+      // First delete from admin_departments
+      const { error: adminDeptError } = await supabase
+        .from('admin_departments')
+        .delete()
+        .eq('department_id', departmentToDelete.id);
+        
+      if (adminDeptError) throw adminDeptError;
+      
+      // Then delete from departments table
       const { error } = await supabase
         .from('departments')
         .delete()
@@ -494,6 +535,16 @@ const AdminDepartments = () => {
       </div>
     );
   };
+
+  // Redirect if not a super admin
+  if (!isSuperAdmin) {
+    return (
+      <div className="p-6 text-center">
+        <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+        <p>Only super administrators can access the department management section.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
