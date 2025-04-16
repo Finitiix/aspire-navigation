@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,6 +19,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminTeachers from "./pages/admin/AdminTeachers";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminFeedback from "./pages/admin/AdminFeedback";
+import AdminDepartments from "./pages/admin/AdminDepartments";
 import { FeedbackForm } from "./components/FeedbackForm";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
@@ -71,6 +71,7 @@ function App() {
                 <Route path="teachers" element={<AdminTeachers />} />
                 <Route path="feedback" element={<AdminFeedback />} />
                 <Route path="settings" element={<AdminSettings />} />
+                <Route path="departments" element={<AdminDepartments />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

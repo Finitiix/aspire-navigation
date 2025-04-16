@@ -124,9 +124,9 @@ type Teacher = {
 // -----------------------
 
 // Helper function to replace all occurrences of a string
-const replaceAll = (str: string, find: string, replace: string) => {
-  return str.split(find).join(replace);
-};
+function safeReplace(str: string, search: string, replacement: string) {
+  return str.split(search).join(replacement);
+}
 
 // Clean EID by removing spaces and '@' symbol
 const cleanEid = (eid: string) => {

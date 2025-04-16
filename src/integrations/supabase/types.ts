@@ -41,6 +41,21 @@ export type Database = {
           },
         ]
       }
+      departments: {
+        Row: {
+          id: string
+          name: string
+        }
+        Insert: {
+          id: string
+          name: string
+        }
+        Update: {
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       detailed_achievements: {
         Row: {
           award_name: string | null
@@ -233,6 +248,13 @@ export type Database = {
             referencedRelation: "teacher_details"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "detailed_achievements_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_details_by_admin"
+            referencedColumns: ["id"]
+          },
         ]
       }
       feedback: {
@@ -265,16 +287,19 @@ export type Database = {
       important_details: {
         Row: {
           created_at: string | null
+          department: string | null
           detail: string
           id: string
         }
         Insert: {
           created_at?: string | null
+          department?: string | null
           detail: string
           id?: string
         }
         Update: {
           created_at?: string | null
+          department?: string | null
           detail?: string
           id?: string
         }
@@ -283,16 +308,19 @@ export type Database = {
       important_messages: {
         Row: {
           created_at: string | null
+          department: string | null
           id: string
           message: string
         }
         Insert: {
           created_at?: string | null
+          department?: string | null
           id?: string
           message: string
         }
         Update: {
           created_at?: string | null
+          department?: string | null
           id?: string
           message?: string
         }
@@ -432,6 +460,13 @@ export type Database = {
             referencedRelation: "teacher_details"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "researcher_ids_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_details_by_admin"
+            referencedColumns: ["id"]
+          },
         ]
       }
       teacher_details: {
@@ -521,6 +556,45 @@ export type Database = {
           id?: string | null
         }
         Relationships: []
+      }
+      teacher_details_by_admin: {
+        Row: {
+          address: string | null
+          admin_id: string | null
+          block: string | null
+          cabin_no: string | null
+          created_at: string | null
+          date_of_joining: string | null
+          department: string | null
+          designation: string | null
+          eid: string | null
+          email_id: string | null
+          full_name: string | null
+          gender: string | null
+          highest_qualification: string | null
+          id: string | null
+          mobile_number: string | null
+          profile_pic_url: string | null
+          skills: string[] | null
+          timetable_url: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_departments_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_details_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {

@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { LogOut, UserCircle2, Home, Users, Settings, MessageSquare } from "lucide-react";
+import { LogOut, UserCircle2, Home, Users, Settings, MessageSquare, LayoutGrid } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -176,7 +176,7 @@ const Admin = () => {
         </Card>
       </main>
 
-      {/* Bottom Navigation - Updated with blue color and added Feedback tab */}
+      {/* Bottom Navigation - Updated with blue color and added Departments tab */}
       <nav className="fixed bottom-0 left-0 right-0 bg-[#1EAEDB] text-white border-t z-50">
         <div className="container mx-auto px-4">
           <div className="flex justify-around items-center h-16">
@@ -188,6 +188,15 @@ const Admin = () => {
             >
               <Home className="h-5 w-5" />
               <span className="text-xs mt-1">Home</span>
+            </Link>
+            <Link
+              to="/admin-dashboard/departments"
+              className={`flex flex-col items-center ${
+                location.pathname === '/admin-dashboard/departments' ? 'text-white font-bold' : 'text-gray-100'
+              }`}
+            >
+              <LayoutGrid className="h-5 w-5" />
+              <span className="text-xs mt-1">Departments</span>
             </Link>
             <Link
               to="/admin-dashboard/teachers"
