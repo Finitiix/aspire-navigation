@@ -287,16 +287,19 @@ export type Database = {
       important_details: {
         Row: {
           created_at: string | null
+          department: string | null
           detail: string
           id: string
         }
         Insert: {
           created_at?: string | null
+          department?: string | null
           detail: string
           id?: string
         }
         Update: {
           created_at?: string | null
+          department?: string | null
           detail?: string
           id?: string
         }
@@ -305,16 +308,19 @@ export type Database = {
       important_messages: {
         Row: {
           created_at: string | null
+          department: string | null
           id: string
           message: string
         }
         Insert: {
           created_at?: string | null
+          department?: string | null
           id?: string
           message: string
         }
         Update: {
           created_at?: string | null
+          department?: string | null
           id?: string
           message?: string
         }

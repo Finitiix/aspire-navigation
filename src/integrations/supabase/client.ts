@@ -50,5 +50,11 @@ const initializeStorage = async () => {
   }
 };
 
+// Helper function for cross-browser string replacement
+export const safeReplace = (str: string, search: string | RegExp, replacement: string): string => {
+  if (typeof str !== 'string') return '';
+  return str.replace(new RegExp(search instanceof RegExp ? search : search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), replacement);
+};
+
 // Call the initialization function
 initializeStorage();
