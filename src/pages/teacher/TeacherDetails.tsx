@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,24 +14,56 @@ type TeacherDetail = {
   cabin_no: string | null;
   block: string | null;
   timetable_url: string | null;
+  department: string;
 };
 
 const TeacherDetails = () => {
   const [teachers, setTeachers] = useState<TeacherDetail[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTimetable, setSelectedTimetable] = useState<string | null>(null);
+  const [currentUserDepartment, setCurrentUserDepartment] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchTeachers = async () => {
-      const { data } = await supabase
-        .from('teacher_details')
-        .select('profile_pic_url, full_name, eid, designation, cabin_no, block, timetable_url');
+    // First get the current user's department
+    const getCurrentUserDepartment = async () => {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
       
-      if (data) setTeachers(data);
+      if (user) {
+        const { data } = await supabase
+          .from('teacher_details')
+          .select('department')
+          .eq('id', user.id)
+          .single();
+        
+        if (data) {
+          setCurrentUserDepartment(data.department);
+          fetchTeachers(data.department);
+        } else {
+          // If user has no department yet, still load teachers but show empty state
+          setLoading(false);
+        }
+      }
     };
 
-    fetchTeachers();
+    getCurrentUserDepartment();
   }, []);
+
+  const fetchTeachers = async (department: string) => {
+    try {
+      const { data } = await supabase
+        .from('teacher_details')
+        .select('profile_pic_url, full_name, eid, designation, cabin_no, block, timetable_url, department')
+        .eq('department', department);
+      
+      if (data) setTeachers(data);
+    } catch (error) {
+      console.error("Error fetching teachers:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredTeachers = teachers.filter((teacher) =>
     teacher.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -40,11 +73,37 @@ const TeacherDetails = () => {
     (teacher.block && teacher.block.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-10">
+          <div className="animate-pulse h-6 bg-gray-200 rounded w-1/3 mx-auto mb-4"></div>
+          <div className="animate-pulse h-24 bg-gray-200 rounded-lg max-w-md mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUserDepartment) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <h2 className="text-xl font-semibold mb-4">Department Information Not Found</h2>
+        <p>Please complete your profile to view teachers in your department.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Department Info */}
+      <div className="mb-4 text-center">
+        <h2 className="text-xl font-semibold mb-2">Department: {currentUserDepartment}</h2>
+        <p className="text-gray-600">Showing {filteredTeachers.length} teachers in your department</p>
+      </div>
+      
       {/* Search Box */}
       <div className="mb-6 flex justify-center">
-        <div className="relative w-full max-w-lg"> {/* Responsive Width */}
+        <div className="relative w-full max-w-lg">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
           <Input
             type="text"
