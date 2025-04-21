@@ -17,7 +17,6 @@ import {
   YAxis,
 } from "recharts";
 
-// Helper to ensure the URL includes a protocol and has no extra whitespace
 const ensureValidUrl = (url: string) => {
   if (!url) return "";
   const trimmed = url.trim();
@@ -35,13 +34,11 @@ type DetailedAchievement = {
   remarks?: string;
   document_url?: string;
   status: string;
-  // Teacher details (stored in the achievement record)
   teacher_name: string;
   teacher_eid: string;
   teacher_designation: string;
   teacher_mobile: string;
   teacher_department: string;
-  // Journal Articles
   journal_name?: string;
   issn?: string;
   doi?: string;
@@ -49,34 +46,28 @@ type DetailedAchievement = {
   indexed_in?: string[];
   q_ranking?: string;
   journal_link?: string;
-  // Conference Papers
   conference_name?: string;
   conference_date?: string;
   proceedings_publisher?: string;
   isbn?: string;
   paper_link?: string;
-  // Books & Book Chapters
   book_title?: string;
   chapter_title?: string;
   year_of_publication?: string;
   book_drive_link?: string;
-  // Patents
   patent_number?: string;
   patent_office?: string;
   filing_date?: string;
   grant_date?: string;
   patent_status?: string;
   patent_link?: string;
-  // Research Collaborations
   partner_institutions?: string;
   research_area?: string;
   collaboration_details?: string;
-  // Awards & Recognitions
   award_name?: string;
   awarding_body?: string;
   award_type?: string;
   certificate_link?: string;
-  // Consultancy & Funded Projects
   client_organization?: string;
   project_title?: string;
   funding_agency?: string;
@@ -85,12 +76,10 @@ type DetailedAchievement = {
   project_duration_end?: string;
   project_status?: string;
   project_details_link?: string;
-  // Startups & Centers of Excellence
   startup_center_name?: string;
   domain?: string;
   funding_details?: string;
   website_link?: string;
-  // Others
   description?: string;
   organization?: string;
   proof_link?: string;
@@ -98,11 +87,9 @@ type DetailedAchievement = {
 };
 
 const AdminDashboard = () => {
-  // Get department info from local storage
   const department = localStorage.getItem("admin_department");
   const isSuper = localStorage.getItem("is_super_admin") === "true";
 
-  // General states
   const [feedback, setFeedback] = useState<any[]>([]);
   const [pendingAchievements, setPendingAchievements] = useState<DetailedAchievement[]>([]);
   const [stats, setStats] = useState({
@@ -145,21 +132,16 @@ const AdminDashboard = () => {
       Q4: 0,
     },
   });
-  // All achievements (for statistics filtering and export)
   const [allAchievements, setAllAchievements] = useState<DetailedAchievement[]>([]);
   const [importantMessages, setImportantMessages] = useState<any[]>([]);
   const [importantDetails, setImportantDetails] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [newDetail, setNewDetail] = useState("");
-
-  // Modal for viewing document proof
   const [viewDocumentUrl, setViewDocumentUrl] = useState<string | null>(null);
-  // For multiple approval in Approval Requests section
   const [selectedAchievements, setSelectedAchievements] = useState<string[]>([]);
-
-  // Modal state for showing statistic details; filter holds type and value.
   const [statModalOpen, setStatModalOpen] = useState(false);
   const [statModalFilter, setStatModalFilter] = useState<{ filterType: string; filterValue: any } | null>(null);
+  const [viewAchievementDetails, setViewAchievementDetails] = useState<DetailedAchievement | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -169,7 +151,6 @@ const AdminDashboard = () => {
     fetchAllDocStats();
   }, []);
 
-  // Fetch general stats and feedback
   const fetchData = async () => {
     try {
       const { data: feedbackData } = await supabase
@@ -177,7 +158,6 @@ const AdminDashboard = () => {
         .select("name, message, created_at")
         .order("created_at", { ascending: false });
 
-      // When fetching teacher count, filter by department if user is NOT a super admin
       let teacherQuery = supabase
         .from("teacher_details")
         .select("*", { count: "exact" });
@@ -186,7 +166,6 @@ const AdminDashboard = () => {
       }
       const { count: teacherCount } = await teacherQuery;
 
-      // Fetch pending achievements with a similar filter for teacher_department
       let pendingQuery = supabase
         .from("detailed_achievements")
         .select("*", { count: "exact" })
@@ -212,7 +191,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Fetch pending achievements (for approval)
   const fetchPendingAchievements = async () => {
     try {
       let query = supabase
@@ -237,7 +215,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Fetch ALL achievements (for statistics and export)
   const fetchAllDocStats = async () => {
     try {
       let query = supabase.from("detailed_achievements").select("*");
@@ -319,7 +296,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Bulk approval/rejection
   const handleBulkApproval = async (status: "Approved" | "Rejected") => {
     try {
       if (selectedAchievements.length === 0) {
@@ -343,7 +319,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Toggle individual achievement selection
   const toggleSelection = (id: string) => {
     if (selectedAchievements.includes(id)) {
       setSelectedAchievements(selectedAchievements.filter((selectedId) => selectedId !== id));
@@ -352,7 +327,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // "Select All" checkbox handler
   const handleSelectAll = () => {
     if (selectedAchievements.length === pendingAchievements.length) {
       setSelectedAchievements([]);
@@ -361,7 +335,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Individual approval/rejection handler
   const handleApproval = async (id: string, status: "Approved" | "Rejected") => {
     try {
       const { error } = await supabase
@@ -380,7 +353,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Fetch important messages and details
   const fetchImportantMessages = async () => {
     const { data } = await supabase.from("important_messages").select("*");
     setImportantMessages(data ? data.map((msg) => ({ id: msg.id, text: msg.message })) : []);
@@ -423,19 +395,15 @@ const AdminDashboard = () => {
     setImportantDetails(importantDetails.filter((detail) => detail.id !== id));
   };
 
-  // Handler for viewing document proof modal
   const handleViewDocument = (url: string) => {
     setViewDocumentUrl(url);
   };
 
-  // ----- STATISTICS MODAL FUNCTIONALITY -----
-  // Open modal given a filter type and value
   const openStatModal = (filterType: string, filterValue: any) => {
     setStatModalFilter({ filterType, filterValue });
     setStatModalOpen(true);
   };
 
-  // Filter achievements based on modal filter
   const getFilteredAchievements = (): DetailedAchievement[] => {
     if (!statModalFilter) return [];
     const { filterType, filterValue } = statModalFilter;
@@ -455,7 +423,6 @@ const AdminDashboard = () => {
     return [];
   };
 
-  // Export CSV for detailed achievement data
   const exportCSV = (data: DetailedAchievement[], filename: string) => {
     if (!data || data.length === 0) return;
     const replacer = (_key: string, value: any) => (value === null ? "" : value);
@@ -480,7 +447,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Export summary data as CSV (structured summary)
   const exportSummary = () => {
     const summaryRows = [
       ["Category", "Metric", "Value"],
@@ -514,7 +480,6 @@ const AdminDashboard = () => {
       ["Categories", "Others", docStats.categories["Others"]],
     ];
 
-    // Convert rows to CSV string. Use empty rows as separator.
     const csv = summaryRows
       .map((row) => row.join(","))
       .join("\r\n");
@@ -533,7 +498,6 @@ const AdminDashboard = () => {
 
   return (
     <div className="p-6">
-      {/* Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card className="p-6">
           <h3 className="text-lg font-medium mb-2">Total Teachers</h3>
@@ -549,10 +513,8 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Approval Requests for Achievements Section */}
       <Card className="p-6 mb-8">
         <h2 className="text-xl font-bold mb-4">Approval Requests for Achievements</h2>
-        {/* Bulk Action Buttons & Select All */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
             <Button
@@ -592,7 +554,6 @@ const AdminDashboard = () => {
           {pendingAchievements.length > 0 ? (
             pendingAchievements.map((achievement) => (
               <div key={achievement.id} className="relative bg-white shadow rounded p-4">
-                {/* Teacher Info and Selection */}
                 <div className="flex justify-between items-start">
                   <div className="flex items-center">
                     <input
@@ -629,7 +590,6 @@ const AdminDashboard = () => {
                     </Button>
                   </div>
                 </div>
-                {/* Document Details */}
                 <div className="mt-4">
                   <p className="text-md font-medium">
                     {achievement.category} - {achievement.title}
@@ -735,7 +695,6 @@ const AdminDashboard = () => {
                       </a>
                     )}
                   </div>
-                  {/* Category-Specific Details */}
                   <div className="mt-4 border-t pt-2">
                     <h4 className="font-semibold mb-2">Category Specific Details:</h4>
                     {achievement.category === "Journal Articles" && (
@@ -836,7 +795,6 @@ const AdminDashboard = () => {
         </div>
       </Card>
 
-      {/* Document & Achievement Statistics Section */}
       <Card className="p-6 mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
           <h2 className="text-2xl font-bold text-center sm:text-left">
@@ -847,7 +805,6 @@ const AdminDashboard = () => {
             Export Summary
           </Button>
         </div>
-        {/* Statistics rendered as interactive cards/buttons */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <div className="bg-gradient-to-r from-blue-500 to-blue-400 p-4 rounded shadow flex flex-col items-center text-white">
             <h3 className="text-lg font-semibold">Total Documents Uploaded</h3>
@@ -982,7 +939,6 @@ const AdminDashboard = () => {
         </div>
       </Card>
 
-      {/* Important Messages & Details Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Card className="p-6">
           <h2 className="text-xl font-bold mb-4">Important Messages</h2>
@@ -1036,7 +992,6 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Recent Feedback Section */}
       <Card className="p-6 mb-8">
         <h2 className="text-xl font-bold mb-4">Recent Feedback</h2>
         <div className="space-y-4 max-h-60 overflow-y-auto">
@@ -1054,7 +1009,6 @@ const AdminDashboard = () => {
         </div>
       </Card>
 
-      {/* Document Viewer Modal */}
       {viewDocumentUrl && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="relative bg-white p-4 rounded-lg max-w-6xl max-h-[90vh] w-full overflow-auto">
@@ -1087,7 +1041,6 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* STATISTICS DETAILS MODAL */}
       {statModalOpen && statModalFilter && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="relative bg-white p-6 rounded-lg max-w-4xl max-h-[90vh] w-full overflow-auto">
@@ -1129,6 +1082,7 @@ const AdminDashboard = () => {
                       <th className="px-4 py-2 text-left">Title</th>
                       <th className="px-4 py-2 text-left">Category</th>
                       <th className="px-4 py-2 text-left">Date Achieved</th>
+                      <th className="px-4 py-2 text-left">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -1142,6 +1096,15 @@ const AdminDashboard = () => {
                         <td className="px-4 py-2">{ach.title}</td>
                         <td className="px-4 py-2">{ach.category}</td>
                         <td className="px-4 py-2">{new Date(ach.date_achieved).toLocaleDateString()}</td>
+                        <td className="px-4 py-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setViewAchievementDetails(ach)}
+                          >
+                            View All Details
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1149,6 +1112,228 @@ const AdminDashboard = () => {
               ) : (
                 <p className="text-center text-gray-500">No records found.</p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewAchievementDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+          <div className="relative bg-white p-6 rounded-lg max-w-2xl max-h-[90vh] w-full overflow-auto">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-2 z-10"
+              onClick={() => setViewAchievementDetails(null)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <div>
+              <h3 className="text-2xl font-bold mb-2">{viewAchievementDetails.title}</h3>
+              <div className="text-sm text-gray-700 space-y-1">
+                <div><b>Teacher Name:</b> {viewAchievementDetails.teacher_name}</div>
+                <div><b>EID:</b> {viewAchievementDetails.teacher_eid}</div>
+                <div><b>Designation:</b> {viewAchievementDetails.teacher_designation}</div>
+                <div><b>Mobile:</b> {viewAchievementDetails.teacher_mobile}</div>
+                <div><b>Department:</b> {viewAchievementDetails.teacher_department}</div>
+                <div><b>Category:</b> {viewAchievementDetails.category}</div>
+                <div><b>Date Achieved:</b> {new Date(viewAchievementDetails.date_achieved).toLocaleDateString()}</div>
+                {viewAchievementDetails.remarks && <div><b>Remarks:</b> {viewAchievementDetails.remarks}</div>}
+                {viewAchievementDetails.document_url && (
+                  <div>
+                    <a
+                      className="text-blue-600 underline"
+                      href={viewAchievementDetails.document_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Document Proof
+                    </a>
+                  </div>
+                )}
+                {viewAchievementDetails.journal_link && (
+                  <div>
+                    <a
+                      className="text-blue-600 underline"
+                      href={ensureValidUrl(viewAchievementDetails.journal_link)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Journal Link
+                    </a>
+                  </div>
+                )}
+                {viewAchievementDetails.paper_link && (
+                  <div>
+                    <a
+                      className="text-blue-600 underline"
+                      href={ensureValidUrl(viewAchievementDetails.paper_link)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Paper Link
+                    </a>
+                  </div>
+                )}
+                {viewAchievementDetails.book_drive_link && (
+                  <div>
+                    <a
+                      className="text-blue-600 underline"
+                      href={ensureValidUrl(viewAchievementDetails.book_drive_link)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Book Drive Link
+                    </a>
+                  </div>
+                )}
+                {viewAchievementDetails.patent_link && (
+                  <div>
+                    <a
+                      className="text-blue-600 underline"
+                      href={ensureValidUrl(viewAchievementDetails.patent_link)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Patent Link
+                    </a>
+                  </div>
+                )}
+                {viewAchievementDetails.certificate_link && (
+                  <div>
+                    <a
+                      className="text-blue-600 underline"
+                      href={ensureValidUrl(viewAchievementDetails.certificate_link)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Certificate Link
+                    </a>
+                  </div>
+                )}
+                {viewAchievementDetails.project_details_link && (
+                  <div>
+                    <a
+                      className="text-blue-600 underline"
+                      href={ensureValidUrl(viewAchievementDetails.project_details_link)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Project Details Link
+                    </a>
+                  </div>
+                )}
+                {viewAchievementDetails.website_link && (
+                  <div>
+                    <a
+                      className="text-blue-600 underline"
+                      href={ensureValidUrl(viewAchievementDetails.website_link)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Website Link
+                    </a>
+                  </div>
+                )}
+                {viewAchievementDetails.proof_link && (
+                  <div>
+                    <a
+                      className="text-blue-600 underline"
+                      href={ensureValidUrl(viewAchievementDetails.proof_link)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Proof Link
+                    </a>
+                  </div>
+                )}
+                {viewAchievementDetails.category === "Journal Articles" && (
+                  <div>
+                    {viewAchievementDetails.journal_name && <div><b>Journal Name:</b> {viewAchievementDetails.journal_name}</div>}
+                    {viewAchievementDetails.issn && <div><b>ISSN:</b> {viewAchievementDetails.issn}</div>}
+                    {viewAchievementDetails.doi && <div><b>DOI:</b> {viewAchievementDetails.doi}</div>}
+                    {viewAchievementDetails.publisher && <div><b>Publisher:</b> {viewAchievementDetails.publisher}</div>}
+                    {viewAchievementDetails.indexed_in && viewAchievementDetails.indexed_in.length > 0 && (
+                      <div><b>Indexed In:</b> {viewAchievementDetails.indexed_in.join(", ")}</div>
+                    )}
+                    {viewAchievementDetails.q_ranking && <div><b>Q Ranking:</b> {viewAchievementDetails.q_ranking}</div>}
+                  </div>
+                )}
+                {viewAchievementDetails.category === "Conference Papers" && (
+                  <div>
+                    {viewAchievementDetails.conference_name && <div><b>Conference Name:</b> {viewAchievementDetails.conference_name}</div>}
+                    {viewAchievementDetails.conference_date && (
+                        <div><b>Conference Date:</b> {new Date(viewAchievementDetails.conference_date).toLocaleDateString()}</div>
+                    )}
+                    {viewAchievementDetails.proceedings_publisher && <div><b>Proceedings Publisher:</b> {viewAchievementDetails.proceedings_publisher}</div>}
+                    {viewAchievementDetails.isbn && <div><b>ISBN:</b> {viewAchievementDetails.isbn}</div>}
+                  </div>
+                )}
+                {viewAchievementDetails.category === "Books & Book Chapters" && (
+                  <div>
+                    {viewAchievementDetails.book_title && <div><b>Book Title:</b> {viewAchievementDetails.book_title}</div>}
+                    {viewAchievementDetails.chapter_title && <div><b>Chapter Title:</b> {viewAchievementDetails.chapter_title}</div>}
+                    {viewAchievementDetails.year_of_publication && (
+                      <div><b>Year of Publication:</b> {new Date(viewAchievementDetails.year_of_publication).toLocaleDateString()}</div>
+                    )}
+                  </div>
+                )}
+                {viewAchievementDetails.category === "Patents" && (
+                  <div>
+                    {viewAchievementDetails.patent_number && <div><b>Patent Number:</b> {viewAchievementDetails.patent_number}</div>}
+                    {viewAchievementDetails.patent_office && <div><b>Patent Office:</b> {viewAchievementDetails.patent_office}</div>}
+                    {viewAchievementDetails.filing_date && (
+                      <div><b>Filing Date:</b> {new Date(viewAchievementDetails.filing_date).toLocaleDateString()}</div>
+                    )}
+                    {viewAchievementDetails.grant_date && (
+                      <div><b>Grant Date:</b> {new Date(viewAchievementDetails.grant_date).toLocaleDateString()}</div>
+                    )}
+                    {viewAchievementDetails.patent_status && <div><b>Patent Status:</b> {viewAchievementDetails.patent_status}</div>}
+                  </div>
+                )}
+                {viewAchievementDetails.category === "Research Collaborations" && (
+                  <div>
+                    {viewAchievementDetails.partner_institutions && <div><b>Partner Institutions:</b> {viewAchievementDetails.partner_institutions}</div>}
+                    {viewAchievementDetails.research_area && <div><b>Research Area:</b> {viewAchievementDetails.research_area}</div>}
+                    {viewAchievementDetails.collaboration_details && <div><b>Collaboration Details:</b> {viewAchievementDetails.collaboration_details}</div>}
+                  </div>
+                )}
+                {viewAchievementDetails.category === "Awards & Recognitions" && (
+                  <div>
+                    {viewAchievementDetails.award_name && <div><b>Award Name:</b> {viewAchievementDetails.award_name}</div>}
+                    {viewAchievementDetails.awarding_body && <div><b>Awarding Body:</b> {viewAchievementDetails.awarding_body}</div>}
+                    {viewAchievementDetails.award_type && <div><b>Award Type:</b> {viewAchievementDetails.award_type}</div>}
+                  </div>
+                )}
+                {viewAchievementDetails.category === "Consultancy & Funded Projects" && (
+                  <div>
+                    {viewAchievementDetails.client_organization && <div><b>Client Organization:</b> {viewAchievementDetails.client_organization}</div>}
+                    {viewAchievementDetails.project_title && <div><b>Project Title:</b> {viewAchievementDetails.project_title}</div>}
+                    {viewAchievementDetails.funding_agency && <div><b>Funding Agency:</b> {viewAchievementDetails.funding_agency}</div>}
+                    {viewAchievementDetails.funding_amount !== undefined && <div><b>Funding Amount:</b> {viewAchievementDetails.funding_amount}</div>}
+                    {viewAchievementDetails.project_duration_start && (
+                      <div><b>Project Start:</b> {new Date(viewAchievementDetails.project_duration_start).toLocaleDateString()}</div>
+                    )}
+                    {viewAchievementDetails.project_duration_end && (
+                      <div><b>Project End:</b> {new Date(viewAchievementDetails.project_duration_end).toLocaleDateString()}</div>
+                    )}
+                    {viewAchievementDetails.project_status && <div><b>Project Status:</b> {viewAchievementDetails.project_status}</div>}
+                  </div>
+                )}
+                {viewAchievementDetails.category === "Startups & Centers of Excellence" && (
+                  <div>
+                    {viewAchievementDetails.startup_center_name && <div><b>Startup/Center Name:</b> {viewAchievementDetails.startup_center_name}</div>}
+                    {viewAchievementDetails.domain && <div><b>Domain:</b> {viewAchievementDetails.domain}</div>}
+                    {viewAchievementDetails.funding_details && <div><b>Funding Details:</b> {viewAchievementDetails.funding_details}</div>}
+                  </div>
+                )}
+                {viewAchievementDetails.category === "Others" && (
+                  <div>
+                    {viewAchievementDetails.description && <div><b>Description:</b> {viewAchievementDetails.description}</div>}
+                    {viewAchievementDetails.organization && <div><b>Organization:</b> {viewAchievementDetails.organization}</div>}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
