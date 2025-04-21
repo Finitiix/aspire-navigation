@@ -16,8 +16,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import RejectReasonModal from "@/components/RejectReasonModal";
 
+// Helper to ensure the URL includes a protocol and has no extra whitespace
 const ensureValidUrl = (url: string) => {
   if (!url) return "";
   const trimmed = url.trim();
@@ -35,11 +35,13 @@ type DetailedAchievement = {
   remarks?: string;
   document_url?: string;
   status: string;
+  // Teacher details (stored in the achievement record)
   teacher_name: string;
   teacher_eid: string;
   teacher_designation: string;
   teacher_mobile: string;
   teacher_department: string;
+  // Journal Articles
   journal_name?: string;
   issn?: string;
   doi?: string;
@@ -47,28 +49,34 @@ type DetailedAchievement = {
   indexed_in?: string[];
   q_ranking?: string;
   journal_link?: string;
+  // Conference Papers
   conference_name?: string;
   conference_date?: string;
   proceedings_publisher?: string;
   isbn?: string;
   paper_link?: string;
+  // Books & Book Chapters
   book_title?: string;
   chapter_title?: string;
   year_of_publication?: string;
   book_drive_link?: string;
+  // Patents
   patent_number?: string;
   patent_office?: string;
   filing_date?: string;
   grant_date?: string;
   patent_status?: string;
   patent_link?: string;
+  // Research Collaborations
   partner_institutions?: string;
   research_area?: string;
   collaboration_details?: string;
+  // Awards & Recognitions
   award_name?: string;
   awarding_body?: string;
   award_type?: string;
   certificate_link?: string;
+  // Consultancy & Funded Projects
   client_organization?: string;
   project_title?: string;
   funding_agency?: string;
@@ -77,10 +85,12 @@ type DetailedAchievement = {
   project_duration_end?: string;
   project_status?: string;
   project_details_link?: string;
+  // Startups & Centers of Excellence
   startup_center_name?: string;
   domain?: string;
   funding_details?: string;
   website_link?: string;
+  // Others
   description?: string;
   organization?: string;
   proof_link?: string;
@@ -88,9 +98,11 @@ type DetailedAchievement = {
 };
 
 const AdminDashboard = () => {
+  // Get department info from local storage
   const department = localStorage.getItem("admin_department");
   const isSuper = localStorage.getItem("is_super_admin") === "true";
 
+  // General states
   const [feedback, setFeedback] = useState<any[]>([]);
   const [pendingAchievements, setPendingAchievements] = useState<DetailedAchievement[]>([]);
   const [stats, setStats] = useState({
@@ -133,19 +145,19 @@ const AdminDashboard = () => {
       Q4: 0,
     },
   });
+  // All achievements (for statistics filtering and export)
   const [allAchievements, setAllAchievements] = useState<DetailedAchievement[]>([]);
   const [importantMessages, setImportantMessages] = useState<any[]>([]);
   const [importantDetails, setImportantDetails] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [newDetail, setNewDetail] = useState("");
-  const [rejectModalOpen, setRejectModalOpen] = useState(false);
-  const [rejectModalAchievement, setRejectModalAchievement] = useState<DetailedAchievement | null>(null);
-  const [rejectModalReason, setRejectModalReason] = useState("");
-  const [rejectLoading, setRejectLoading] = useState(false);
 
+  // Modal for viewing document proof
   const [viewDocumentUrl, setViewDocumentUrl] = useState<string | null>(null);
+  // For multiple approval in Approval Requests section
   const [selectedAchievements, setSelectedAchievements] = useState<string[]>([]);
 
+  // Modal state for showing statistic details; filter holds type and value.
   const [statModalOpen, setStatModalOpen] = useState(false);
   const [statModalFilter, setStatModalFilter] = useState<{ filterType: string; filterValue: any } | null>(null);
 
@@ -157,6 +169,7 @@ const AdminDashboard = () => {
     fetchAllDocStats();
   }, []);
 
+  // Fetch general stats and feedback
   const fetchData = async () => {
     try {
       const { data: feedbackData } = await supabase
@@ -164,6 +177,7 @@ const AdminDashboard = () => {
         .select("name, message, created_at")
         .order("created_at", { ascending: false });
 
+      // When fetching teacher count, filter by department if user is NOT a super admin
       let teacherQuery = supabase
         .from("teacher_details")
         .select("*", { count: "exact" });
@@ -172,6 +186,7 @@ const AdminDashboard = () => {
       }
       const { count: teacherCount } = await teacherQuery;
 
+      // Fetch pending achievements with a similar filter for teacher_department
       let pendingQuery = supabase
         .from("detailed_achievements")
         .select("*", { count: "exact" })
@@ -197,6 +212,7 @@ const AdminDashboard = () => {
     }
   };
 
+  // Fetch pending achievements (for approval)
   const fetchPendingAchievements = async () => {
     try {
       let query = supabase
@@ -221,28 +237,22 @@ const AdminDashboard = () => {
     }
   };
 
+  // Fetch ALL achievements (for statistics and export)
   const fetchAllDocStats = async () => {
     try {
-      let query = supabase
-        .from("detailed_achievements")
-        .select("*")
-        .neq("status", "Rejected");
-      
+      let query = supabase.from("detailed_achievements").select("*");
       if (!isSuper && department) {
         query = query.eq("teacher_department", department);
       }
-      
       const { data, error } = await query;
       if (error) {
         console.error("Error fetching doc stats:", error);
         toast.error("Error loading document stats");
         return;
       }
-      
       if (data) {
         setAllAchievements(data);
       }
-      
       const aggregated = {
         totalDocuments: 0,
         indexed: {
@@ -309,6 +319,7 @@ const AdminDashboard = () => {
     }
   };
 
+  // Bulk approval/rejection
   const handleBulkApproval = async (status: "Approved" | "Rejected") => {
     try {
       if (selectedAchievements.length === 0) {
@@ -332,6 +343,7 @@ const AdminDashboard = () => {
     }
   };
 
+  // Toggle individual achievement selection
   const toggleSelection = (id: string) => {
     if (selectedAchievements.includes(id)) {
       setSelectedAchievements(selectedAchievements.filter((selectedId) => selectedId !== id));
@@ -340,6 +352,7 @@ const AdminDashboard = () => {
     }
   };
 
+  // "Select All" checkbox handler
   const handleSelectAll = () => {
     if (selectedAchievements.length === pendingAchievements.length) {
       setSelectedAchievements([]);
@@ -348,22 +361,26 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleApproval = async (id: string, status: "Approved" | "Rejected", achievement?: DetailedAchievement) => {
-    const ach = achievement ?? pendingAchievements.find(a => a.id === id);
-    if (!ach) {
-      toast.error("Achievement not found");
-      return;
-    }
-    
-    if (status === "Approved") {
-      await sendApprovalEmail(ach);
-    } else {
-      setRejectModalAchievement(ach);
-      setRejectModalReason("");
-      setRejectModalOpen(true);
+  // Individual approval/rejection handler
+  const handleApproval = async (id: string, status: "Approved" | "Rejected") => {
+    try {
+      const { error } = await supabase
+        .from("detailed_achievements")
+        .update({ status })
+        .eq("id", id);
+      if (error) {
+        toast.error("Error updating achievement status");
+      } else {
+        toast.success(`Achievement ${status}`);
+        fetchPendingAchievements();
+        fetchData();
+      }
+    } catch (error) {
+      toast.error("Error processing request");
     }
   };
 
+  // Fetch important messages and details
   const fetchImportantMessages = async () => {
     const { data } = await supabase.from("important_messages").select("*");
     setImportantMessages(data ? data.map((msg) => ({ id: msg.id, text: msg.message })) : []);
@@ -406,125 +423,19 @@ const AdminDashboard = () => {
     setImportantDetails(importantDetails.filter((detail) => detail.id !== id));
   };
 
+  // Handler for viewing document proof modal
   const handleViewDocument = (url: string) => {
     setViewDocumentUrl(url);
   };
 
-  const fetchTeacherEmail = async (eid: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("teacher_details")
-        .select("email_id, full_name")
-        .eq("eid", eid)
-        .maybeSingle();
-
-      if (error || !data) return null;
-      return data;
-    } catch {
-      return null;
-    }
-  };
-
-  const sendApprovalEmail = async (achievement: DetailedAchievement) => {
-    const emailData = await fetchTeacherEmail(achievement.teacher_eid);
-    if (!emailData) {
-      toast.error("Teacher email not found");
-      return;
-    }
-    try {
-      await fetch("/functions/v1/send-teacher-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: emailData.email_id,
-          teacherName: emailData.full_name,
-          type: "approved",
-          document: achievement,
-        }),
-      });
-      toast.success("Approval email sent 🎉");
-    } catch {
-      toast.error("Failed to send approval email");
-    }
-  };
-
-  const sendRejectEmail = async () => {
-    if (!rejectModalAchievement) return;
-    setRejectLoading(true);
-    
-    try {
-      let teacherEmail = '';
-      let teacherName = '';
-      
-      const { data: teacher, error: teacherError } = await supabase
-        .from("teacher_details")
-        .select("email_id, full_name")
-        .eq("eid", rejectModalAchievement.teacher_eid)
-        .maybeSingle();
-      
-      if (teacherError || !teacher) {
-        toast.error("Teacher email not found");
-        setRejectLoading(false);
-        return;
-      }
-      
-      teacherEmail = teacher.email_id;
-      teacherName = teacher.full_name;
-      
-      console.log("Sending rejection email to:", teacherEmail);
-      console.log("For document:", rejectModalAchievement.title);
-      console.log("With reason:", rejectModalReason);
-      
-      const response = await fetch(`${window.location.origin}/functions/v1/send-teacher-email`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: teacherEmail,
-          teacherName: teacherName,
-          type: "rejected",
-          reason: rejectModalReason,
-          document: rejectModalAchievement,
-        }),
-      });
-      
-      const result = await response.json();
-      console.log("Email API response:", result);
-      
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to send email");
-      }
-      
-      const { error: updateError } = await supabase
-        .from("detailed_achievements")
-        .update({ 
-          status: "Rejected",
-          rejection_reason: rejectModalReason
-        })
-        .eq("id", rejectModalAchievement.id);
-      
-      if (updateError) {
-        throw new Error("Error updating achievement status");
-      }
-      
-      toast.success("Document rejected and email sent!");
-      setRejectModalOpen(false);
-      setRejectModalAchievement(null);
-      setRejectModalReason("");
-      
-      fetchPendingAchievements();
-    } catch (error: any) {
-      console.error("Error in rejection process:", error);
-      toast.error(error.message || "Failed to send rejection email");
-    } finally {
-      setRejectLoading(false);
-    }
-  };
-
+  // ----- STATISTICS MODAL FUNCTIONALITY -----
+  // Open modal given a filter type and value
   const openStatModal = (filterType: string, filterValue: any) => {
     setStatModalFilter({ filterType, filterValue });
     setStatModalOpen(true);
   };
 
+  // Filter achievements based on modal filter
   const getFilteredAchievements = (): DetailedAchievement[] => {
     if (!statModalFilter) return [];
     const { filterType, filterValue } = statModalFilter;
@@ -544,6 +455,7 @@ const AdminDashboard = () => {
     return [];
   };
 
+  // Export CSV for detailed achievement data
   const exportCSV = (data: DetailedAchievement[], filename: string) => {
     if (!data || data.length === 0) return;
     const replacer = (_key: string, value: any) => (value === null ? "" : value);
@@ -568,6 +480,7 @@ const AdminDashboard = () => {
     }
   };
 
+  // Export summary data as CSV (structured summary)
   const exportSummary = () => {
     const summaryRows = [
       ["Category", "Metric", "Value"],
@@ -601,6 +514,7 @@ const AdminDashboard = () => {
       ["Categories", "Others", docStats.categories["Others"]],
     ];
 
+    // Convert rows to CSV string. Use empty rows as separator.
     const csv = summaryRows
       .map((row) => row.join(","))
       .join("\r\n");
@@ -619,6 +533,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="p-6">
+      {/* Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card className="p-6">
           <h3 className="text-lg font-medium mb-2">Total Teachers</h3>
@@ -634,8 +549,10 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
+      {/* Approval Requests for Achievements Section */}
       <Card className="p-6 mb-8">
         <h2 className="text-xl font-bold mb-4">Approval Requests for Achievements</h2>
+        {/* Bulk Action Buttons & Select All */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
             <Button
@@ -675,6 +592,7 @@ const AdminDashboard = () => {
           {pendingAchievements.length > 0 ? (
             pendingAchievements.map((achievement) => (
               <div key={achievement.id} className="relative bg-white shadow rounded p-4">
+                {/* Teacher Info and Selection */}
                 <div className="flex justify-between items-start">
                   <div className="flex items-center">
                     <input
@@ -698,19 +616,20 @@ const AdminDashboard = () => {
                       variant="outline"
                       size="sm"
                       className="bg-green-500 hover:bg-green-600 text-white"
-                      onClick={() => handleApproval(achievement.id, "Approved", achievement)}
+                      onClick={() => handleApproval(achievement.id, "Approved")}
                     >
                       Approve
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleApproval(achievement.id, "Rejected", achievement)}
+                      onClick={() => handleApproval(achievement.id, "Rejected")}
                     >
                       Reject
                     </Button>
                   </div>
                 </div>
+                {/* Document Details */}
                 <div className="mt-4">
                   <p className="text-md font-medium">
                     {achievement.category} - {achievement.title}
@@ -816,6 +735,7 @@ const AdminDashboard = () => {
                       </a>
                     )}
                   </div>
+                  {/* Category-Specific Details */}
                   <div className="mt-4 border-t pt-2">
                     <h4 className="font-semibold mb-2">Category Specific Details:</h4>
                     {achievement.category === "Journal Articles" && (
@@ -916,6 +836,7 @@ const AdminDashboard = () => {
         </div>
       </Card>
 
+      {/* Document & Achievement Statistics Section */}
       <Card className="p-6 mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
           <h2 className="text-2xl font-bold text-center sm:text-left">
@@ -926,6 +847,7 @@ const AdminDashboard = () => {
             Export Summary
           </Button>
         </div>
+        {/* Statistics rendered as interactive cards/buttons */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <div className="bg-gradient-to-r from-blue-500 to-blue-400 p-4 rounded shadow flex flex-col items-center text-white">
             <h3 className="text-lg font-semibold">Total Documents Uploaded</h3>
@@ -1060,6 +982,7 @@ const AdminDashboard = () => {
         </div>
       </Card>
 
+      {/* Important Messages & Details Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Card className="p-6">
           <h2 className="text-xl font-bold mb-4">Important Messages</h2>
@@ -1113,6 +1036,7 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
+      {/* Recent Feedback Section */}
       <Card className="p-6 mb-8">
         <h2 className="text-xl font-bold mb-4">Recent Feedback</h2>
         <div className="space-y-4 max-h-60 overflow-y-auto">
@@ -1130,6 +1054,7 @@ const AdminDashboard = () => {
         </div>
       </Card>
 
+      {/* Document Viewer Modal */}
       {viewDocumentUrl && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="relative bg-white p-4 rounded-lg max-w-6xl max-h-[90vh] w-full overflow-auto">
@@ -1162,6 +1087,7 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {/* STATISTICS DETAILS MODAL */}
       {statModalOpen && statModalFilter && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="relative bg-white p-6 rounded-lg max-w-4xl max-h-[90vh] w-full overflow-auto">
@@ -1227,17 +1153,6 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
-
-      <RejectReasonModal
-        open={rejectModalOpen}
-        teacherEmail={rejectModalAchievement?.teacher_eid ? (rejectModalAchievement?.teacher_eid) : ""}
-        title={rejectModalAchievement?.title || ""}
-        loading={rejectLoading}
-        reason={rejectModalReason}
-        onReasonChange={setRejectModalReason}
-        onClose={() => { setRejectModalOpen(false); setRejectModalAchievement(null); setRejectModalReason(""); }}
-        onSend={sendRejectEmail}
-      />
     </div>
   );
 };
