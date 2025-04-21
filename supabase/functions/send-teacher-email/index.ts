@@ -24,6 +24,8 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    console.log("Email function called");
+    
     const {
       email,
       teacherName,
@@ -31,6 +33,8 @@ const handler = async (req: Request): Promise<Response> => {
       reason,
       document,
     }: SendTeacherEmailRequest = await req.json();
+
+    console.log(`Attempting to send ${type} email to ${email}`);
 
     const title = document?.title ?? "Achievement";
 
@@ -69,12 +73,16 @@ const handler = async (req: Request): Promise<Response> => {
       `;
     }
 
+    console.log("Preparing to send email with subject:", subject);
+
     const response = await resend.emails.send({
       from: "Admin <onboarding@resend.dev>",
       to: [email],
       subject,
       html,
     });
+
+    console.log("Email send response:", response);
 
     return new Response(JSON.stringify({ success: true, response }), {
       status: 200,

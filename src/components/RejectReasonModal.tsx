@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 interface RejectReasonModalProps {
   open: boolean;
@@ -50,8 +51,19 @@ const RejectReasonModal: React.FC<RejectReasonModalProps> = ({
             <Button variant="outline" onClick={onClose} disabled={loading}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={onSend} loading={loading}>
-              Send Email
+            <Button 
+              variant="destructive" 
+              onClick={onSend} 
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                "Send Email"
+              )}
             </Button>
           </div>
         </div>
