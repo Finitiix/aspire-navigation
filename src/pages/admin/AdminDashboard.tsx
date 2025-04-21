@@ -16,6 +16,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import RejectReasonModal from "@/components/RejectReasonModal";
 
 // Helper to ensure the URL includes a protocol and has no extra whitespace
 const ensureValidUrl = (url: string) => {
@@ -151,6 +152,10 @@ const AdminDashboard = () => {
   const [importantDetails, setImportantDetails] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [newDetail, setNewDetail] = useState("");
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectModalAchievement, setRejectModalAchievement] = useState<DetailedAchievement | null>(null);
+  const [rejectModalReason, setRejectModalReason] = useState("");
+  const [rejectLoading, setRejectLoading] = useState(false);
 
   // Modal for viewing document proof
   const [viewDocumentUrl, setViewDocumentUrl] = useState<string | null>(null);
@@ -362,21 +367,36 @@ const AdminDashboard = () => {
   };
 
   // Individual approval/rejection handler
-  const handleApproval = async (id: string, status: "Approved" | "Rejected") => {
-    try {
-      const { error } = await supabase
-        .from("detailed_achievements")
-        .update({ status })
-        .eq("id", id);
-      if (error) {
-        toast.error("Error updating achievement status");
-      } else {
-        toast.success(`Achievement ${status}`);
-        fetchPendingAchievements();
-        fetchData();
+  const handleApproval = async (id: string, status: "Approved" | "Rejected", achievement?: DetailedAchievement) => {
+    if (status === "Approved") {
+      const ach = achievement ?? pendingAchievements.find(a => a.id === id);
+      if (ach) {
+        await sendApprovalEmail(ach);
       }
-    } catch (error) {
-      toast.error("Error processing request");
+      try {
+        const { error } = await supabase
+          .from("detailed_achievements")
+          .update({ status: "Approved" })
+          .eq("id", id);
+        if (error) {
+          toast.error("Error updating achievement status");
+        } else {
+          toast.success("Achievement Approved");
+          fetchPendingAchievements();
+          fetchData();
+        }
+      } catch (error) {
+        toast.error("Error processing request");
+      }
+    } else {
+      const ach = achievement ?? pendingAchievements.find(a => a.id === id);
+      if (!ach) {
+        toast.error("Achievement not found");
+        return;
+      }
+      setRejectModalAchievement(ach);
+      setRejectModalReason("");
+      setRejectModalOpen(true);
     }
   };
 
@@ -426,6 +446,80 @@ const AdminDashboard = () => {
   // Handler for viewing document proof modal
   const handleViewDocument = (url: string) => {
     setViewDocumentUrl(url);
+  };
+
+  // Fetch teacher email from teacher_details
+  const fetchTeacherEmail = async (eid: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("teacher_details")
+        .select("email_id, full_name")
+        .eq("eid", eid)
+        .maybeSingle();
+
+      if (error || !data) return null;
+      return data;
+    } catch {
+      return null;
+    }
+  };
+
+  // EMAIL: Approve
+  const sendApprovalEmail = async (achievement: DetailedAchievement) => {
+    // Fetch email and teacher name
+    const emailData = await fetchTeacherEmail(achievement.teacher_eid);
+    if (!emailData) {
+      toast.error("Teacher email not found");
+      return;
+    }
+    try {
+      await fetch("/functions/v1/send-teacher-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: emailData.email_id,
+          teacherName: emailData.full_name,
+          type: "approved",
+          document: achievement,
+        }),
+      });
+      toast.success("Approval email sent 🎉");
+    } catch {
+      toast.error("Failed to send approval email");
+    }
+  };
+
+  // EMAIL: Reject (called from inside modal)
+  const sendRejectEmail = async () => {
+    if (!rejectModalAchievement) return;
+    setRejectLoading(true);
+    const emailData = await fetchTeacherEmail(rejectModalAchievement.teacher_eid);
+    if (!emailData) {
+      setRejectLoading(false);
+      toast.error("Teacher email not found");
+      return;
+    }
+    try {
+      await fetch("/functions/v1/send-teacher-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: emailData.email_id,
+          teacherName: emailData.full_name,
+          type: "rejected",
+          reason: rejectModalReason,
+          document: rejectModalAchievement,
+        }),
+      });
+      toast.success("Rejection email sent!");
+      setRejectModalOpen(false);
+      setRejectModalAchievement(null);
+      setRejectModalReason("");
+    } catch {
+      toast.error("Failed to send rejection email");
+    } finally {
+      setRejectLoading(false);
+    }
   };
 
   // ----- STATISTICS MODAL FUNCTIONALITY -----
@@ -616,14 +710,14 @@ const AdminDashboard = () => {
                       variant="outline"
                       size="sm"
                       className="bg-green-500 hover:bg-green-600 text-white"
-                      onClick={() => handleApproval(achievement.id, "Approved")}
+                      onClick={() => handleApproval(achievement.id, "Approved", achievement)}
                     >
                       Approve
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleApproval(achievement.id, "Rejected")}
+                      onClick={() => handleApproval(achievement.id, "Rejected", achievement)}
                     >
                       Reject
                     </Button>
@@ -1153,6 +1247,18 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Rejection Modal */}
+      <RejectReasonModal
+        open={rejectModalOpen}
+        teacherEmail={rejectModalAchievement?.teacher_eid ? (rejectModalAchievement?.teacher_eid) : ""}
+        title={rejectModalAchievement?.title || ""}
+        loading={rejectLoading}
+        reason={rejectModalReason}
+        onReasonChange={setRejectModalReason}
+        onClose={() => { setRejectModalOpen(false); setRejectModalAchievement(null); setRejectModalReason(""); }}
+        onSend={sendRejectEmail}
+      />
     </div>
   );
 };

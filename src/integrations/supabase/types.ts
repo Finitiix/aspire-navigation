@@ -41,21 +41,6 @@ export type Database = {
           },
         ]
       }
-      departments: {
-        Row: {
-          id: string
-          name: string
-        }
-        Insert: {
-          id: string
-          name: string
-        }
-        Update: {
-          id?: string
-          name?: string
-        }
-        Relationships: []
-      }
       detailed_achievements: {
         Row: {
           award_name: string | null
