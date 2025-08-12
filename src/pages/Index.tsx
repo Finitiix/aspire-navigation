@@ -9,12 +9,7 @@ const Index = () => {
   const navigate = useNavigate();
 
   const sections = [
-    {
-      title: "Student",
-      icon: GraduationCap,
-      description: "Access your courses, track progress, and achieve your goals",
-      onClick: () => window.location.href = "https://cec-aiml.vercel.app/"
-    },
+    
     {
       title: "Teacher",
       icon: School,
