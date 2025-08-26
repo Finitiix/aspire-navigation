@@ -140,6 +140,29 @@ const About = () => {
         </div>
       </section>
 
+      {/* About Finitix */}
+      <section className="py-16 px-6 bg-gray-50">
+        <div className="container mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">About Finitix</h2>
+              <p className="text-lg text-gray-600 mb-4">
+                Finitix is a product-based software company dedicated to creating innovative digital solutions that tackle real-world problems. Finitix focuses on quality, innovation, and impact.
+              </p>
+              <p className="text-lg text-gray-600">
+                We believe that the best products aren't just functional — they inspire, empower, and make life easier.
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="inline-block bg-white p-8 rounded-lg shadow-lg">
+                <h3 className="text-2xl font-bold text-primary mb-4">Finitix</h3>
+                <p className="text-gray-600 font-medium">Creating Digital Solutions for Tomorrow</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-16 px-6 bg-primary text-white">
         <div className="container mx-auto text-center">
@@ -217,6 +240,7 @@ const About = () => {
           </div>
           <div className="mt-8 pt-8 border-t border-gray-800 text-center text-gray-400">
             <p>&copy; {new Date().getFullYear()} Achievement Hub. All rights reserved.</p>
+            <p className="mt-2 text-sm font-semibold text-gray-500">POWERED BY Finitix</p>
           </div>
         </div>
       </footer>
