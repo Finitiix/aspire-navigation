@@ -13,6 +13,9 @@ export const Navigation = () => {
           />
           Achievement Hub
         </Link>
+        <div className="text-white text-sm opacity-75">
+          By finitix
+        </div>
       </div>
     </nav>
   );
