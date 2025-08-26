@@ -556,36 +556,36 @@ const AdminTeachers = () => {
       const teacherStats = computeTeacherStats(teacher.achievements || []);
       const approvedCount = (teacher.achievements || []).filter(a => a.status === "Approved").length;
       const row = [
-        teacher.eid,
-        teacher.full_name,
-        teacher.designation,
-        teacher.department,
-        teacherStats.totalDocuments,
-        approvedCount,
-        teacherStats.indexed.SCI,
-        teacherStats.indexed.Scopus,
-        teacherStats.indexed["UGC Approved"],
-        teacherStats.indexed.WOS,
-        teacherStats.indexed["IEEE Xplore"],
-        teacherStats.indexed.Springer,
-        teacherStats.indexed.Elsevier,
-        teacherStats.yearly[2022],
-        teacherStats.yearly[2023],
-        teacherStats.yearly[2024],
-        teacherStats.yearly[2025],
-        teacherStats.quality.Q1,
-        teacherStats.quality.Q2,
-        teacherStats.quality.Q3,
-        teacherStats.quality.Q4,
-        teacherStats.categories["Journal Articles"],
-        teacherStats.categories["Conference Papers"],
-        teacherStats.categories["Books & Book Chapters"],
-        teacherStats.categories["Patents"],
-        teacherStats.categories["Research Collaborations"],
-        teacherStats.categories["Awards & Recognitions"],
-        teacherStats.categories["Consultancy & Funded Projects"],
-        teacherStats.categories["Startups & Centers of Excellence"],
-        teacherStats.categories["Others"],
+        String(teacher.eid || ''),
+        String(teacher.full_name || ''),
+        String(teacher.designation || ''),
+        String(teacher.department || ''),
+        String(teacherStats.totalDocuments || 0),
+        String(approvedCount || 0),
+        String(teacherStats.indexed.SCI || 0),
+        String(teacherStats.indexed.Scopus || 0),
+        String(teacherStats.indexed["UGC Approved"] || 0),
+        String(teacherStats.indexed.WOS || 0),
+        String(teacherStats.indexed["IEEE Xplore"] || 0),
+        String(teacherStats.indexed.Springer || 0),
+        String(teacherStats.indexed.Elsevier || 0),
+        String(teacherStats.yearly[2022] || 0),
+        String(teacherStats.yearly[2023] || 0),
+        String(teacherStats.yearly[2024] || 0),
+        String(teacherStats.yearly[2025] || 0),
+        String(teacherStats.quality.Q1 || 0),
+        String(teacherStats.quality.Q2 || 0),
+        String(teacherStats.quality.Q3 || 0),
+        String(teacherStats.quality.Q4 || 0),
+        String(teacherStats.categories["Journal Articles"] || 0),
+        String(teacherStats.categories["Conference Papers"] || 0),
+        String(teacherStats.categories["Books & Book Chapters"] || 0),
+        String(teacherStats.categories["Patents"] || 0),
+        String(teacherStats.categories["Research Collaborations"] || 0),
+        String(teacherStats.categories["Awards & Recognitions"] || 0),
+        String(teacherStats.categories["Consultancy & Funded Projects"] || 0),
+        String(teacherStats.categories["Startups & Centers of Excellence"] || 0),
+        String(teacherStats.categories["Others"] || 0),
       ];
       rows.push(row);
     });
@@ -990,7 +990,7 @@ const AdminTeachers = () => {
                                         return (
                                           <div key={key}>
                                             <p className="text-sm font-medium capitalize">
-                                              {key.replaceAll("_", " ")}:
+                                               {key.replace(/_/g, " ")}:
                                             </p>
                                             <p className="text-sm">{String(value)}</p>
                                           </div>
@@ -1089,7 +1089,7 @@ const AdminTeachers = () => {
                                           return (
                                             <div key={key}>
                                               <p className="text-sm font-medium capitalize">
-                                                {key.replaceAll("_", " ")}:
+                                                 {key.replace(/_/g, " ")}:
                                               </p>
                                               <p className="text-sm">{String(value)}</p>
                                             </div>
@@ -1181,7 +1181,7 @@ const AdminTeachers = () => {
                                           return (
                                             <div key={key}>
                                               <p className="text-sm font-medium capitalize">
-                                                {key.replaceAll("_", " ")}:
+                                                {key.replace(/_/g, " ")}:
                                               </p>
                                               <p className="text-sm">{String(value)}</p>
                                             </div>
