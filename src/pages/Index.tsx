@@ -10,13 +10,6 @@ const Index = () => {
 
   const sections = [
     {
-      title: "Student",
-      icon: School,
-      description: "Manage your classes and monitor student performance",
-      onClick: () => navigate("/Student")
-    },
-    
-    {
       title: "Teacher",
       icon: School,
       description: "Manage your classes and monitor student performance",
