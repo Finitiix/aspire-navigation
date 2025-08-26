@@ -12,19 +12,19 @@ const Index = () => {
     {
       title: "Teacher",
       icon: School,
-      description: "Manage your classes and monitor student performance",
+      description: "Access your personalized teaching dashboard to manage classes, track student progress, submit achievements, and monitor your academic contributions. Upload research papers, patents, and other scholarly work with detailed analytics.",
       onClick: () => navigate("/teacher")
     },
     {
       title: "Admin",
       icon: Shield,
-      description: "Oversee system operations and user management",
+      description: "Comprehensive administrative control panel for managing the entire educational ecosystem. Oversee user accounts, review teacher submissions, generate detailed reports, manage departments, and configure system-wide settings.",
       onClick: () => navigate("/admin-auth")
     },
     {
       title: "Feedback",
       icon: MessageSquare,
-      description: "Share your thoughts and help us improve",
+      description: "Share your valuable insights and suggestions to help us continuously improve the platform. Your feedback drives our development priorities and helps create a better experience for the entire academic community.",
       onClick: () => navigate("/feedback")
     }
   ];
@@ -55,22 +55,22 @@ const Index = () => {
       {/* Features Section */}
       <section className="py-16 px-6 bg-white">
         <div className="container mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {sections.map((section) => (
               <div
                 key={section.title}
                 onClick={section.onClick}
                 className="group transform transition-all duration-300 hover:-translate-y-2 cursor-pointer"
               >
-                <Card className="h-[300px] shadow-lg hover:shadow-xl transition-shadow transition-colors duration-300 group-hover:bg-red-500">
+                <Card className="h-[400px] shadow-lg hover:shadow-xl transition-shadow transition-colors duration-300 group-hover:bg-red-500">
                   <CardHeader className="text-center pb-2">
                     <section.icon className="w-16 h-16 mx-auto text-primary mb-4 transition-colors duration-300 group-hover:text-white" />
                     <CardTitle className="text-2xl font-bold transition-colors duration-300 group-hover:text-white">
                       {section.title}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-600 text-center text-lg transition-colors duration-300 group-hover:text-white">
+                  <CardContent className="px-6">
+                    <p className="text-gray-600 text-center text-base leading-relaxed transition-colors duration-300 group-hover:text-white">
                       {section.description}
                     </p>
                   </CardContent>
@@ -191,6 +191,7 @@ const Index = () => {
           </div>
           <div className="mt-8 pt-8 border-t border-gray-800 text-center text-gray-400">
             <p>&copy; {new Date().getFullYear()} Achievement Hub. All rights reserved.</p>
+            <p className="mt-2 text-sm font-semibold text-gray-500">POWERED BY Finitix</p>
           </div>
         </div>
       </footer>
