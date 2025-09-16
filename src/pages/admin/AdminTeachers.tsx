@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Search, X, Eye, ExternalLink, FileText, Trash, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -231,6 +232,8 @@ const AdminTeachers = () => {
   const [viewDocumentUrl, setViewDocumentUrl] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [achievementToDelete, setAchievementToDelete] = useState<DetailedAchievement | null>(null);
+  const [departmentFilter, setDepartmentFilter] = useState("");
+  const [designationFilter, setDesignationFilter] = useState("");
 
   // Modal state for Teacher Document Statistics (interactive filtering)
   const [teacherStatModalOpen, setTeacherStatModalOpen] = useState(false);
@@ -241,19 +244,28 @@ const AdminTeachers = () => {
   }, []);
 
   useEffect(() => {
+    let filtered = teachers;
+    
     if (searchQuery) {
-      const filtered = teachers.filter(
+      filtered = filtered.filter(
         (teacher) =>
           teacher.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           teacher.email_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
           teacher.eid.toLowerCase().includes(searchQuery.toLowerCase()) ||
           teacher.department.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      setFilteredTeachers(filtered);
-    } else {
-      setFilteredTeachers(teachers);
     }
-  }, [searchQuery, teachers]);
+    
+    if (departmentFilter) {
+      filtered = filtered.filter(teacher => teacher.department === departmentFilter);
+    }
+    
+    if (designationFilter) {
+      filtered = filtered.filter(teacher => teacher.designation === designationFilter);
+    }
+    
+    setFilteredTeachers(filtered);
+  }, [searchQuery, departmentFilter, designationFilter, teachers]);
 
   const fetchTeachers = async () => {
     try {
@@ -398,7 +410,7 @@ const AdminTeachers = () => {
     }
   };
 
-  // Only Export CSV remains (removing export PDF)
+  // Export CSV for achievements
   const exportCSV = () => {
     let achievementsToExport: DetailedAchievement[] = [];
   
@@ -427,6 +439,74 @@ const AdminTeachers = () => {
     link.setAttribute("href", url);
     link.setAttribute("download", "filtered_teacher_data.csv");
     link.click();
+  };
+
+  // Export teacher profiles as CSV
+  const exportTeacherProfiles = async () => {
+    try {
+      const teachersToExport = filteredTeachers;
+      
+      if (!teachersToExport.length) {
+        toast.error("No teachers to export");
+        return;
+      }
+
+      // Fetch researcher IDs for all teachers
+      const teachersWithResearcherIds = await Promise.all(
+        teachersToExport.map(async (teacher) => {
+          const { data: researcherIds } = await supabase
+            .from('researcher_ids')
+            .select('*')
+            .eq('teacher_id', teacher.id)
+            .single();
+
+          return {
+            name: teacher.full_name,
+            eid: teacher.eid,
+            department: teacher.department,
+            email: teacher.email_id,
+            mobile: teacher.mobile_number,
+            designation: teacher.designation,
+            date_of_joining: teacher.date_of_joining || '',
+            qualification: teacher.highest_qualification || '',
+            address: teacher.address || '',
+            cabin: teacher.cabin_no || '',
+            block: teacher.block || '',
+            total_documents: teacher.achievements?.length || 0,
+            google_scholar_id: researcherIds?.google_scholar_id || '',
+            orcid: researcherIds?.orcid || '',
+            scopus_author_id: researcherIds?.scopus_author_id || '',
+            web_of_science_id: researcherIds?.web_of_science_id || ''
+          };
+        })
+      );
+
+      const headers = [
+        'Name', 'EID', 'Department', 'Email', 'Mobile', 'Designation', 
+        'Date of Joining', 'Qualification', 'Address', 'Cabin', 'Block', 
+        'Total Documents', 'Google Scholar ID', 'ORCID', 'Scopus Author ID', 'Web of Science ID'
+      ];
+      
+      const rows = teachersWithResearcherIds.map(teacher => [
+        teacher.name, teacher.eid, teacher.department, teacher.email, teacher.mobile,
+        teacher.designation, teacher.date_of_joining, teacher.qualification, teacher.address,
+        teacher.cabin, teacher.block, teacher.total_documents, teacher.google_scholar_id,
+        teacher.orcid, teacher.scopus_author_id, teacher.web_of_science_id
+      ].map(field => `"${field}"`).join(','));
+
+      const csvContent = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'teacher_profiles.csv');
+      link.click();
+      
+      toast.success('Teacher profiles exported successfully');
+    } catch (error) {
+      console.error('Error exporting teacher profiles:', error);
+      toast.error('Failed to export teacher profiles');
+    }
   };
   
   // ---------------------------
@@ -598,20 +678,111 @@ const AdminTeachers = () => {
     link.click();
   };
 
+  // Get unique departments and designations for filters
+  const uniqueDepartments = [...new Set(teachers.map(t => t.department))];
+  const uniqueDesignations = [...new Set(teachers.map(t => t.designation))];
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Teacher Management</h1>
       </div>
 
+      {/* Search and Filter Section */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Search & Filter Teachers</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label>Search</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search by name, email, EID..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Department</Label>
+              <select
+                className="w-full p-2 border rounded-md"
+                value={departmentFilter}
+                onChange={(e) => setDepartmentFilter(e.target.value)}
+              >
+                <option value="">All Departments</option>
+                {uniqueDepartments.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Designation</Label>
+              <select
+                className="w-full p-2 border rounded-md"
+                value={designationFilter}
+                onChange={(e) => setDesignationFilter(e.target.value)}
+              >
+                <option value="">All Designations</option>
+                {uniqueDesignations.map(designation => (
+                  <option key={designation} value={designation}>{designation}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Export</Label>
+              <Button 
+                onClick={exportTeacherProfiles}
+                className="w-full"
+                variant="outline"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export Teacher Profiles
+              </Button>
+            </div>
+          </div>
+          
+          {/* Clear Filters */}
+          {(searchQuery || departmentFilter || designationFilter) && (
+            <div className="mt-4">
+              <Button 
+                variant="ghost" 
+                onClick={() => {
+                  setSearchQuery("");
+                  setDepartmentFilter("");
+                  setDesignationFilter("");
+                }}
+                className="text-sm"
+              >
+                <X className="mr-2 h-4 w-4" />
+                Clear All Filters
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card className="mb-6">
         <CardHeader>
           <div className="flex items-center justify-between w-full">
             <CardTitle>Teachers List ({filteredTeachers.length})</CardTitle>
-            {/* New Export Summary Button for Teachers List */}
-            <Button onClick={exportTeachersSummary} variant="outline" size="sm">
-              Export Summary
-            </Button>
+            <div className="space-x-2">
+              <Button onClick={exportTeachersSummary} variant="outline" size="sm">
+                <Download className="mr-1 h-4 w-4" />
+                Export Summary
+              </Button>
+              <Button onClick={exportTeacherProfiles} variant="outline" size="sm">
+                <Download className="mr-1 h-4 w-4" />
+                Export Teacher Profiles
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -773,10 +944,14 @@ const AdminTeachers = () => {
                         <CardTitle className="text-2xl font-bold text-white">
                           Teacher Document Statistics
                         </CardTitle>
-                        <div className="mt-2">
+                        <div className="mt-2 space-x-2">
                           <Button variant="outline" size="sm" onClick={exportTeacherSummary}>
                             <Download className="w-4 h-4 mr-1" />
                             Export Summary
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={exportTeacherProfiles}>
+                            <Download className="w-4 h-4 mr-1" />
+                            Export Teacher Profile
                           </Button>
                         </div>
                       </CardHeader>

@@ -67,6 +67,39 @@ function safeReplace(str: string, search: string, replacement: string) {
   return str.split(search).join(replacement);
 }
 
+const PREDEFINED_DEPARTMENTS = [
+  "1st Year",
+  "CSE 2nd Year", 
+  "CSE 3rd Year",
+  "CSE 4th Year",
+  "UIC, BCA 1st Year",
+  "UIC, BCA 2nd Year", 
+  "UIC, BCA 3rd Year",
+  "UIC, MCA 1st Year",
+  "UIC, MCA 2nd Year",
+  "AIT CSE AI/ML 2nd Year",
+  "AIT CSE AI/ML 3rd Year",
+  "AIT CSE AI/ML 4th Year", 
+  "AIT CSE NON AI/ML 2nd Year",
+  "AIT CSE NON AI/ML 3rd Year",
+  "AIT CSE NON AI/ML 4th Year",
+  "NON-CSE 2nd Year",
+  "NON-CSE 3rd Year", 
+  "NON-CSE 4th Year",
+  "ME-NON-CSE 1st Year",
+  "ME-NON-CSE 2nd Year",
+  "ME CSE 1st Year",
+  "ME CSE 2nd Year", 
+  "PhD CSE",
+  "PhD NON-CSE"
+];
+
+interface DepartmentAdmin {
+  email: string;
+  department_id: string;
+  is_super_admin: boolean;
+}
+
 const AdminDepartments = () => {
   // Get admin context information
   const { departments: adminDepartments, isSuperAdmin } = useOutletContext<{
@@ -83,6 +116,11 @@ const AdminDepartments = () => {
   const [newDepartmentName, setNewDepartmentName] = useState("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [departmentToDelete, setDepartmentToDelete] = useState<Department | null>(null);
+  const [departmentAdmins, setDepartmentAdmins] = useState<DepartmentAdmin[]>([]);
+  const [selectedDepartmentTeachers, setSelectedDepartmentTeachers] = useState<any[]>([]);
+  const [isAddAdminDialogOpen, setIsAddAdminDialogOpen] = useState(false);
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminDepartment, setNewAdminDepartment] = useState("");
   
   // Used for chart coloring
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
@@ -108,38 +146,22 @@ const AdminDepartments = () => {
     try {
       setLoading(true);
       
-      // First, get all departments that the admin has access to through the admin_departments table
-      const { data: adminDeptData, error: adminDeptError } = await supabase
-        .from('admin_departments')
-        .select('department_id, is_super_admin');
-      
-      if (adminDeptError) throw adminDeptError;
-      
-      // Extract department IDs
-      const departmentIds = adminDeptData?.map(item => item.department_id) || [];
-      
-      // Fetch department details
-      const { data: departmentsData, error: departmentsError } = await supabase
-        .from('departments')
-        .select('*');
-        
-      if (departmentsError) throw departmentsError;
-      
-      // Fetch teacher counts for each department
+      // Create departments list from predefined list
       const departmentsWithCount = await Promise.all(
-        (departmentsData || []).map(async (dept) => {
+        PREDEFINED_DEPARTMENTS.map(async (deptName) => {
           const { count: teacherCount } = await supabase
             .from('teacher_details')
             .select('*', { count: 'exact' })
-            .eq('department', dept.id);
+            .eq('department', deptName);
             
           const { count: documentCount } = await supabase
             .from('detailed_achievements')
             .select('*', { count: 'exact' })
-            .eq('teacher_department', dept.id);
+            .eq('teacher_department', deptName);
             
           return {
-            ...dept,
+            id: deptName,
+            name: deptName,
             teacherCount: teacherCount || 0,
             documentCount: documentCount || 0
           };
@@ -147,11 +169,50 @@ const AdminDepartments = () => {
       );
       
       setDepartments(departmentsWithCount);
+      
+      // Fetch department admins with emails
+      const { data: adminData, error: adminError } = await supabase
+        .from('admin_departments')
+        .select('department_id, is_super_admin, admin_id');
+      
+      if (!adminError && adminData) {
+        const adminEmails = await Promise.all(
+          adminData.map(async (admin) => {
+            const { data: userData } = await supabase
+              .from('auth_users_view')
+              .select('email')
+              .eq('id', admin.admin_id)
+              .single();
+            
+            return {
+              email: userData?.email || 'Unknown',
+              department_id: admin.department_id,
+              is_super_admin: admin.is_super_admin
+            };
+          })
+        );
+        setDepartmentAdmins(adminEmails);
+      }
     } catch (error) {
       console.error('Error fetching departments:', error);
       toast.error('Failed to fetch departments');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDepartmentTeachers = async (departmentId: string) => {
+    try {
+      const { data: teachers, error } = await supabase
+        .from('teacher_details')
+        .select('*')
+        .eq('department', departmentId);
+      
+      if (error) throw error;
+      setSelectedDepartmentTeachers(teachers || []);
+    } catch (error) {
+      console.error('Error fetching department teachers:', error);
+      toast.error('Failed to fetch department teachers');
     }
   };
   
@@ -218,44 +279,44 @@ const AdminDepartments = () => {
     }
   };
   
-  const handleAddDepartment = async () => {
+  const handleAddAdmin = async () => {
     try {
-      if (!newDepartmentId.trim() || !newDepartmentName.trim()) {
-        toast.error('Department ID and name are required');
+      if (!newAdminEmail.trim() || !newAdminDepartment.trim()) {
+        toast.error('Email and department are required');
         return;
       }
       
-      // First add to departments table
-      const { error } = await supabase
-        .from('departments')
-        .insert({ id: newDepartmentId.trim(), name: newDepartmentName.trim() });
-        
-      if (error) throw error;
+      // Find user by email
+      const { data: userData, error: userError } = await supabase
+        .from('auth_users_view')
+        .select('id')
+        .eq('email', newAdminEmail.trim())
+        .single();
       
-      // Get current user ID
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        // Add admin's access to this department
-        const { error: adminDeptError } = await supabase
-          .from('admin_departments')
-          .insert({ 
-            admin_id: user.id, 
-            department_id: newDepartmentId.trim(),
-            is_super_admin: true 
-          });
-          
-        if (adminDeptError) throw adminDeptError;
+      if (userError || !userData) {
+        toast.error('User not found with this email');
+        return;
       }
       
-      toast.success('Department added successfully');
-      setIsAddDialogOpen(false);
-      setNewDepartmentId("");
-      setNewDepartmentName("");
+      // Add admin access to department
+      const { error: adminError } = await supabase
+        .from('admin_departments')
+        .insert({
+          admin_id: userData.id,
+          department_id: newAdminDepartment,
+          is_super_admin: false
+        });
+      
+      if (adminError) throw adminError;
+      
+      toast.success('Department admin added successfully');
+      setIsAddAdminDialogOpen(false);
+      setNewAdminEmail("");
+      setNewAdminDepartment("");
       fetchDepartments();
     } catch (error) {
-      console.error('Error adding department:', error);
-      toast.error('Failed to add department');
+      console.error('Error adding admin:', error);
+      toast.error('Failed to add department admin');
     }
   };
   
@@ -274,26 +335,9 @@ const AdminDepartments = () => {
         return;
       }
       
-      // First delete from admin_departments
-      const { error: adminDeptError } = await supabase
-        .from('admin_departments')
-        .delete()
-        .eq('department_id', departmentToDelete.id);
-        
-      if (adminDeptError) throw adminDeptError;
-      
-      // Then delete from departments table
-      const { error } = await supabase
-        .from('departments')
-        .delete()
-        .eq('id', departmentToDelete.id);
-        
-      if (error) throw error;
-      
-      toast.success('Department deleted successfully');
+      toast.success('Cannot delete predefined departments');
       setIsDeleteDialogOpen(false);
       setDepartmentToDelete(null);
-      fetchDepartments();
     } catch (error) {
       console.error('Error deleting department:', error);
       toast.error('Failed to delete department');
@@ -361,52 +405,45 @@ const AdminDepartments = () => {
     return (
       <>
         {isSuperAdmin && (
-          <div className="flex justify-end mb-4">
-            <Button onClick={() => setIsAddDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Add Department
+          <div className="flex justify-end mb-4 space-x-2">
+            <Button onClick={() => setIsAddAdminDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" /> Add Department Admin
             </Button>
           </div>
         )}
         <div className="space-y-2">
-          {departments.map(dept => (
-            <Card 
-              key={dept.id} 
-              className={`cursor-pointer hover:shadow-md transition-shadow ${
-                selectedDepartment === dept.id ? 'border-primary border-2' : ''
-              }`}
-              onClick={() => setSelectedDepartment(dept.id)}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">{dept.name}</h3>
-                    <p className="text-sm text-gray-500">ID: {dept.id}</p>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="text-right">
-                      <p className="text-sm"><span className="font-medium">{dept.teacherCount}</span> Teachers</p>
-                      <p className="text-sm"><span className="font-medium">{dept.documentCount}</span> Documents</p>
+          {departments.map(dept => {
+            const adminEmail = departmentAdmins.find(admin => admin.department_id === dept.id)?.email || 'No admin assigned';
+            return (
+              <Card 
+                key={dept.id} 
+                className={`cursor-pointer hover:shadow-md transition-shadow ${
+                  selectedDepartment === dept.id ? 'border-primary border-2' : ''
+                }`}
+                onClick={() => {
+                  setSelectedDepartment(dept.id);
+                  fetchDepartmentTeachers(dept.id);
+                }}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-medium">{dept.name}</h3>
+                      <p className="text-sm text-gray-500">Department ID: {dept.id}</p>
+                      <p className="text-sm text-blue-600">Admin: {adminEmail}</p>
                     </div>
-                    <ChevronRight className="h-5 w-5 text-gray-400" />
-                    {isSuperAdmin && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDepartmentToDelete(dept);
-                          setIsDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right">
+                        <p className="text-sm"><span className="font-medium">{dept.teacherCount}</span> Teachers</p>
+                        <p className="text-sm"><span className="font-medium">{dept.documentCount}</span> Documents</p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-gray-400" />
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </>
     );
@@ -435,14 +472,17 @@ const AdminDepartments = () => {
       })
     );
     
+    const adminEmail = departmentAdmins.find(admin => admin.department_id === department.id)?.email || 'No admin assigned';
+    
     return (
       <div>
         <div className="mb-6">
           <h2 className="text-2xl font-bold mb-2">{department.name}</h2>
           <p className="text-gray-500">Department ID: {department.id}</p>
+          <p className="text-blue-600">Department Admin: {adminEmail}</p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Total Teachers</CardTitle>
@@ -471,7 +511,39 @@ const AdminDepartments = () => {
               </p>
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Active Research</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-primary">{departmentMetrics.pendingDocuments}</p>
+            </CardContent>
+          </Card>
         </div>
+        
+        {/* Teachers in Department */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Teachers in {department.name}</CardTitle>
+            <CardDescription>Complete list of faculty members</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {selectedDepartmentTeachers.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {selectedDepartmentTeachers.map(teacher => (
+                  <div key={teacher.id} className="p-4 border rounded-lg">
+                    <h3 className="font-medium">{teacher.full_name}</h3>
+                    <p className="text-sm text-gray-600">{teacher.designation}</p>
+                    <p className="text-sm text-gray-500">EID: {teacher.eid}</p>
+                    <p className="text-sm text-gray-500">{teacher.email_id}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500">No teachers found in this department</p>
+            )}
+          </CardContent>
+        </Card>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Document Status Chart */}
@@ -571,41 +643,46 @@ const AdminDepartments = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Add Department Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+      {/* Add Department Admin Dialog */}
+      <Dialog open={isAddAdminDialogOpen} onOpenChange={setIsAddAdminDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add New Department</DialogTitle>
+            <DialogTitle>Add Department Admin</DialogTitle>
             <DialogDescription>
-              Enter the details for the new department.
+              Assign an admin to a specific department.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="department-id">Department ID</Label>
+              <Label htmlFor="admin-email">Admin Email</Label>
               <Input
-                id="department-id"
-                placeholder="E.g., CSE, ECE, MECH"
-                value={newDepartmentId}
-                onChange={(e) => setNewDepartmentId(e.target.value)}
+                id="admin-email"
+                placeholder="admin@example.com"
+                value={newAdminEmail}
+                onChange={(e) => setNewAdminEmail(e.target.value)}
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="department-name">Department Name</Label>
-              <Input
-                id="department-name"
-                placeholder="E.g., Computer Science Engineering"
-                value={newDepartmentName}
-                onChange={(e) => setNewDepartmentName(e.target.value)}
-              />
+              <Label htmlFor="admin-department">Department</Label>
+              <select
+                id="admin-department"
+                className="w-full p-2 border rounded-md"
+                value={newAdminDepartment}
+                onChange={(e) => setNewAdminDepartment(e.target.value)}
+              >
+                <option value="">Select Department</option>
+                {PREDEFINED_DEPARTMENTS.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
             </div>
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddDepartment}>Add Department</Button>
+            <Button variant="outline" onClick={() => setIsAddAdminDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddAdmin}>Add Admin</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
