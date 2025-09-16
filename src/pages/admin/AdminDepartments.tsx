@@ -121,6 +121,7 @@ const AdminDepartments = () => {
   const [isAddAdminDialogOpen, setIsAddAdminDialogOpen] = useState(false);
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminDepartment, setNewAdminDepartment] = useState("");
+  const [newAdminPassword, setNewAdminPassword] = useState("");
   
   // Used for chart coloring
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
@@ -281,28 +282,53 @@ const AdminDepartments = () => {
   
   const handleAddAdmin = async () => {
     try {
-      if (!newAdminEmail.trim() || !newAdminDepartment.trim()) {
-        toast.error('Email and department are required');
+      if (!newAdminEmail.trim() || !newAdminDepartment.trim() || !newAdminPassword.trim()) {
+        toast.error('Email, password, and department are required');
         return;
       }
       
-      // Find user by email
-      const { data: userData, error: userError } = await supabase
+      // First check if user already exists
+      const { data: existingUser } = await supabase
         .from('auth_users_view')
         .select('id')
         .eq('email', newAdminEmail.trim())
         .single();
       
-      if (userError || !userData) {
-        toast.error('User not found with this email');
-        return;
+      let userId;
+      
+      if (existingUser) {
+        // User exists, just add admin access
+        userId = existingUser.id;
+      } else {
+        // Create new user with admin role
+        const { data: newUser, error: signUpError } = await supabase.auth.signUp({
+          email: newAdminEmail.trim(),
+          password: newAdminPassword.trim(),
+          options: {
+            data: {
+              role: 'admin'
+            }
+          }
+        });
+        
+        if (signUpError) {
+          toast.error('Failed to create user: ' + signUpError.message);
+          return;
+        }
+        
+        if (!newUser.user) {
+          toast.error('Failed to create user');
+          return;
+        }
+        
+        userId = newUser.user.id;
       }
       
       // Add admin access to department
       const { error: adminError } = await supabase
         .from('admin_departments')
         .insert({
-          admin_id: userData.id,
+          admin_id: userId,
           department_id: newAdminDepartment,
           is_super_admin: false
         });
@@ -313,6 +339,7 @@ const AdminDepartments = () => {
       setIsAddAdminDialogOpen(false);
       setNewAdminEmail("");
       setNewAdminDepartment("");
+      setNewAdminPassword("");
       fetchDepartments();
     } catch (error) {
       console.error('Error adding admin:', error);
@@ -661,6 +688,17 @@ const AdminDepartments = () => {
                 placeholder="admin@example.com"
                 value={newAdminEmail}
                 onChange={(e) => setNewAdminEmail(e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="admin-password">Password</Label>
+              <Input
+                id="admin-password"
+                type="password"
+                placeholder="Enter password for admin"
+                value={newAdminPassword}
+                onChange={(e) => setNewAdminPassword(e.target.value)}
               />
             </div>
             
