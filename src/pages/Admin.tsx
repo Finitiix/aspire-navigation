@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { LogOut, UserCircle2, Home, Users, Settings, MessageSquare, LayoutGrid } from "lucide-react";
+import { LogOut, UserCircle2, Home, Users, Settings, MessageSquare, LayoutGrid, Target } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -211,6 +211,15 @@ const Admin = () => {
             >
               <Users className="h-5 w-5" />
               <span className="text-xs mt-1">Teachers</span>
+            </Link>
+            <Link
+              to="/admin-dashboard/points"
+              className={`flex flex-col items-center ${
+                location.pathname === '/admin-dashboard/points' ? 'text-white font-bold' : 'text-gray-100'
+              }`}
+            >
+              <Target className="h-5 w-5" />
+              <span className="text-xs mt-1">Points</span>
             </Link>
             <Link
               to="/admin-dashboard/feedback"

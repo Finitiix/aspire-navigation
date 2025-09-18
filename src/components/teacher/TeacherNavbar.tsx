@@ -10,6 +10,7 @@ import { ChangePasswordDialog } from "./ChangePasswordDialog";
 export const TeacherNavbar = () => {
   const navigate = useNavigate();
   const [teacherDetails, setTeacherDetails] = useState<any>(null);
+  const [currentPoints, setCurrentPoints] = useState(0);
 
   useEffect(() => {
     const fetchTeacherDetails = async () => {
@@ -21,6 +22,15 @@ export const TeacherNavbar = () => {
           .eq('id', user.id)
           .single();
         setTeacherDetails(data);
+        
+        // Fetch current points
+        const { data: pointsData } = await supabase
+          .from('teacher_points')
+          .select('current_points')
+          .eq('teacher_id', user.id)
+          .single();
+        
+        setCurrentPoints(pointsData?.current_points || 0);
       }
     };
 
@@ -57,6 +67,12 @@ export const TeacherNavbar = () => {
                 <p className="text-sm text-white/80">
                   {teacherDetails?.eid} | {teacherDetails?.designation}
                 </p>
+              </div>
+              <div className="flex items-center gap-4 text-white/90">
+                <div className="text-center">
+                  <p className="text-xs text-white/70">Achieve Score</p>
+                  <p className="text-lg font-bold">{currentPoints}</p>
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-3">

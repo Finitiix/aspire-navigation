@@ -20,6 +20,7 @@ import AdminTeachers from "./pages/admin/AdminTeachers";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminFeedback from "./pages/admin/AdminFeedback";
 import AdminDepartments from "./pages/admin/AdminDepartments";
+import AdminPoints from "./pages/admin/AdminPoints";
 import { FeedbackForm } from "./components/FeedbackForm";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
@@ -72,6 +73,7 @@ function App() {
                 <Route path="feedback" element={<AdminFeedback />} />
                 <Route path="settings" element={<AdminSettings />} />
                 <Route path="departments" element={<AdminDepartments />} />
+                <Route path="points" element={<AdminPoints />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

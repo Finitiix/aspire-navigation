@@ -239,6 +239,14 @@ const AdminTeachers = () => {
   // Modal state for Teacher Document Statistics (interactive filtering)
   const [teacherStatModalOpen, setTeacherStatModalOpen] = useState(false);
   const [teacherStatModalFilter, setTeacherStatModalFilter] = useState<{ filterType: string; filterValue: any } | null>(null);
+  
+  // Points approval dialog state
+  const [isPointsDialogOpen, setIsPointsDialogOpen] = useState(false);
+  const [selectedAchievementForPoints, setSelectedAchievementForPoints] = useState<{
+    id: string;
+    teacherId: string;
+    teacherName: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchTeachers();
@@ -1288,9 +1296,16 @@ const AdminTeachers = () => {
                                   size="sm"
                                   variant="outline"
                                   className="bg-green-500 hover:bg-green-600 text-white"
-                                  onClick={() => handleUpdateAchievementStatus(achievement.id, "Approved")}
+                                  onClick={() => {
+                                    setSelectedAchievementForPoints({
+                                      id: achievement.id,
+                                      teacherId: selectedTeacher?.id || "",
+                                      teacherName: achievement.teacher_name
+                                    });
+                                    setIsPointsDialogOpen(true);
+                                  }}
                                 >
-                                  <X className="h-4 w-4" />
+                                  Approve
                                 </Button>
                                 <Button
                                   size="sm"

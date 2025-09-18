@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, X, Award, Clock, Calendar, CheckCircle, XCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AchievementForm } from "@/components/teacher/AchievementForm";
+import { PointsDisplay } from "@/components/teacher/PointsDisplay";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { 
@@ -226,6 +227,13 @@ const TeacherHome = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Points Display */}
+      {teacherDetails && (
+        <div className="mb-8">
+          <PointsDisplay teacherDepartment={teacherDetails.department} />
+        </div>
+      )}
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Card className="shadow-md hover:shadow-lg transition-all duration-300">
           <CardHeader>
