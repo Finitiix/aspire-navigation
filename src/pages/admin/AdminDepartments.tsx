@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { PointsApprovalDialog } from "@/components/admin/PointsApprovalDialog";
 import { 
   BarChart, 
   Bar, 
@@ -122,6 +123,12 @@ const AdminDepartments = () => {
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminDepartment, setNewAdminDepartment] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
+  const [isPointsDialogOpen, setIsPointsDialogOpen] = useState(false);
+  const [selectedAchievementForPoints, setSelectedAchievementForPoints] = useState<{
+    id: string;
+    teacherId: string;
+    teacherName: string;
+  } | null>(null);
   
   // Used for chart coloring
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
@@ -742,6 +749,23 @@ const AdminDepartments = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Points Approval Dialog */}
+      {selectedAchievementForPoints && (
+        <PointsApprovalDialog
+          isOpen={isPointsDialogOpen}
+          onClose={() => {
+            setIsPointsDialogOpen(false);
+            setSelectedAchievementForPoints(null);
+          }}
+          achievementId={selectedAchievementForPoints.id}
+          teacherId={selectedAchievementForPoints.teacherId}
+          teacherName={selectedAchievementForPoints.teacherName}
+          onApprovalComplete={() => {
+            fetchDepartments();
+          }}
+        />
+      )}
     </div>
   );
 };

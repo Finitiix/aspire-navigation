@@ -10,6 +10,7 @@ import { Search, X, Eye, ExternalLink, FileText, Trash, Download } from "lucide-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { PointsApprovalDialog } from "@/components/admin/PointsApprovalDialog";
 import { format as dateFormat } from "date-fns";
 import {
   ResponsiveContainer,
@@ -1182,14 +1183,21 @@ const AdminTeachers = () => {
                               </span>
                               {achievement.status === "Pending Approval" && (
                                 <>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="bg-green-500 hover:bg-green-600 text-white"
-                                    onClick={() => handleUpdateAchievementStatus(achievement.id, "Approved")}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
+                                   <Button
+                                     size="sm"
+                                     variant="outline"
+                                     className="bg-green-500 hover:bg-green-600 text-white"
+                                     onClick={() => {
+                                       setSelectedAchievementForPoints({
+                                         id: achievement.id,
+                                         teacherId: selectedTeacher?.id || "",
+                                         teacherName: achievement.teacher_name
+                                       });
+                                       setIsPointsDialogOpen(true);
+                                     }}
+                                   >
+                                     Approve
+                                   </Button>
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -1510,6 +1518,23 @@ const AdminTeachers = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Points Approval Dialog */}
+      {selectedAchievementForPoints && (
+        <PointsApprovalDialog
+          isOpen={isPointsDialogOpen}
+          onClose={() => {
+            setIsPointsDialogOpen(false);
+            setSelectedAchievementForPoints(null);
+          }}
+          achievementId={selectedAchievementForPoints.id}
+          teacherId={selectedAchievementForPoints.teacherId}
+          teacherName={selectedAchievementForPoints.teacherName}
+          onApprovalComplete={() => {
+            fetchTeachers();
+          }}
+        />
+      )}
     </div>
   );
 };
