@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Trash, ExternalLink, FileText, X, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { PointsApprovalDialog } from "@/components/admin/PointsApprovalDialog";
 import {
   ResponsiveContainer,
   PieChart,
@@ -36,6 +37,7 @@ type DetailedAchievement = {
   document_url?: string;
   status: string;
   // Teacher details (stored in the achievement record)
+  teacher_id?: string;
   teacher_name: string;
   teacher_eid: string;
   teacher_designation: string;
@@ -156,6 +158,14 @@ const AdminDashboard = () => {
   const [viewDocumentUrl, setViewDocumentUrl] = useState<string | null>(null);
   // For multiple approval in Approval Requests section
   const [selectedAchievements, setSelectedAchievements] = useState<string[]>([]);
+  
+  // Points approval dialog state
+  const [isPointsDialogOpen, setIsPointsDialogOpen] = useState(false);
+  const [selectedAchievementForPoints, setSelectedAchievementForPoints] = useState<{
+    id: string;
+    teacherId: string;
+    teacherName: string;
+  } | null>(null);
 
   // Modal state for showing statistic details; filter holds type and value.
   const [statModalOpen, setStatModalOpen] = useState(false);
@@ -616,7 +626,14 @@ const AdminDashboard = () => {
                       variant="outline"
                       size="sm"
                       className="bg-green-500 hover:bg-green-600 text-white"
-                      onClick={() => handleApproval(achievement.id, "Approved")}
+                      onClick={() => {
+                        setSelectedAchievementForPoints({
+                          id: achievement.id,
+                          teacherId: achievement.teacher_id || achievement.teacher_eid,
+                          teacherName: achievement.teacher_name
+                        });
+                        setIsPointsDialogOpen(true);
+                      }}
                     >
                       Approve
                     </Button>
@@ -1152,6 +1169,24 @@ const AdminDashboard = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Points Approval Dialog */}
+      {selectedAchievementForPoints && (
+        <PointsApprovalDialog
+          isOpen={isPointsDialogOpen}
+          onClose={() => {
+            setIsPointsDialogOpen(false);
+            setSelectedAchievementForPoints(null);
+          }}
+          achievementId={selectedAchievementForPoints.id}
+          teacherId={selectedAchievementForPoints.teacherId}
+          teacherName={selectedAchievementForPoints.teacherName}
+          onApprovalComplete={() => {
+            fetchPendingAchievements();
+            fetchData();
+          }}
+        />
       )}
     </div>
   );

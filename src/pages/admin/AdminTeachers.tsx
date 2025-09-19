@@ -118,6 +118,7 @@ type Teacher = {
   created_at?: string;
   updated_at?: string;
   achievements?: DetailedAchievement[];
+  current_points?: number;
   [key: string]: any;
 };
 
@@ -304,7 +305,19 @@ const AdminTeachers = () => {
               achievementQuery = achievementQuery.eq("teacher_department", department);
             }
             const { data: achievements } = await achievementQuery;
-            return { ...teacher, achievements: achievements || [] };
+            
+            // Fetch teacher points
+            const { data: pointsData } = await supabase
+              .from("teacher_points")
+              .select("current_points")
+              .eq("teacher_id", teacher.id)
+              .single();
+            
+            return { 
+              ...teacher, 
+              achievements: achievements || [],
+              current_points: pointsData?.current_points || 0
+            };
           })
         );
         setTeachers(teachersWithAchievements);
@@ -804,6 +817,7 @@ const AdminTeachers = () => {
                   <th className="p-3 text-left">Department</th>
                   <th className="p-3 text-left">Designation</th>
                   <th className="p-3 text-left">Achievements</th>
+                  <th className="p-3 text-center">Points</th>
                   <th className="p-3 text-center">Actions</th>
                 </tr>
               </thead>
@@ -836,6 +850,11 @@ const AdminTeachers = () => {
                             Pending: {teacher.achievements?.filter(a => a.status === "Pending Approval").length || 0}
                           </span>
                         </div>
+                      </td>
+                      <td className="p-3 text-center">
+                        <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
+                          Points: {teacher.current_points || 0}
+                        </span>
                       </td>
                       <td className="p-3 text-center">
                         <Button
