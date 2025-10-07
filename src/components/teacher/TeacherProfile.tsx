@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Edit, X, Upload, Image } from "lucide-react";
+import { Edit, X, Upload, Image, Plus, Trash2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -97,6 +97,7 @@ export const TeacherProfile = () => {
     personal_website: "",
   });
   const [showTimetable, setShowTimetable] = useState(false);
+  const [experiences, setExperiences] = useState<Array<{role: string; institution: string; years: string}>>([]);
 
   useEffect(() => {
     fetchTeacherDetails();
@@ -121,11 +122,29 @@ export const TeacherProfile = () => {
       
       if (data) {
         setTeacherDetails(data);
+        setUserId(data.eid); // Use EID instead of user ID
+        
+        // Parse experience if it exists
+        const parsedExperience = data.experience 
+          ? (typeof data.experience === 'string' 
+            ? JSON.parse(data.experience) 
+            : Array.isArray(data.experience) 
+              ? data.experience 
+              : [])
+          : [];
+        
+        setExperiences(parsedExperience);
+        
         setFormData({
           ...data,
           skills: data.skills ? data.skills.join(", ") : "",
           block: data.block || "",
           timetable_url: data.timetable_url || "",
+          tagline: data.tagline || "",
+          bio: data.bio || "",
+          github_url: data.github_url || "",
+          linkedin_url: data.linkedin_url || "",
+          personal_website: data.personal_website || "",
         });
       }
     }
@@ -142,6 +161,7 @@ export const TeacherProfile = () => {
       const updatedData = {
         ...formData,
         skills: formData.skills.split(',').map(skill => skill.trim()),
+        experience: experiences,
       };
 
       const { error } = await supabase
@@ -508,6 +528,76 @@ export const TeacherProfile = () => {
                   />
                 </div>
               </div>
+              
+              {/* Experience Section */}
+              <div className="space-y-4 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-lg font-semibold">Experience</label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setExperiences([...experiences, { role: "", institution: "", years: "" }])}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Experience
+                  </Button>
+                </div>
+                {experiences.map((exp, index) => (
+                  <Card key={index} className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <h4 className="font-medium text-gray-700">Experience {index + 1}</h4>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setExperiences(experiences.filter((_, i) => i !== index))}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-sm font-medium">Role/Position</label>
+                        <Input
+                          value={exp.role}
+                          onChange={(e) => {
+                            const newExps = [...experiences];
+                            newExps[index].role = e.target.value;
+                            setExperiences(newExps);
+                          }}
+                          placeholder="e.g., Assistant Professor"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Institution</label>
+                        <Input
+                          value={exp.institution}
+                          onChange={(e) => {
+                            const newExps = [...experiences];
+                            newExps[index].institution = e.target.value;
+                            setExperiences(newExps);
+                          }}
+                          placeholder="e.g., XYZ University"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Years</label>
+                        <Input
+                          value={exp.years}
+                          onChange={(e) => {
+                            const newExps = [...experiences];
+                            newExps[index].years = e.target.value;
+                            setExperiences(newExps);
+                          }}
+                          placeholder="e.g., 2020 - Present"
+                        />
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+              
               <div className="flex gap-4 justify-end">
                 <Button
                   type="button"

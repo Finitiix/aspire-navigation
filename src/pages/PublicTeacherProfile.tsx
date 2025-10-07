@@ -4,20 +4,31 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   ExternalLink, 
   Award, 
-  BookOpen, 
   Briefcase, 
-  FileText, 
   Users, 
   TrendingUp,
   Mail,
   Phone,
-  MapPin,
-  Calendar
+  Calendar,
+  FileText,
+  Download
 } from "lucide-react";
-import { AchievementStats } from "@/components/teacher/AchievementStats";
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  PieChart, 
+  Pie, 
+  Cell, 
+  Legend, 
+  ResponsiveContainer 
+} from "recharts";
 
 interface TeacherData {
   id: string;
@@ -49,26 +60,47 @@ interface Points {
   current_points: number;
 }
 
+interface Achievement {
+  id: string;
+  category: string;
+  title: string;
+  date_achieved: string;
+  status: string;
+  document_url?: string;
+  q_ranking?: string;
+  indexed_in?: string[];
+  journal_name?: string;
+  conference_name?: string;
+  book_title?: string;
+  patent_number?: string;
+  award_name?: string;
+  doi?: string;
+  publisher?: string;
+  [key: string]: any;
+}
+
 const PublicTeacherProfile = () => {
-  const { id } = useParams<{ id: string }>();
+  const { eid } = useParams<{ eid: string }>();
   const [teacher, setTeacher] = useState<TeacherData | null>(null);
   const [researcherIds, setResearcherIds] = useState<ResearcherIds | null>(null);
   const [points, setPoints] = useState<Points | null>(null);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchTeacherData();
-  }, [id]);
+  }, [eid]);
 
   const fetchTeacherData = async () => {
-    if (!id) return;
+    if (!eid) return;
 
     try {
-      // Fetch teacher details
+      // Fetch teacher details by EID
       const { data: teacherData, error: teacherError } = await supabase
         .from("teacher_details")
         .select("*")
-        .eq("id", id)
+        .eq("eid", eid)
         .single();
 
       if (teacherError) throw teacherError;
@@ -98,7 +130,7 @@ const PublicTeacherProfile = () => {
       const { data: researchData } = await supabase
         .from("researcher_ids")
         .select("*")
-        .eq("teacher_id", id)
+        .eq("teacher_id", teacherData.id)
         .single();
 
       setResearcherIds(researchData);
@@ -107,15 +139,59 @@ const PublicTeacherProfile = () => {
       const { data: pointsData } = await supabase
         .from("teacher_points")
         .select("current_points")
-        .eq("teacher_id", id)
+        .eq("teacher_id", teacherData.id)
         .single();
 
       setPoints(pointsData);
+
+      // Fetch approved achievements
+      const { data: achievementsData } = await supabase
+        .from("detailed_achievements")
+        .select("*")
+        .eq("teacher_id", teacherData.id)
+        .eq("status", "Approved")
+        .order("date_achieved", { ascending: false });
+
+      setAchievements(achievementsData || []);
     } catch (error) {
       console.error("Error fetching teacher data:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const computeStats = (achievements: Achievement[]) => {
+    const stats = {
+      totalDocuments: achievements.length,
+      categories: {} as Record<string, number>,
+      yearly: {} as Record<number, number>,
+      quality: {
+        Q1: 0,
+        Q2: 0,
+        Q3: 0,
+        Q4: 0,
+      },
+    };
+
+    achievements.forEach((achievement) => {
+      // Count by category
+      if (achievement.category) {
+        stats.categories[achievement.category] = (stats.categories[achievement.category] || 0) + 1;
+      }
+      
+      // Count by year
+      if (achievement.date_achieved) {
+        const year = new Date(achievement.date_achieved).getFullYear();
+        stats.yearly[year] = (stats.yearly[year] || 0) + 1;
+      }
+      
+      // Count by quality
+      if (achievement.q_ranking && stats.quality[achievement.q_ranking as keyof typeof stats.quality] !== undefined) {
+        stats.quality[achievement.q_ranking as keyof typeof stats.quality]++;
+      }
+    });
+
+    return stats;
   };
 
   if (loading) {
@@ -151,6 +227,13 @@ const PublicTeacherProfile = () => {
     { name: "LinkedIn", url: teacher?.linkedin_url, icon: "💼" },
     { name: "Website", url: teacher?.personal_website, icon: "🌐" },
   ].filter(link => link.url);
+
+  const stats = computeStats(achievements);
+  const categoryData = Object.entries(stats.categories).map(([name, value]) => ({ name, value }));
+  const yearlyData = Object.entries(stats.yearly).map(([year, count]) => ({ year, count }));
+  const qualityData = Object.entries(stats.quality).map(([quality, count]) => ({ quality, count }));
+
+  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AA336A", "#33AA77", "#7755AA", "#AA5577", "#55AA77"];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-red-50 to-white">
@@ -325,7 +408,7 @@ const PublicTeacherProfile = () => {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {teacher.skills.map((skill, index) => (
+                {teacher.skills.map((skill: string, index: number) => (
                   <Badge key={index} variant="secondary" className="bg-red-100 text-red-700 hover:bg-red-200">
                     {skill}
                   </Badge>
@@ -335,14 +418,113 @@ const PublicTeacherProfile = () => {
           </Card>
         )}
 
-        {/* Achievement Stats */}
-        <div className="mb-8 animate-fade-in">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Award className="w-6 h-6 text-red-600" />
-            Achievement Metrics
-          </h2>
-          <AchievementStats teacherId={id} />
-        </div>
+        {/* Achievement Metrics */}
+        {achievements.length > 0 && (
+          <>
+            <Card className="mb-8 shadow-lg animate-fade-in">
+              <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-500 p-4">
+                <CardTitle className="text-2xl font-bold text-white flex items-center gap-2">
+                  <Award className="w-6 h-6" />
+                  Achievement Metrics
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <h3 className="text-lg font-semibold text-gray-700">Total Achievements</h3>
+                    <p className="text-3xl font-bold text-blue-600 mt-2">{stats.totalDocuments}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Category Breakdown</h3>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie 
+                          data={categoryData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          fill="#8884d8"
+                          label
+                        >
+                          {categoryData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Yearly Achievements</h3>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={yearlyData}>
+                        <XAxis dataKey="year" stroke="#333" />
+                        <YAxis stroke="#333" />
+                        <Tooltip />
+                        <Bar dataKey="count" fill="#82ca9d" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {qualityData.some(d => d.count > 0) && (
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Quality Ranking (Q1 - Q4)</h3>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={qualityData}>
+                        <XAxis dataKey="quality" stroke="#333" />
+                        <YAxis stroke="#333" />
+                        <Tooltip />
+                        <Bar dataKey="count" fill="#8884d8" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Achievement List */}
+            <Card className="mb-8 shadow-lg animate-fade-in">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-red-600" />
+                  All Achievements ({achievements.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {achievements.map((achievement) => (
+                    <div
+                      key={achievement.id}
+                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all cursor-pointer hover:border-red-300"
+                      onClick={() => setSelectedAchievement(achievement)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-grow">
+                          <h3 className="font-semibold text-lg text-gray-900">{achievement.title}</h3>
+                          <p className="text-sm text-gray-600 mt-1">{achievement.category}</p>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {new Date(achievement.date_achieved).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <Badge variant="secondary" className="bg-green-100 text-green-700">
+                          {achievement.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
 
         {/* Footer */}
         <footer className="mt-12 pt-8 border-t border-gray-200 text-center">
@@ -352,6 +534,86 @@ const PublicTeacherProfile = () => {
           </div>
         </footer>
       </div>
+
+      {/* Achievement Detail Dialog */}
+      <Dialog open={!!selectedAchievement} onOpenChange={() => setSelectedAchievement(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">{selectedAchievement?.title}</DialogTitle>
+          </DialogHeader>
+          {selectedAchievement && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">Category</p>
+                  <p className="text-gray-900">{selectedAchievement.category}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">Date Achieved</p>
+                  <p className="text-gray-900">{new Date(selectedAchievement.date_achieved).toLocaleDateString()}</p>
+                </div>
+                {selectedAchievement.journal_name && (
+                  <div>
+                    <p className="text-sm font-semibold text-gray-600">Journal</p>
+                    <p className="text-gray-900">{selectedAchievement.journal_name}</p>
+                  </div>
+                )}
+                {selectedAchievement.conference_name && (
+                  <div>
+                    <p className="text-sm font-semibold text-gray-600">Conference</p>
+                    <p className="text-gray-900">{selectedAchievement.conference_name}</p>
+                  </div>
+                )}
+                {selectedAchievement.publisher && (
+                  <div>
+                    <p className="text-sm font-semibold text-gray-600">Publisher</p>
+                    <p className="text-gray-900">{selectedAchievement.publisher}</p>
+                  </div>
+                )}
+                {selectedAchievement.doi && (
+                  <div>
+                    <p className="text-sm font-semibold text-gray-600">DOI</p>
+                    <a href={`https://doi.org/${selectedAchievement.doi}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                      {selectedAchievement.doi}
+                    </a>
+                  </div>
+                )}
+                {selectedAchievement.q_ranking && (
+                  <div>
+                    <p className="text-sm font-semibold text-gray-600">Q Ranking</p>
+                    <Badge variant="secondary">{selectedAchievement.q_ranking}</Badge>
+                  </div>
+                )}
+              </div>
+
+              {selectedAchievement.indexed_in && selectedAchievement.indexed_in.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold text-gray-600 mb-2">Indexed In</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedAchievement.indexed_in.map((index: string, i: number) => (
+                      <Badge key={i} variant="outline">{index}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedAchievement.document_url && (
+                <div className="pt-4 border-t">
+                  <a
+                    href={selectedAchievement.document_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-blue-600 hover:underline"
+                  >
+                    <Download className="w-4 h-4" />
+                    View/Download Document
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

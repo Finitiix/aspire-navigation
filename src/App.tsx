@@ -62,6 +62,7 @@ function App() {
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/privacy" element={<Privacy />} />
+              <Route path="/teacher/:eid" element={<PublicTeacherProfile />} />
               <Route path="/teacher/:id" element={<PublicTeacherProfile />} />
               <Route path="/teacher-dashboard" element={<TeacherDashboard />}>
                 <Route index element={<TeacherHome />} />
