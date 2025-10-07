@@ -522,6 +522,7 @@ export type Database = {
       teacher_details: {
         Row: {
           address: string | null
+          bio: string | null
           block: string | null
           cabin_no: string | null
           created_at: string | null
@@ -530,18 +531,24 @@ export type Database = {
           designation: string
           eid: string
           email_id: string
+          experience: Json | null
           full_name: string
           gender: string
+          github_url: string | null
           highest_qualification: string
           id: string
+          linkedin_url: string | null
           mobile_number: string
+          personal_website: string | null
           profile_pic_url: string | null
           skills: string[] | null
+          tagline: string | null
           timetable_url: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
+          bio?: string | null
           block?: string | null
           cabin_no?: string | null
           created_at?: string | null
@@ -550,18 +557,24 @@ export type Database = {
           designation: string
           eid: string
           email_id: string
+          experience?: Json | null
           full_name: string
           gender: string
+          github_url?: string | null
           highest_qualification: string
           id: string
+          linkedin_url?: string | null
           mobile_number: string
+          personal_website?: string | null
           profile_pic_url?: string | null
           skills?: string[] | null
+          tagline?: string | null
           timetable_url?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
+          bio?: string | null
           block?: string | null
           cabin_no?: string | null
           created_at?: string | null
@@ -570,13 +583,18 @@ export type Database = {
           designation?: string
           eid?: string
           email_id?: string
+          experience?: Json | null
           full_name?: string
           gender?: string
+          github_url?: string | null
           highest_qualification?: string
           id?: string
+          linkedin_url?: string | null
           mobile_number?: string
+          personal_website?: string | null
           profile_pic_url?: string | null
           skills?: string[] | null
+          tagline?: string | null
           timetable_url?: string | null
           updated_at?: string | null
         }

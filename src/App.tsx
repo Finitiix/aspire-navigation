@@ -25,6 +25,7 @@ import { FeedbackForm } from "./components/FeedbackForm";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Privacy from "./pages/Privacy";
+import PublicTeacherProfile from "./pages/PublicTeacherProfile";
 
 const RouteGuard = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
@@ -61,6 +62,7 @@ function App() {
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/privacy" element={<Privacy />} />
+              <Route path="/teacher/:id" element={<PublicTeacherProfile />} />
               <Route path="/teacher-dashboard" element={<TeacherDashboard />}>
                 <Route index element={<TeacherHome />} />
                 <Route path="profile" element={<TeacherProfile />} />

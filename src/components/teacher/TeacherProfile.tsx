@@ -30,6 +30,11 @@ type TeacherProfileData = {
   profile_pic_url: string;
   block: string;
   timetable_url: string;
+  tagline?: string;
+  bio?: string;
+  github_url?: string;
+  linkedin_url?: string;
+  personal_website?: string;
 };
 
 const departments = [
@@ -65,6 +70,7 @@ export const TeacherProfile = () => {
   const [loading, setLoading] = useState(false);
   const [uploadingProfilePic, setUploadingProfilePic] = useState(false);
   const [uploadingTimetable, setUploadingTimetable] = useState(false);
+  const [userId, setUserId] = useState<string>("");
   const profilePicRef = useRef<HTMLInputElement>(null);
   const timetableRef = useRef<HTMLInputElement>(null);
   
@@ -84,12 +90,25 @@ export const TeacherProfile = () => {
     eid: "",
     block: "",
     timetable_url: "",
+    tagline: "",
+    bio: "",
+    github_url: "",
+    linkedin_url: "",
+    personal_website: "",
   });
   const [showTimetable, setShowTimetable] = useState(false);
 
   useEffect(() => {
     fetchTeacherDetails();
+    getCurrentUserId();
   }, []);
+
+  const getCurrentUserId = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setUserId(user.id);
+    }
+  };
 
   const fetchTeacherDetails = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -197,6 +216,17 @@ export const TeacherProfile = () => {
     }
   };
 
+  const handleShareProfile = () => {
+    const profileUrl = `${window.location.origin}/teacher/${userId}`;
+    navigator.clipboard.writeText(profileUrl);
+    toast.success("Profile link copied to clipboard!");
+  };
+
+  const handleOpenProfile = () => {
+    const profileUrl = `${window.location.origin}/teacher/${userId}`;
+    window.open(profileUrl, '_blank');
+  };
+
   if (!teacherDetails) return null;
 
   return (
@@ -204,12 +234,22 @@ export const TeacherProfile = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-2xl font-bold">Teacher Profile</CardTitle>
-          {!isEditing && (
-            <Button onClick={() => setIsEditing(true)} variant="outline" size="sm">
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Profile
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {!isEditing ? (
+              <>
+                <Button onClick={handleShareProfile} variant="outline" size="sm">
+                  Share Profile
+                </Button>
+                <Button onClick={handleOpenProfile} variant="outline" size="sm">
+                  View Public Profile
+                </Button>
+                <Button onClick={() => setIsEditing(true)} variant="outline" size="sm">
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Profile
+                </Button>
+              </>
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent>
           {isEditing ? (
@@ -420,6 +460,53 @@ export const TeacherProfile = () => {
                   value={formData.address}
                   onChange={handleChange}
                 />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tagline</label>
+                <Input
+                  name="tagline"
+                  value={formData.tagline}
+                  onChange={handleChange}
+                  placeholder="e.g., Exploring AI for a Smarter World"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Bio</label>
+                <Input
+                  name="bio"
+                  value={formData.bio}
+                  onChange={handleChange}
+                  placeholder="Short biography or personal description"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">GitHub URL</label>
+                  <Input
+                    name="github_url"
+                    value={formData.github_url}
+                    onChange={handleChange}
+                    placeholder="https://github.com/username"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">LinkedIn URL</label>
+                  <Input
+                    name="linkedin_url"
+                    value={formData.linkedin_url}
+                    onChange={handleChange}
+                    placeholder="https://linkedin.com/in/username"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Personal Website</label>
+                  <Input
+                    name="personal_website"
+                    value={formData.personal_website}
+                    onChange={handleChange}
+                    placeholder="https://yourwebsite.com"
+                  />
+                </div>
               </div>
               <div className="flex gap-4 justify-end">
                 <Button
