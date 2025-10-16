@@ -691,6 +691,21 @@ export const TeacherProfile = () => {
           </div>
         </div>
       )}
+
+      {/* From Finitix Branding */}
+      <div className="text-center py-6 mt-8">
+        <p className="text-sm text-gray-500">
+          From{" "}
+          <a 
+            href="https://finitix.vercel.app/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-gray-700 hover:text-primary transition-colors"
+          >
+            Finitix
+          </a>
+        </p>
+      </div>
     </div>
   );
 };
