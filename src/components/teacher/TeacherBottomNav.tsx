@@ -48,6 +48,19 @@ export const TeacherBottomNav = () => {
             <span className="text-sm mt-1">Profile</span>
           </Link>
         </div>
+        <div className="text-center py-2 border-t">
+          <p className="text-xs text-gray-500">
+            From{" "}
+            <a 
+              href="https://finitix.vercel.app/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-gray-600 hover:text-primary transition-colors"
+            >
+              Finitix
+            </a>
+          </p>
+        </div>
       </div>
     </nav>
   );

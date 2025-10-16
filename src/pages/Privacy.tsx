@@ -193,6 +193,17 @@ const Privacy = () => {
           </div>
           <div className="mt-8 pt-8 border-t border-gray-800 text-center text-gray-400">
             <p>&copy; {new Date().getFullYear()} Achievement Hub. All rights reserved.</p>
+            <p className="mt-2 text-sm">
+              From{" "}
+              <a 
+                href="https://finitix.vercel.app/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="font-semibold text-gray-300 hover:text-white transition-colors"
+              >
+                Finitix
+              </a>
+            </p>
           </div>
         </div>
       </footer>

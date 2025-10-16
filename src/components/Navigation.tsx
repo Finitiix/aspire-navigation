@@ -13,9 +13,14 @@ export const Navigation = () => {
           />
           Achievement Hub
         </Link>
-        <div className="text-white text-sm opacity-75">
+        <a 
+          href="https://finitix.vercel.app/" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-white text-sm opacity-75 hover:opacity-100 transition-opacity"
+        >
           By Finitix
-        </div>
+        </a>
       </div>
     </nav>
   );

@@ -242,10 +242,15 @@ const PublicTeacherProfile = () => {
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold tracking-tight">Achievement Hub</h1>
-            <div className="text-right">
+            <a 
+              href="https://finitix.vercel.app/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-right hover:opacity-90 transition-opacity"
+            >
               <p className="text-sm opacity-90">Powered by</p>
               <p className="text-2xl font-bold">Finitix</p>
-            </div>
+            </a>
           </div>
         </div>
       </div>
@@ -530,7 +535,17 @@ const PublicTeacherProfile = () => {
         <footer className="mt-12 pt-8 border-t border-gray-200 text-center">
           <div className="bg-gradient-to-r from-red-600 to-red-700 text-white py-6 rounded-lg shadow-lg">
             <p className="text-lg font-semibold mb-2">© 2025 Achievement Hub</p>
-            <p className="text-sm opacity-90">Built with ❤️ by Finitix</p>
+            <p className="text-sm opacity-90">
+              From{" "}
+              <a 
+                href="https://finitix.vercel.app/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="underline hover:opacity-80 transition-opacity"
+              >
+                Finitix
+              </a>
+            </p>
           </div>
         </footer>
       </div>

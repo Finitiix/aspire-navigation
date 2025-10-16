@@ -240,6 +240,19 @@ const Admin = () => {
               <span className="text-xs mt-1">Settings</span>
             </Link>
           </div>
+          <div className="text-center py-2 border-t border-white/20">
+            <p className="text-xs opacity-75">
+              From{" "}
+              <a 
+                href="https://finitix.vercel.app/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="hover:opacity-100 transition-opacity"
+              >
+                Finitix
+              </a>
+            </p>
+          </div>
         </div>
       </nav>
     </div>

@@ -5,26 +5,14 @@ import { Link } from "react-router-dom";
 import { Award, Target, Users, Trophy } from "lucide-react";
 
 const About = () => {
-  const team = [
-    {
-      name: "Dr. Emily Johnson",
-      role: "Founder & CEO",
-      bio: "Former education professor with over 15 years of experience in educational technology.",
-      image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&auto=format&fit=crop"
-    },
-    {
-      name: "Marcus Chen",
-      role: "Chief Technology Officer",
-      bio: "Tech innovator with a passion for creating tools that transform the educational landscape.",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&auto=format&fit=crop"
-    },
-    {
-      name: "Priya Patel",
-      role: "Head of Educational Content",
-      bio: "Curriculum specialist focused on creating engaging and effective learning materials.",
-      image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&auto=format&fit=crop"
-    }
-  ];
+  const founder = {
+    name: "Jnaneswar Kandukuri",
+    initials: "JK",
+    role: "Founder & CEO",
+    quote: "As the visionary behind Finitix, I believe in the transformative power of technology. My journey in tech began with a simple question: How can we make innovation accessible to everyone? Today, FINITIX is the answer to that question.",
+    bio: "With over a decade of experience in software development and business strategy, Jnaneswar has led FINITIX to become a trusted partner for businesses seeking digital excellence. His philosophy is simple: build solutions that don't follow trends—set them.",
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&auto=format&fit=crop"
+  };
 
   const values = [
     {
@@ -116,52 +104,53 @@ const About = () => {
         </div>
       </section>
 
-      {/* Our Team */}
+      {/* Meet Our Founder */}
       <section className="py-16 px-6 bg-white">
         <div className="container mx-auto">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Our Leadership Team</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {team.map((member, index) => (
-              <div key={index} className="text-center">
-                <div className="relative inline-block mb-4">
-                  <div className="absolute inset-0 rounded-full bg-primary/20 transform scale-110"></div>
-                  <img 
-                    src={member.image} 
-                    alt={member.name} 
-                    className="w-48 h-48 object-cover rounded-full relative z-10" 
-                  />
+          <h2 className="text-3xl font-bold text-center text-gray-900 mb-4">Meet Our Founder</h2>
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-2xl p-8 md:p-12 shadow-lg">
+              <div className="flex flex-col md:flex-row items-center gap-8">
+                <div className="relative flex-shrink-0">
+                  <div className="absolute inset-0 rounded-full bg-primary/30 transform scale-110 animate-pulse"></div>
+                  <div className="relative w-40 h-40 rounded-full bg-gradient-to-br from-primary to-red-700 flex items-center justify-center text-white text-4xl font-bold shadow-xl">
+                    {founder.initials}
+                  </div>
                 </div>
-                <h3 className="text-xl font-semibold mb-1">{member.name}</h3>
-                <p className="text-primary font-medium mb-3">{member.role}</p>
-                <p className="text-gray-600">{member.bio}</p>
+                <div className="flex-1 text-center md:text-left">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-1">{founder.name}</h3>
+                  <p className="text-primary font-semibold text-lg mb-4">{founder.role}</p>
+                  <blockquote className="text-gray-700 italic mb-4 text-lg leading-relaxed border-l-4 border-primary pl-4">
+                    "{founder.quote}"
+                  </blockquote>
+                  <p className="text-gray-600 leading-relaxed">
+                    {founder.bio}
+                  </p>
+                </div>
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* About Finitix */}
+      {/* Developed By */}
       <section className="py-16 px-6 bg-gray-50">
-        <div className="container mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">About Finitix</h2>
-              <p className="text-lg text-gray-600 mb-4">
-                Finitix is a product-based software company dedicated to creating innovative digital solutions that tackle real-world problems. Finitix focuses on quality, innovation, and impact.
-              </p>
-              <p className="text-lg text-gray-600">
-                We believe that the best products aren't just functional — they inspire, empower, and make life easier.
-              </p>
+        <div className="container mx-auto text-center">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8">Developed By</h2>
+          <a 
+            href="https://finitix.vercel.app/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-block"
+          >
+            <div className="inline-block bg-white p-8 rounded-lg shadow-lg hover:shadow-xl transition-shadow">
+              <h3 className="text-2xl font-bold text-primary mb-4">Finitix</h3>
+              <p className="text-gray-600 font-medium">Creating Digital Solutions for Tomorrow</p>
             </div>
-            <div className="text-center">
-              <div className="inline-block bg-white p-8 rounded-lg shadow-lg">
-                <h3 className="text-2xl font-bold text-primary mb-4">Finitix</h3>
-                <p className="text-gray-600 font-medium">Creating Digital Solutions for Tomorrow</p>
-              </div>
-            </div>
-          </div>
+          </a>
         </div>
       </section>
+
 
       {/* CTA Section */}
       <section className="py-16 px-6 bg-primary text-white">
@@ -240,7 +229,17 @@ const About = () => {
           </div>
           <div className="mt-8 pt-8 border-t border-gray-800 text-center text-gray-400">
             <p>&copy; {new Date().getFullYear()} Achievement Hub. All rights reserved.</p>
-            <p className="mt-2 text-sm font-semibold text-gray-500">POWERED BY Finitix</p>
+            <p className="mt-2 text-sm">
+              From{" "}
+              <a 
+                href="https://finitix.vercel.app/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="font-semibold text-gray-300 hover:text-white transition-colors"
+              >
+                Finitix
+              </a>
+            </p>
           </div>
         </div>
       </footer>
