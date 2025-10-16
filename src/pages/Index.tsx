@@ -12,19 +12,19 @@ const Index = () => {
     {
       title: "Teacher",
       icon: School,
-      description: "Access your personalized teaching dashboard to manage classes, track student progress, submit achievements, and monitor your academic contributions. Upload research papers, patents, and other scholarly work with detailed analytics.",
+      description: "Manage your classes, track progress, submit achievements, and upload research papers with detailed analytics.",
       onClick: () => navigate("/teacher")
     },
     {
       title: "Admin",
       icon: Shield,
-      description: "Comprehensive administrative control panel for managing the entire educational ecosystem. Oversee user accounts, review teacher submissions, generate detailed reports, manage departments, and configure system-wide settings.",
+      description: "Manage users, review submissions, generate reports, and configure system settings.",
       onClick: () => navigate("/admin-auth")
     },
     {
       title: "Feedback",
       icon: MessageSquare,
-      description: "Share your valuable insights and suggestions to help us continuously improve the platform. Your feedback drives our development priorities and helps create a better experience for the entire academic community.",
+      description: "Share your insights and suggestions to help us improve the platform.",
       onClick: () => navigate("/feedback")
     }
   ];
