@@ -1,69 +1,42 @@
-# Welcome to your Lovable project
+Project Title: Achievement Hub
+Description:
 
-## Project info
+Achievement Hub is a full-stack web application designed to streamline and digitize the process of managing, showcasing, and approving teachers’ academic and professional achievements within an educational institution. It provides separate, secure dashboards for Teachers and Administrators, ensuring efficient communication, transparency, and centralized record management.
 
-**URL**: https://lovable.dev/projects/19337df0-5e18-44d6-b126-85f93158e6e5
+The system allows teachers to log in, update their profiles, and submit their academic and extracurricular achievements for approval. Admins can review, approve, or reject submissions, manage feedback, and monitor overall institutional performance in real time.
 
-## How can I edit this code?
+The platform is built with a React (TypeScript) frontend for a modern, responsive user interface, and a Django + PostgreSQL backend ensuring robust authentication, real-time data management, and secure storage. The entire application maintains a red-and-white themed, intuitive UI with smooth animations, responsive layouts, and integrated feedback and reporting features.
 
-There are several ways of editing your application.
+Key Features:
 
-**Use Lovable**
+🔐 Role-based Authentication: Separate sign-in/sign-up systems for Admins and Teachers using PostgreSQL authentication.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/19337df0-5e18-44d6-b126-85f93158e6e5) and start prompting.
+🧑‍🏫 Teacher Dashboard: Profile management, achievement submissions, real-time data updates, and secure password change functionality.
 
-Changes made via Lovable will be committed automatically to this repo.
+🧑‍💼 Admin Dashboard: Approval of achievements, management of teacher data, feedback viewing, and message broadcasting.
 
-**Use your preferred IDE**
+📋 Feedback System: Allows teachers to send feedback or messages that appear dynamically in the Admin Panel.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+📊 Analytics Overview: Displays real-time statistics such as total teachers, approval requests, and feedback count.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+🧠 Smooth UX/UI: Built with modern design principles, hover effects, animations, and easy navigation.
 
-Follow these steps:
+🗄️ Database Integration: Uses PostgreSQL with Supabase/Django ORM for structured and secure data storage.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+⚙️ Fully Responsive Design: Works seamlessly across desktops, tablets, and mobile devices.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Tech Stack:
 
-# Step 3: Install the necessary dependencies.
-npm i
+Frontend: React (Vite + TypeScript), Tailwind CSS, ShadCN UI, Framer Motion
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+Backend: Django, Django REST Framework
 
-**Edit a file directly in GitHub**
+Database: PostgreSQL (via Supabase integration)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Hosting: Vercel (Frontend), Render/Heroku (Backend)
 
-**Use GitHub Codespaces**
+Authentication & Security: Role-based login, password hashing, secure routing
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Impact:
 
-## What technologies are used for this project?
-
-This project is built with .
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/19337df0-5e18-44d6-b126-85f93158e6e5) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+Achievement Hub significantly reduces manual paperwork and approval delays, enhances data accuracy, and provides institutions with a transparent, centralized digital system for managing teacher achievements and performance tracking. It supports academic excellence and institutional accountability through structured documentation and verification workflows.
