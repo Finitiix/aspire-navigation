@@ -196,7 +196,7 @@ const Privacy = () => {
             <p className="mt-2 text-sm">
               From{" "}
               <a 
-                href="https://finitix.vercel.app/" 
+                href="https://www.finitix.site/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="font-semibold text-gray-300 hover:text-white transition-colors"

@@ -244,7 +244,7 @@ const Admin = () => {
             <p className="text-xs opacity-75">
               From{" "}
               <a 
-                href="https://finitix.vercel.app/" 
+                href="https://www.finitix.site/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="hover:opacity-100 transition-opacity"

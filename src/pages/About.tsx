@@ -138,7 +138,7 @@ const About = () => {
         <div className="container mx-auto text-center">
           <h2 className="text-3xl font-bold text-gray-900 mb-8">Developed By</h2>
           <a 
-            href="https://finitix.vercel.app/" 
+            href="https://www.finitix.site/" 
             target="_blank" 
             rel="noopener noreferrer"
             className="inline-block"
@@ -232,7 +232,7 @@ const About = () => {
             <p className="mt-2 text-sm">
               From{" "}
               <a 
-                href="https://finitix.vercel.app/" 
+                href="https://www.finitix.site/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="font-semibold text-gray-300 hover:text-white transition-colors"

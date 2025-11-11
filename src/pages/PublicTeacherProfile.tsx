@@ -243,7 +243,7 @@ const PublicTeacherProfile = () => {
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold tracking-tight">Achievement Hub</h1>
             <a 
-              href="https://finitix.vercel.app/" 
+              href="https://www.finitix.site/" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-right hover:opacity-90 transition-opacity"
@@ -538,7 +538,7 @@ const PublicTeacherProfile = () => {
             <p className="text-sm opacity-90">
               From{" "}
               <a 
-                href="https://finitix.vercel.app/" 
+                href="https://www.finitix.site/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="underline hover:opacity-80 transition-opacity"

@@ -14,7 +14,7 @@ export const Navigation = () => {
           Achievement Hub
         </Link>
         <a 
-          href="https://finitix.vercel.app/" 
+          href="https://www.finitix.site/" 
           target="_blank" 
           rel="noopener noreferrer"
           className="text-white text-sm opacity-75 hover:opacity-100 transition-opacity"

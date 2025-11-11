@@ -175,7 +175,7 @@ const TeacherDetails = () => {
         <p className="text-sm text-gray-500">
           From{" "}
           <a 
-            href="https://finitix.vercel.app/" 
+            href="https://www.finitix.site/" 
             target="_blank" 
             rel="noopener noreferrer"
             className="text-gray-700 hover:text-primary transition-colors"
